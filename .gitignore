@@ -1,0 +1,37 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Generated files
+*.lock
+*.log
+
+# Android Studio
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# iOS
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+
+# Android
+android/.gradle
+android/app/build
+
+# Local env
+.env
+
+# Firebase
+firebase-debug.log
