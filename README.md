@@ -1,4 +1,4 @@
-# Heptapus MVP
+# COETUS MVP
 
 Heptapus, kullanıcıların sahip oldukları yetenekleri öğreterek kredi kazandığı ve bu kredileri kullanarak yeni yetenekler öğrendiği bir mobil uygulamadır.
 
