@@ -1,17 +1,39 @@
-# coetus
+# COETUS MVP
 
-A new Flutter project.
+Heptapus, kullanıcıların sahip oldukları yetenekleri öğreterek kredi kazandığı ve bu kredileri kullanarak yeni yetenekler öğrendiği bir mobil uygulamadır.
 
-## Getting Started
+## Temel Mantık
 
-This project is a starting point for a Flutter application.
+Öğret → Kredi Kazan → Öğren
 
-A few resources to get you started if this is your first Flutter project:
+## Proje Amacı
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Bu proje, yüksek kurs maliyetlerine alternatif olarak insanların birbirlerine yetenek öğretebildiği bir ekosistem oluşturmayı hedefler.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Aynı zamanda kullanıcıların:
+
+- yeni ilgi alanları keşfetmesini
+- sosyalleşmesini
+- üretken bir öğrenme topluluğu oluşturmasını
+
+sağlamayı amaçlar.
+
+## Proje Durumu
+
+Bu repo, 8 kişilik bir öğrenci ekibi tarafından geliştirilen 45 günlük MVP sürecini içermektedir.
+
+## MVP Kapsamı
+
+- Kullanıcı kayıt ve giriş sistemi
+- Profil oluşturma
+- Skill (yetenek) ekleme
+- Skill keşfetme (kaydırma yok – marketplace mantığı)
+- Teklif gönderme
+- Session oluşturma
+- Kredi sistemi
+- Escrow (emanet kredi)
+- Doğrulama sistemi
+
+## Dokümantasyon
+
+Tüm proje planları ve teknik detaylar `/docs` klasöründe bulunmaktadır.
