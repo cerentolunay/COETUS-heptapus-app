@@ -10,10 +10,14 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _showPassword = false;
+  bool _isLoading = false;
+
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
@@ -22,7 +26,6 @@ class _LoginPageState extends State<LoginPage>
   static const Color _bgMiddle = Color(0xFF0F172A);
   static const Color _bgEnd = Color(0xFF1E1B4B);
   static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _blue = Color(0xFF0EA5E9);
   static const Color _purple = Color(0xFF7C3AED);
 
   @override
@@ -60,7 +63,60 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
-  void _handleLogin() {
+  String? _validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+
+    if (email.isEmpty) {
+      return 'Email zorunludur';
+    }
+
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(email)) {
+      return 'Geçerli bir email adresi gir';
+    }
+
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final password = value?.trim() ?? '';
+
+    if (password.isEmpty) {
+      return 'Şifre zorunludur';
+    }
+
+    if (password.length < 8) {
+      return 'Şifre en az 8 karakter olmalıdır';
+    }
+
+    return null;
+  }
+
+  Future<void> _handleLogin() async {
+    final isValid = _formKey.currentState?.validate() ?? false;
+
+    if (!isValid) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Giriş başarılı'),
+      ),
+    );
+
     context.go('/home');
   }
 
@@ -82,109 +138,119 @@ class _LoginPageState extends State<LoginPage>
               position: _slideAnimation,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 12),
-                    const _HeaderSection(),
-                    const SizedBox(height: 28),
-                    _InputSection(
-                      emailController: _emailController,
-                      passwordController: _passwordController,
-                      showPassword: _showPassword,
-                      onTogglePassword: () {
-                        setState(() {
-                          _showPassword = !_showPassword;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          context.go('/forgot-password');
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 12),
+                      const _HeaderSection(),
+                      const SizedBox(height: 28),
+                      _InputSection(
+                        emailController: _emailController,
+                        passwordController: _passwordController,
+                        showPassword: _showPassword,
+                        onTogglePassword: () {
+                          setState(() {
+                            _showPassword = !_showPassword;
+                          });
                         },
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: _cyan,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        emailValidator: _validateEmail,
+                        passwordValidator: _validatePassword,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _GradientButton(
-                      text: 'Login',
-                      icon: Icons.arrow_forward,
-                      onTap: _handleLogin,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 1,
-                            color: Colors.white.withOpacity(0.10),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'OR',
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  context.go('/forgot-password');
+                                },
+                          child: const Text(
+                            'Forgot Password?',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.35),
-                              fontSize: 12,
+                              color: _cyan,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
-                        Expanded(
-                          child: Container(
-                            height: 1,
-                            color: Colors.white.withOpacity(0.10),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    _SecondaryButton(
-                      text: 'Continue with Google',
-                      leading: const _GoogleIcon(),
-                      onTap: () {},
-                    ),
-                    const SizedBox(height: 32),
-                    Center(
-                      child: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                      ),
+                      const SizedBox(height: 8),
+                      _GradientButton(
+                        text: _isLoading ? 'Logging in...' : 'Login',
+                        icon: _isLoading ? null : Icons.arrow_forward,
+                        isLoading: _isLoading,
+                        onTap: _isLoading ? null : _handleLogin,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
                         children: [
-                          Text(
-                            "Don't have an account? ",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.55),
-                              fontSize: 14,
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: Colors.white.withOpacity(0.10),
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              context.go('/register');
-                            },
-                            child: const Text(
-                              'Create Account',
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'OR',
                               style: TextStyle(
-                                color: _cyan,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                                color: Colors.white.withOpacity(0.35),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: Colors.white.withOpacity(0.10),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                      const SizedBox(height: 24),
+                      _SecondaryButton(
+                        text: 'Continue with Google',
+                        leading: const _GoogleIcon(),
+                        onTap: _isLoading ? null : () {},
+                      ),
+                      const SizedBox(height: 32),
+                      Center(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.55),
+                                fontSize: 14,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _isLoading
+                                  ? null
+                                  : () {
+                                      context.go('/register');
+                                    },
+                              child: const Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  color: _cyan,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -251,12 +317,16 @@ class _InputSection extends StatelessWidget {
   final TextEditingController passwordController;
   final bool showPassword;
   final VoidCallback onTogglePassword;
+  final String? Function(String?) emailValidator;
+  final String? Function(String?) passwordValidator;
 
   const _InputSection({
     required this.emailController,
     required this.passwordController,
     required this.showPassword,
     required this.onTogglePassword,
+    required this.emailValidator,
+    required this.passwordValidator,
   });
 
   @override
@@ -271,6 +341,7 @@ class _InputSection extends StatelessWidget {
           hintText: 'your.email@example.com',
           prefixIcon: Icons.mail_outline,
           keyboardType: TextInputType.emailAddress,
+          validator: emailValidator,
         ),
         const SizedBox(height: 18),
         _FieldLabel(text: 'Password'),
@@ -280,6 +351,7 @@ class _InputSection extends StatelessWidget {
           hintText: 'Enter your password',
           prefixIcon: Icons.lock_outline,
           obscureText: !showPassword,
+          validator: passwordValidator,
           suffix: IconButton(
             onPressed: onTogglePassword,
             icon: Icon(
@@ -318,6 +390,7 @@ class _GlassInput extends StatelessWidget {
   final Widget? suffix;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
 
   const _GlassInput({
     required this.controller,
@@ -326,20 +399,26 @@ class _GlassInput extends StatelessWidget {
     this.suffix,
     this.obscureText = false,
     this.keyboardType,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
           color: Colors.white.withOpacity(0.35),
           fontSize: 14,
+        ),
+        errorStyle: const TextStyle(
+          color: Color(0xFFFFB4B4),
+          fontSize: 12,
         ),
         prefixIcon: Icon(
           prefixIcon,
@@ -364,6 +443,19 @@ class _GlassInput extends StatelessWidget {
             color: Color(0x8006B6D4),
           ),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Color(0xFFFF6B6B),
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(
+            color: Color(0xFFFF6B6B),
+            width: 1.2,
+          ),
+        ),
       ),
     );
   }
@@ -371,12 +463,14 @@ class _GlassInput extends StatelessWidget {
 
 class _GradientButton extends StatelessWidget {
   final String text;
-  final IconData icon;
-  final VoidCallback onTap;
+  final IconData? icon;
+  final bool isLoading;
+  final VoidCallback? onTap;
 
   const _GradientButton({
     required this.text,
     required this.icon,
+    required this.isLoading,
     required this.onTap,
   });
 
@@ -412,6 +506,16 @@ class _GradientButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (isLoading)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            if (isLoading) const SizedBox(width: 10),
             Text(
               text,
               style: const TextStyle(
@@ -420,12 +524,13 @@ class _GradientButton extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 20,
-            ),
+            if (!isLoading && icon != null) const SizedBox(width: 8),
+            if (!isLoading && icon != null)
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -436,7 +541,7 @@ class _GradientButton extends StatelessWidget {
 class _SecondaryButton extends StatelessWidget {
   final String text;
   final Widget leading;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _SecondaryButton({
     required this.text,
@@ -464,9 +569,9 @@ class _SecondaryButton extends StatelessWidget {
         children: [
           leading,
           const SizedBox(width: 10),
-          const Text(
-            'Continue with Google',
-            style: TextStyle(
+          Text(
+            text,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w600,

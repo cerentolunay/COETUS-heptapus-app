@@ -1,3 +1,5 @@
+import 'package:coetus/features/auth/domain/models/app_user.dart';
+import 'package:coetus/features/profile/domain/models/skill_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,17 +11,24 @@ class SkillProfilePage extends StatefulWidget {
 }
 
 class _SkillProfilePageState extends State<SkillProfilePage> {
-  final List<_Skill> _skills = const [
-    _Skill(id: '1', name: 'Guitar', level: 6, emoji: '🎸'),
-    _Skill(id: '2', name: 'English', level: 2, emoji: '🇬🇧'),
-    _Skill(id: '3', name: 'Cooking', level: 5, emoji: '👨‍🍳'),
-    _Skill(id: '4', name: 'Photography', level: 4, emoji: '📷'),
+  AppUser _user = const AppUser(
+    id: 'u1',
+    name: 'Alex Chen',
+    email: 'alex@example.com',
+    bio: 'Skill swapping enthusiast',
+  );
+
+  final List<SkillModel> _skills = [
+    const SkillModel(id: '1', name: 'Guitar', level: 6),
+    const SkillModel(id: '2', name: 'English', level: 2),
+    const SkillModel(id: '3', name: 'Cooking', level: 5),
+    const SkillModel(id: '4', name: 'Photography', level: 4),
   ];
 
-  final List<_Goal> _learningGoals = const [
-    _Goal(id: '1', name: 'Spanish', emoji: '🇪🇸'),
-    _Goal(id: '2', name: 'Yoga', emoji: '🧘'),
-    _Goal(id: '3', name: 'Piano', emoji: '🎹'),
+  final List<_LearningGoal> _learningGoals = const [
+    _LearningGoal(id: '1', name: 'Spanish', emoji: 'ES'),
+    _LearningGoal(id: '2', name: 'Yoga', emoji: 'YG'),
+    _LearningGoal(id: '3', name: 'Piano', emoji: 'PN'),
   ];
 
   static const Color _bg = Color(0xFF0A0A0F);
@@ -30,6 +39,197 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   static const Color _violet = Color(0xFF8B5CF6);
   static const Color _indigoText = Color(0xFF818CF8);
   static const Color _violetText = Color(0xFFC4B5FD);
+
+  Future<void> _showEditSkillDialog(SkillModel skill) async {
+  final nameController = TextEditingController(text: skill.name);
+  double selectedLevel = skill.level.toDouble();
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: _card,
+        title: const Text(
+          'Edit Skill',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Skill name',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withOpacity(0.40),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Colors.white.withOpacity(0.12),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _indigo),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Level: ${selectedLevel.toInt()}/7',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Slider(
+                  value: selectedLevel,
+                  min: 1,
+                  max: 7,
+                  divisions: 6,
+                  activeColor: _indigo,
+                  inactiveColor: Colors.white.withOpacity(0.15),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedLevel = value;
+                    });
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedName = nameController.text.trim();
+              if (updatedName.isEmpty) return;
+
+              setState(() {
+                final index = _skills.indexWhere((s) => s.id == skill.id);
+                if (index != -1) {
+                  _skills[index] = _skills[index].copyWith(
+                    name: updatedName,
+                    level: selectedLevel.toInt(),
+                  );
+                }
+              });
+
+              Navigator.of(dialogContext).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _indigo,
+            ),
+            child: const Text(
+              'Save',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  nameController.dispose();
+}
+
+Future<void> _showDeleteSkillDialog(SkillModel skill) async {
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: _card,
+        title: const Text(
+          'Delete Skill',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '${skill.name} skillini silmek istiyor musun?',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.80),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _skills.removeWhere((s) => s.id == skill.id);
+              });
+
+              Navigator.of(dialogContext).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+  Future<void> _showEditProfileDialog() async {
+    final AppUser? updatedUser = await showDialog<AppUser>(
+      context: context,
+      builder: (_) => _EditProfileDialog(user: _user),
+  );
+
+  if (!mounted || updatedUser == null) return;
+
+  setState(() {
+    _user = updatedUser;
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Profile updated'),
+    ),
+  );
+}
+
+
+  Future<void> _showAddSkillDialog() async {
+    final SkillModel? newSkill = await showDialog<SkillModel>(
+      context: context,
+      builder: (_) => const _AddSkillDialog(),
+    );
+
+    if (!mounted || newSkill == null) return;
+
+    setState(() {
+      _skills.add(newSkill);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${newSkill.name} added'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +284,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             ),
           ),
           child: IconButton(
-            onPressed: () {},
+            onPressed: _showEditProfileDialog,
             icon: const Icon(
               Icons.edit_outlined,
               color: Colors.white,
@@ -131,9 +331,9 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Alex Chen',
-                  style: TextStyle(
+                Text(
+                  _user.name,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
@@ -141,10 +341,19 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'San Francisco, CA',
+                  _user.email,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.55),
                     fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _user.bio,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.70),
+                    fontSize: 13,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -153,12 +362,12 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                   runSpacing: 8,
                   children: [
                     _InfoChip(
-                      text: '4 skills',
+                      text: '${_skills.length} skills',
                       background: _indigo.withOpacity(0.20),
                       textColor: _indigoText,
                     ),
                     _InfoChip(
-                      text: '12 matches',
+                      text: '${_learningGoals.length} goals',
                       background: _violet.withOpacity(0.20),
                       textColor: _violetText,
                     ),
@@ -171,6 +380,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
       ),
     );
   }
+
 
   Widget _buildSkillsSection() {
     return Column(
@@ -188,7 +398,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
               ),
             ),
             TextButton.icon(
-              onPressed: () {},
+              onPressed: _showAddSkillDialog,
               icon: const Icon(Icons.add, color: _indigoText, size: 18),
               label: const Text(
                 'Add Skill',
@@ -202,7 +412,13 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
         ),
         const SizedBox(height: 12),
         Column(
-          children: _skills.map((skill) => _SkillCard(skill: skill)).toList(),
+          children: _skills.map((skill) {
+            return _SkillCard(
+              skill: skill,
+              onEdit: () => _showEditSkillDialog(skill),
+              onDelete: () => _showDeleteSkillDialog(skill),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -258,7 +474,17 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(goal.emoji, style: const TextStyle(fontSize: 32)),
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: _violet.withOpacity(0.20),
+                    child: Text(
+                      goal.emoji,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     goal.name,
@@ -305,9 +531,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
           _NavItem(
             icon: Icons.chat_bubble_outline,
             label: 'Chats',
-            onTap: () {
-              context.go('/chat');
-            },
+            onTap: () {},
           ),
         ],
       ),
@@ -316,9 +540,15 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
 }
 
 class _SkillCard extends StatelessWidget {
-  final _Skill skill;
+  final SkillModel skill;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _SkillCard({required this.skill});
+  const _SkillCard({
+    required this.skill,
+    required this.onEdit,
+    required this.onDelete
+  });
 
   static const Color _bg = Color(0xFF1A1A2E);
   static const Color _border = Color(0xFF2A2A3E);
@@ -329,7 +559,8 @@ class _SkillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final widthFactor = skill.level / 7;
+    final int normalizedLevel = skill.level.clamp(0, 7);
+    final double widthFactor = normalizedLevel / 7;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -343,7 +574,17 @@ class _SkillCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(skill.emoji, style: const TextStyle(fontSize: 26)),
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: _indigo.withOpacity(0.20),
+                child: Text(
+                  skill.name.isNotEmpty ? skill.name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -356,11 +597,28 @@ class _SkillCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${skill.level}/7',
+                '$normalizedLevel/7',
                 style: const TextStyle(
                   color: _indigoText,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: onEdit,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: Colors.white70,
+                  size: 20,
+                ),
+              ),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                  size: 20,
                 ),
               ),
             ],
@@ -390,7 +648,7 @@ class _SkillCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: List.generate(7, (index) {
-              final active = index < skill.level;
+              final bool active = index < normalizedLevel;
               return Expanded(
                 child: Container(
                   height: 6,
@@ -460,7 +718,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.45);
+    final Color color = isActive ? _active : Colors.white.withOpacity(0.45);
 
     return InkWell(
       onTap: onTap,
@@ -486,28 +744,255 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _Skill {
+class _LearningGoal {
   final String id;
   final String name;
-  final int level;
   final String emoji;
 
-  const _Skill({
+  const _LearningGoal({
     required this.id,
     required this.name,
-    required this.level,
     required this.emoji,
   });
 }
 
-class _Goal {
-  final String id;
-  final String name;
-  final String emoji;
+class _AddSkillDialog extends StatefulWidget {
+  const _AddSkillDialog();
 
-  const _Goal({
-    required this.id,
-    required this.name,
-    required this.emoji,
-  });
+  @override
+  State<_AddSkillDialog> createState() => _AddSkillDialogState();
+}
+
+class _AddSkillDialogState extends State<_AddSkillDialog> {
+  final TextEditingController _nameController = TextEditingController();
+  double _selectedLevel = 1;
+
+  static const Color _card = Color(0xFF1A1A2E);
+  static const Color _indigo = Color(0xFF6366F1);
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final String skillName = _nameController.text.trim();
+
+    if (skillName.isEmpty) return;
+
+    Navigator.of(context).pop(
+      SkillModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: skillName,
+        level: _selectedLevel.toInt(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: _card,
+      title: const Text(
+        'Add Skill',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _nameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Skill name',
+              hintStyle: TextStyle(
+                color: Colors.white.withOpacity(0.40),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: Colors.white.withOpacity(0.12),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _indigo),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Level: ${_selectedLevel.toInt()}/7',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Slider(
+            value: _selectedLevel,
+            min: 1,
+            max: 7,
+            divisions: 6,
+            activeColor: _indigo,
+            inactiveColor: Colors.white.withOpacity(0.15),
+            label: _selectedLevel.toInt().toString(),
+            onChanged: (value) {
+              setState(() {
+                _selectedLevel = value;
+              });
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.70),
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _indigo,
+          ),
+          child: const Text(
+            'Add',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditProfileDialog extends StatefulWidget {
+  final AppUser user;
+
+  const _EditProfileDialog({required this.user});
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+
+  static const Color _card = Color(0xFF1A1A2E);
+  static const Color _indigo = Color(0xFF6366F1);
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.user.name);
+    _bioController = TextEditingController(text: widget.user.bio);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    final bio = _bioController.text.trim();
+
+    if (name.isEmpty || bio.isEmpty) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      widget.user.copyWith(
+        name: name,
+        bio: bio,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: _card,
+      title: const Text(
+        'Edit Profile',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Name',
+              labelStyle: TextStyle(
+                color: Colors.white.withOpacity(0.70),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: Colors.white.withOpacity(0.12),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _indigo),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _bioController,
+            maxLines: 3,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Bio',
+              labelStyle: TextStyle(
+                color: Colors.white.withOpacity(0.70),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: Colors.white.withOpacity(0.12),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _indigo),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.70),
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _indigo,
+          ),
+          child: const Text(
+            'Save',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
 }
