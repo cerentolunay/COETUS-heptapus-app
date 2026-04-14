@@ -34,6 +34,10 @@ class AppRouter {
         builder: (context, state) => const WelcomePage(),
       ),
       GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingIntroPage(),
+      ),
+      GoRoute(
         path: '/login',
         builder: (context, state) => const LoginPage(),
       ),

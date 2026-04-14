@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -145,7 +146,7 @@ class _WelcomePageState extends State<WelcomePage>
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
-                            'A professional skill-swapping ecosystem where you trade expertise, earn credits, and grow together.',
+                            'Trade what you know, learn what you need, and grow through a modern skill-sharing community.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Color(0xFFD1D5DB),
@@ -157,21 +158,21 @@ class _WelcomePageState extends State<WelcomePage>
                       ],
                     ),
                     const SizedBox(height: 36),
-                    Column(
-                      children: const [
+                    const Column(
+                      children: [
                         _FeatureCard(
-                          icon: '🎯',
-                          text: 'Match with verified skill partners',
+                          badge: '01',
+                          text: 'Create a profile around the skills you can teach',
                         ),
                         SizedBox(height: 14),
                         _FeatureCard(
-                          icon: '🔒',
-                          text: 'Secure escrow-protected sessions',
+                          badge: '02',
+                          text: 'Match with learners and exchange real value',
                         ),
                         SizedBox(height: 14),
                         _FeatureCard(
-                          icon: '⚡',
-                          text: 'Earn and spend Heptapus Credits',
+                          badge: '03',
+                          text: 'Earn credits and use them to keep learning',
                         ),
                       ],
                     ),
@@ -196,7 +197,7 @@ class _WelcomePageState extends State<WelcomePage>
                             ),
                             child: ElevatedButton(
                               onPressed: () {
-                                context.go('/register');
+                                context.go('/onboarding');
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
@@ -211,7 +212,7 @@ class _WelcomePageState extends State<WelcomePage>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    'Get Started',
+                                    'Start Onboarding',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -271,7 +272,7 @@ class _WelcomePageState extends State<WelcomePage>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'By continuing, you agree to our Terms & Privacy Policy',
+                          'By continuing, you agree to our Terms and Privacy Policy',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.38),
@@ -292,11 +293,11 @@ class _WelcomePageState extends State<WelcomePage>
 }
 
 class _FeatureCard extends StatelessWidget {
-  final String icon;
+  final String badge;
   final String text;
 
   const _FeatureCard({
-    required this.icon,
+    required this.badge,
     required this.text,
   });
 
@@ -314,9 +315,23 @@ class _FeatureCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            icon,
-            style: const TextStyle(fontSize: 28),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+            child: Center(
+              child: Text(
+                badge,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(

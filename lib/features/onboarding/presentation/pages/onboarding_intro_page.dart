@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingIntroPage extends StatefulWidget {
   const OnboardingIntroPage({super.key});
@@ -20,43 +22,29 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
   final List<_OnboardingSlide> _slides = const [
     _OnboardingSlide(
       id: 1,
-      icon: '🎯',
-      title: 'Discover Your Perfect Match',
+      badge: '01',
+      title: 'Build Your Skill Identity',
       description:
-          'Our intelligent algorithm matches you with verified professionals based on complementary skills and learning goals.',
+          'Create your profile, list the skills you can teach, and show people what kind of learning exchange you offer.',
     ),
     _OnboardingSlide(
       id: 2,
-      icon: '🔒',
-      title: 'Secure Escrow Protection',
+      badge: '02',
+      title: 'Match and Learn Together',
       description:
-          'Every skill swap is protected by our escrow system. Credits are only released when both parties confirm session completion.',
+          'Discover people with complementary goals, connect around shared interests, and turn skill exchange into real progress.',
     ),
     _OnboardingSlide(
       id: 3,
-      icon: '⚡',
-      title: 'Earn & Spend Credits',
+      badge: '03',
+      title: 'Earn Credits, Unlock Growth',
       description:
-          'Build your reputation, teach your expertise, and unlock new learning opportunities with Heptapus Credits.',
+          'Teach what you know, earn credits from the community, and spend them to learn the next skill on your roadmap.',
     ),
   ];
 
   int _currentSlide = 0;
   late final AnimationController _backgroundController;
-
-  void _handleNext() {
-    if (_currentSlide < _slides.length - 1) {
-      setState(() {
-        _currentSlide++;
-      });
-    } else {
-      context.go('/discovery');
-    }
-  }
-
-  void _handleSkip() {
-    context.go('/discovery');
-  }
 
   @override
   void initState() {
@@ -71,6 +59,29 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
   void dispose() {
     _backgroundController.dispose();
     super.dispose();
+  }
+
+  Future<void> _completeOnboarding(String route) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_onboarding', true);
+
+    if (!mounted) return;
+    context.go(route);
+  }
+
+  void _handleNext() {
+    if (_currentSlide < _slides.length - 1) {
+      setState(() {
+        _currentSlide++;
+      });
+      return;
+    }
+
+    _completeOnboarding('/register');
+  }
+
+  void _handleSkip() {
+    _completeOnboarding('/register');
   }
 
   @override
@@ -131,7 +142,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
                         child: Text(
                           'Skip',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.55),
+                            color: Colors.white.withValues(alpha: 0.60),
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -169,12 +180,24 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
                     const SizedBox(height: 24),
                     _GradientButton(
                       text: _currentSlide == _slides.length - 1
-                          ? 'Start Your Journey'
+                          ? 'Create Account'
                           : 'Continue',
                       icon: _currentSlide == _slides.length - 1
-                          ? Icons.check_circle_outline
+                          ? Icons.person_add_alt_1
                           : Icons.arrow_forward,
                       onTap: _handleNext,
+                    ),
+                    const SizedBox(height: 14),
+                    TextButton(
+                      onPressed: () => _completeOnboarding('/login'),
+                      child: Text(
+                        'I already have an account',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -195,6 +218,9 @@ class _SlideContent extends StatelessWidget {
     required this.slide,
   });
 
+  static const Color _cyan = Color(0xFF06B6D4);
+  static const Color _purple = Color(0xFF7C3AED);
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -202,19 +228,32 @@ class _SlideContent extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: 132,
-          height: 132,
+          width: 136,
+          height: 136,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(32),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_purple, _cyan],
             ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(124, 58, 237, 0.30),
+                blurRadius: 26,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: Center(
             child: Text(
-              slide.icon,
-              style: const TextStyle(fontSize: 64),
+              slide.badge,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 36,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ),
@@ -234,7 +273,7 @@ class _SlideContent extends StatelessWidget {
           slide.description,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.75),
+            color: Colors.white.withValues(alpha: 0.78),
             fontSize: 17,
             height: 1.6,
           ),
@@ -275,7 +314,7 @@ class _ProgressIndicators extends StatelessWidget {
                     colors: [_purple, _cyan],
                   )
                 : null,
-            color: isActive ? null : Colors.white.withOpacity(0.20),
+            color: isActive ? null : Colors.white.withValues(alpha: 0.20),
           ),
         );
       }),
@@ -349,13 +388,13 @@ class _GradientButton extends StatelessWidget {
 
 class _OnboardingSlide {
   final int id;
-  final String icon;
+  final String badge;
   final String title;
   final String description;
 
   const _OnboardingSlide({
     required this.id,
-    required this.icon,
+    required this.badge,
     required this.title,
     required this.description,
   });

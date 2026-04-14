@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -9,16 +10,23 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-
   @override
   void initState() {
     super.initState();
-    // Tüm başlangıç mantığını tek bir yerde topluyoruz
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-       context.go('/welcome'); 
-      }
-    });
+    _handleStartupFlow();
+  }
+
+  Future<void> _handleStartupFlow() async {
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+
+    if (!mounted) return;
+
+    context.go(hasSeenOnboarding ? '/welcome' : '/onboarding');
   }
 
   @override
