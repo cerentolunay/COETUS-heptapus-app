@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/models/app_user.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -14,6 +17,8 @@ class FirebaseAuthRepository implements AuthRepository {
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
 
+  static const Duration _requestTimeout = Duration(seconds: 15);
+
   @override
   Future<AppUser?> getCurrentUser() async {
     final firebaseUser = _firebaseAuth.currentUser;
@@ -21,7 +26,11 @@ class FirebaseAuthRepository implements AuthRepository {
       return null;
     }
 
-    final snapshot = await _firestore.collection('users').doc(firebaseUser.uid).get();
+    final snapshot = await _firestore
+      .collection('users')
+      .doc(firebaseUser.uid)
+      .get()
+      .timeout(_requestTimeout);
     final data = snapshot.data();
 
     if (data == null) {
@@ -45,20 +54,24 @@ class FirebaseAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final credential = await _firebaseAuth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    final credential = await _firebaseAuth
+        .signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        )
+        .timeout(_requestTimeout);
 
     final firebaseUser = credential.user;
     if (firebaseUser == null) {
       throw StateError('Firebase user could not be created.');
     }
 
-    return _upsertUserProfile(
+    final profile = _buildProfile(
       user: firebaseUser,
       fallbackName: firebaseUser.displayName ?? email.split('@').first,
     );
+    _syncUserProfile(profile);
+    return profile;
   }
 
   @override
@@ -67,36 +80,75 @@ class FirebaseAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    final credential = await _firebaseAuth
+        .createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        )
+        .timeout(_requestTimeout);
 
     final firebaseUser = credential.user;
     if (firebaseUser == null) {
       throw StateError('Firebase user could not be created.');
     }
 
-    await firebaseUser.updateDisplayName(fullName.trim());
+    await firebaseUser.updateDisplayName(fullName.trim()).timeout(_requestTimeout);
 
-    return _upsertUserProfile(
+    final profile = _buildProfile(
       user: firebaseUser,
       fallbackName: fullName.trim(),
       bio: 'Ready to exchange skills',
     );
+    _syncUserProfile(profile);
+    return profile;
+  }
+
+  @override
+  Future<AppUser> signInWithGoogle() async {
+    final googleSignIn = GoogleSignIn(
+      scopes: <String>['email'],
+    );
+
+    final googleUser = await googleSignIn.signIn().timeout(_requestTimeout);
+    if (googleUser == null) {
+      throw StateError('Google sign-in was cancelled.');
+    }
+
+    final googleAuth = await googleUser.authentication.timeout(_requestTimeout);
+    final credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+      accessToken: googleAuth.accessToken,
+    );
+
+    final userCredential = await _firebaseAuth
+        .signInWithCredential(credential)
+        .timeout(_requestTimeout);
+
+    final firebaseUser = userCredential.user;
+    if (firebaseUser == null) {
+      throw StateError('Firebase user could not be created.');
+    }
+
+    final profile = _buildProfile(
+      user: firebaseUser,
+      fallbackName: firebaseUser.displayName ?? 'Google User',
+      bio: 'Ready to exchange skills',
+    );
+    _syncUserProfile(profile);
+    return profile;
   }
 
   @override
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    await _firebaseAuth.signOut().timeout(_requestTimeout);
   }
 
-  Future<AppUser> _upsertUserProfile({
+  AppUser _buildProfile({
     required User user,
     required String fallbackName,
     String bio = 'Skill swapping enthusiast',
-  }) async {
-    final profile = AppUser(
+  }) {
+    return AppUser(
       id: user.uid,
       name: user.displayName ?? fallbackName,
       email: user.email ?? '',
@@ -105,12 +157,24 @@ class FirebaseAuthRepository implements AuthRepository {
       credits: 0,
       verified: false,
     );
+  }
 
-    await _firestore.collection('users').doc(user.uid).set(
-          profile.toMap(),
-          SetOptions(merge: true),
-        );
-
-    return profile;
+  void _syncUserProfile(AppUser profile) {
+    unawaited(() async {
+      try {
+        await _firestore
+            .collection('users')
+            .doc(profile.id)
+            .set(
+              profile.toMap(),
+              SetOptions(merge: true),
+            )
+            .timeout(_requestTimeout);
+      } on TimeoutException {
+        // Firestore is optional for unblocking auth; retry can happen later.
+      } catch (_) {
+        // Ignore background profile sync failures.
+      }
+    }());
   }
 }

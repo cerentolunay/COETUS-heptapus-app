@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -141,6 +144,75 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authRepository.signInWithGoogle();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google ile giriş başarılı'),
+        ),
+      );
+
+      context.go('/home');
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_mapAuthError(error.code)),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google oturumu zaman aşımına uğradı.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google ile giriş yapılamadı.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _mapAuthError(String code) {
+    switch (code) {
+      case 'account-exists-with-different-credential':
+        return 'Bu hesap farklı bir yöntemle kayıtlı.';
+      case 'invalid-credential':
+        return 'Google kimlik bilgisi geçersiz.';
+      case 'network-request-failed':
+        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
+      case 'user-disabled':
+        return 'Bu kullanıcı devre dışı bırakılmış.';
+      default:
+        return 'Google ile giriş yapılamadı. ($code)';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -237,7 +309,7 @@ class _LoginPageState extends State<LoginPage>
                       _SecondaryButton(
                         text: 'Continue with Google',
                         leading: const _GoogleIcon(),
-                        onTap: _isLoading ? null : () {},
+                        onTap: _isLoading ? null : _handleGoogleSignIn,
                       ),
                       const SizedBox(height: 32),
                       Center(

@@ -4,6 +4,8 @@ import '../../domain/repositories/auth_repository.dart';
 class LocalAuthRepository implements AuthRepository {
   static AppUser? _currentUser;
 
+  static AppUser? get currentUser => _currentUser;
+
   @override
   Future<AppUser?> getCurrentUser() async {
     return _currentUser;
@@ -44,6 +46,22 @@ class LocalAuthRepository implements AuthRepository {
       trustScore: 0,
       credits: 0,
       verified: false,
+    );
+
+    _currentUser = user;
+    return user;
+  }
+
+  @override
+  Future<AppUser> signInWithGoogle() async {
+    final user = AppUser(
+      id: _buildUserId('google.user@example.com'),
+      name: 'Google User',
+      email: 'google.user@example.com',
+      bio: 'Skill swapping enthusiast',
+      trustScore: 12,
+      credits: 50,
+      verified: true,
     );
 
     _currentUser = user;
