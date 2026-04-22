@@ -1,7 +1,11 @@
-import 'package:coetus/features/auth/domain/models/app_user.dart';
-import 'package:coetus/features/profile/domain/models/skill_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../auth/domain/models/app_user.dart';
+import '../../data/repositories/profile_repository_factory.dart';
+import '../../domain/models/profile_data.dart';
+import '../../domain/models/skill_model.dart';
+import '../../domain/repositories/profile_repository.dart';
 
 class SkillProfilePage extends StatefulWidget {
   const SkillProfilePage({super.key});
@@ -11,6 +15,8 @@ class SkillProfilePage extends StatefulWidget {
 }
 
 class _SkillProfilePageState extends State<SkillProfilePage> {
+  final ProfileRepository _profileRepository = ProfileRepositoryFactory.create();
+
   AppUser _user = const AppUser(
     id: 'u1',
     name: 'Alex Chen',
@@ -18,18 +24,20 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     bio: 'Skill swapping enthusiast',
   );
 
-  final List<SkillModel> _skills = [
-    const SkillModel(id: '1', name: 'Guitar', level: 6),
-    const SkillModel(id: '2', name: 'English', level: 2),
-    const SkillModel(id: '3', name: 'Cooking', level: 5),
-    const SkillModel(id: '4', name: 'Photography', level: 4),
+  List<SkillModel> _skills = const [
+    SkillModel(id: '1', name: 'Guitar', level: 6),
+    SkillModel(id: '2', name: 'English', level: 2),
+    SkillModel(id: '3', name: 'Cooking', level: 5),
+    SkillModel(id: '4', name: 'Photography', level: 4),
   ];
 
-  final List<_LearningGoal> _learningGoals = const [
-    _LearningGoal(id: '1', name: 'Spanish', emoji: 'ES'),
-    _LearningGoal(id: '2', name: 'Yoga', emoji: 'YG'),
-    _LearningGoal(id: '3', name: 'Piano', emoji: 'PN'),
+  List<SkillModel> _learningGoals = const [
+    SkillModel(id: '1', name: 'Spanish', level: 1),
+    SkillModel(id: '2', name: 'Yoga', level: 1),
+    SkillModel(id: '3', name: 'Piano', level: 1),
   ];
+
+  bool _isLoadingProfile = true;
 
   static const Color _bg = Color(0xFF0A0A0F);
   static const Color _card = Color(0xFF1A1A2E);
@@ -39,6 +47,43 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   static const Color _violet = Color(0xFF8B5CF6);
   static const Color _indigoText = Color(0xFF818CF8);
   static const Color _violetText = Color(0xFFC4B5FD);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await _profileRepository.loadProfile();
+
+    if (!mounted) return;
+
+    setState(() {
+      _applyProfile(profile);
+      _isLoadingProfile = false;
+    });
+  }
+
+  void _applyProfile(ProfileData profile) {
+    _user = profile.user;
+    _skills = profile.teachSkills;
+    _learningGoals = profile.learnSkills;
+  }
+
+  String _skillAvatarText(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      return '?';
+    }
+
+    final parts = trimmed.split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return trimmed[0].toUpperCase();
+    }
+
+    return parts.take(2).map((part) => part[0]).join().toUpperCase();
+  }
 
   Future<void> _showEditSkillDialog(SkillModel skill) async {
   final nameController = TextEditingController(text: skill.name);
@@ -113,7 +158,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final updatedName = nameController.text.trim();
               if (updatedName.isEmpty) return;
 
@@ -126,6 +171,13 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                   );
                 }
               });
+
+              await _profileRepository.saveTeachSkill(
+                skill.copyWith(
+                  name: updatedName,
+                  level: selectedLevel.toInt(),
+                ),
+              );
 
               Navigator.of(dialogContext).pop();
             },
@@ -170,10 +222,12 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 _skills.removeWhere((s) => s.id == skill.id);
               });
+
+              await _profileRepository.deleteTeachSkill(skill.id);
 
               Navigator.of(dialogContext).pop();
             },
@@ -204,6 +258,8 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
     _user = updatedUser;
   });
 
+  await _profileRepository.updateProfile(updatedUser);
+
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
       content: Text('Profile updated'),
@@ -224,6 +280,8 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
       _skills.add(newSkill);
     });
 
+    await _profileRepository.saveTeachSkill(newSkill);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${newSkill.name} added'),
@@ -231,8 +289,34 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
     );
   }
 
+  Future<void> _showAddGoalDialog() async {
+    final SkillModel? newGoal = await showDialog<SkillModel>(
+      context: context,
+      builder: (_) => const _AddSkillDialog(),
+    );
+
+    if (!mounted || newGoal == null) return;
+
+    final updatedGoal = newGoal.copyWith(level: 1);
+
+    setState(() {
+      _learningGoals.add(updatedGoal);
+    });
+
+    await _profileRepository.saveLearnSkill(updatedGoal);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingProfile) {
+      return const Scaffold(
+        backgroundColor: _bg,
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
@@ -440,7 +524,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
               ),
             ),
             TextButton.icon(
-              onPressed: () {},
+              onPressed: _showAddGoalDialog,
               icon: const Icon(Icons.add, color: _indigoText, size: 18),
               label: const Text(
                 'Add Goal',
@@ -478,7 +562,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
                     radius: 20,
                     backgroundColor: _violet.withOpacity(0.20),
                     child: Text(
-                      goal.emoji,
+                      _skillAvatarText(goal.name),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -742,18 +826,6 @@ class _NavItem extends StatelessWidget {
       ),
     );
   }
-}
-
-class _LearningGoal {
-  final String id;
-  final String name;
-  final String emoji;
-
-  const _LearningGoal({
-    required this.id,
-    required this.name,
-    required this.emoji,
-  });
 }
 
 class _AddSkillDialog extends StatefulWidget {

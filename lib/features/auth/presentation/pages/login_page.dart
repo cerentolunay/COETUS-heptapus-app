@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../data/repositories/auth_repository_factory.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,6 +17,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final AuthRepository _authRepository = AuthRepositoryFactory.create();
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -103,21 +110,107 @@ class _LoginPageState extends State<LoginPage>
       _isLoading = true;
     });
 
-    await Future<void>.delayed(const Duration(seconds: 1));
+    try {
+      await _authRepository.signIn(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
 
-    if (!mounted) return;
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Giriş başarılı'),
+        ),
+      );
+
+      context.go('/home');
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Giriş yapılamadı'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) {
+      return;
+    }
 
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Giriş başarılı'),
-      ),
-    );
+    try {
+      await _authRepository.signInWithGoogle();
 
-    context.go('/home');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google ile giriş başarılı'),
+        ),
+      );
+
+      context.go('/home');
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_mapAuthError(error.code)),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google oturumu zaman aşımına uğradı.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google ile giriş yapılamadı.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _mapAuthError(String code) {
+    switch (code) {
+      case 'account-exists-with-different-credential':
+        return 'Bu hesap farklı bir yöntemle kayıtlı.';
+      case 'invalid-credential':
+        return 'Google kimlik bilgisi geçersiz.';
+      case 'network-request-failed':
+        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
+      case 'user-disabled':
+        return 'Bu kullanıcı devre dışı bırakılmış.';
+      default:
+        return 'Google ile giriş yapılamadı. ($code)';
+    }
   }
 
   @override
@@ -216,7 +309,7 @@ class _LoginPageState extends State<LoginPage>
                       _SecondaryButton(
                         text: 'Continue with Google',
                         leading: const _GoogleIcon(),
-                        onTap: _isLoading ? null : () {},
+                        onTap: _isLoading ? null : _handleGoogleSignIn,
                       ),
                       const SizedBox(height: 32),
                       Center(

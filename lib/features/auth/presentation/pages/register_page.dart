@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../data/repositories/auth_repository_factory.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -11,6 +17,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final AuthRepository _authRepository = AuthRepositoryFactory.create();
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -138,21 +145,158 @@ class _RegisterPageState extends State<RegisterPage>
       _isLoading = true;
     });
 
-    await Future<void>.delayed(const Duration(seconds: 1));
+    try {
+      await _authRepository.signUp(
+            fullName: _fullNameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
 
-    if (!mounted) return;
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kayıt başarılı'),
+        ),
+      );
+
+      context.go('/home');
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_mapAuthError(error.code)),
+        ),
+      );
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_mapFirestoreError(error.code)),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İstek zaman aşımına uğradı. İnternet bağlantını kontrol et.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kayıt oluşturulamadı. Lütfen tekrar dene.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) {
+      return;
+    }
 
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Kayıt başarılı'),
-      ),
-    );
+    try {
+      await _authRepository.signInWithGoogle();
 
-    context.go('/home');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google ile kayıt başarılı'),
+        ),
+      );
+
+      context.go('/home');
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_mapGoogleAuthError(error.code)),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google oturumu zaman aşımına uğradı.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google ile kayıt oluşturulamadı.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _mapGoogleAuthError(String code) {
+    switch (code) {
+      case 'account-exists-with-different-credential':
+        return 'Bu hesap farklı bir yöntemle kayıtlı.';
+      case 'invalid-credential':
+        return 'Google kimlik bilgisi geçersiz.';
+      case 'network-request-failed':
+        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
+      case 'user-disabled':
+        return 'Bu kullanıcı devre dışı bırakılmış.';
+      default:
+        return 'Google ile kayıt oluşturulamadı. ($code)';
+    }
+  }
+
+  String _mapAuthError(String code) {
+    switch (code) {
+      case 'email-already-in-use':
+        return 'Bu e-posta zaten kullanımda.';
+      case 'invalid-email':
+        return 'Geçerli bir e-posta adresi gir.';
+      case 'weak-password':
+        return 'Şifre çok zayıf. En az 8 karakter kullan.';
+      case 'network-request-failed':
+        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
+      case 'too-many-requests':
+        return 'Çok fazla deneme yapıldı. Bir süre sonra tekrar dene.';
+      default:
+        return 'Kayıt oluşturulamadı. ($code)';
+    }
+  }
+
+  String _mapFirestoreError(String code) {
+    switch (code) {
+      case 'permission-denied':
+        return 'Veri yazma izni yok. Firestore kurallarını kontrol et.';
+      case 'unavailable':
+        return 'Firestore şu an kullanılamıyor. Lütfen tekrar dene.';
+      default:
+        return 'Profil kaydedilemedi. ($code)';
+    }
   }
 
   @override
@@ -275,7 +419,7 @@ class _RegisterPageState extends State<RegisterPage>
                       _SecondaryButton(
                         text: 'Sign up with Google',
                         leading: const _GoogleIcon(),
-                        onTap: _isLoading ? null : () {},
+                        onTap: _isLoading ? null : _handleGoogleSignIn,
                       ),
                       const SizedBox(height: 28),
                       Center(

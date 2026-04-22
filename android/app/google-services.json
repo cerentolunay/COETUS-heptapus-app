@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "247971322354",
+    "firebase_url": "https://coetus-bc9c6-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "coetus-bc9c6",
+    "storage_bucket": "coetus-bc9c6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:247971322354:android:98fa571750f558ef14f36b",
+        "android_client_info": {
+          "package_name": "com.heptapus.coetus"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "247971322354-vpgmh4sap5n6kk84th6vrobcq5ar9p5h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.heptapus.coetus",
+            "certificate_hash": "ce0b976009f925b9c6888934323c302f6be23c5a"
+          }
+        },
+        {
+          "client_id": "247971322354-9jf2fg6854ghh5p3k0mh96jorblj72i2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnHcM9MEepEHReYgVk-cRTMvOZynS08Js"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "247971322354-9jf2fg6854ghh5p3k0mh96jorblj72i2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "247971322354-s7l9p2i63qgn5cv320827rk53gdqvs6k.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.heptapus.coetus"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
