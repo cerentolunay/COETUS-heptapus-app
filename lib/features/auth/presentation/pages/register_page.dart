@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/repositories/auth_repository_factory.dart';
+import '../../domain/repositories/auth_repository.dart';
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -11,6 +14,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final AuthRepository _authRepository = AuthRepositoryFactory.create();
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -138,21 +142,39 @@ class _RegisterPageState extends State<RegisterPage>
       _isLoading = true;
     });
 
-    await Future<void>.delayed(const Duration(seconds: 1));
+    try {
+      await _authRepository.signUp(
+            fullName: _fullNameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
+      setState(() {
+        _isLoading = false;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Kayıt başarılı'),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kayıt başarılı'),
+        ),
+      );
 
-    context.go('/home');
+      context.go('/home');
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kayıt oluşturulamadı'),
+        ),
+      );
+    }
   }
 
   @override

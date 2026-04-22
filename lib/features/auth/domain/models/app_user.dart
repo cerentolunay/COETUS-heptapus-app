@@ -3,12 +3,18 @@ class AppUser {
   final String name;
   final String email;
   final String bio;
+  final int trustScore;
+  final int credits;
+  final bool verified;
 
   const AppUser({
     required this.id,
     required this.name,
     required this.email,
     required this.bio,
+    this.trustScore = 0,
+    this.credits = 0,
+    this.verified = false,
   });
 
   AppUser copyWith({
@@ -16,12 +22,18 @@ class AppUser {
     String? name,
     String? email,
     String? bio,
+    int? trustScore,
+    int? credits,
+    bool? verified,
   }) {
     return AppUser(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
       bio: bio ?? this.bio,
+      trustScore: trustScore ?? this.trustScore,
+      credits: credits ?? this.credits,
+      verified: verified ?? this.verified,
     );
   }
 
@@ -31,6 +43,9 @@ class AppUser {
       'name': name,
       'email': email,
       'bio': bio,
+      'trustScore': trustScore,
+      'credits': credits,
+      'verified': verified,
     };
   }
 
@@ -40,6 +55,9 @@ class AppUser {
       name: map['name'] as String? ?? '',
       email: map['email'] as String? ?? '',
       bio: map['bio'] as String? ?? '',
+      trustScore: map['trustScore'] as int? ?? 0,
+      credits: map['credits'] as int? ?? 0,
+      verified: map['verified'] as bool? ?? false,
     );
   }
 }
