@@ -92,7 +92,13 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: fullName.trim(),
       bio: 'Ready to exchange skills',
     );
-    return _syncUserProfile(profile, includeCreatedAt: true);
+
+    try {
+      return await _syncUserProfile(profile, includeCreatedAt: true);
+    } catch (_) {
+      await firebaseUser.delete().timeout(_requestTimeout);
+      rethrow;
+    }
   }
 
   @override
