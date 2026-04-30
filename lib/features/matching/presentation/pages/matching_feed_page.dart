@@ -205,11 +205,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             const Text(
               'Check back soon for more skill-swap opportunities',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _textMuted,
-                fontSize: 14,
-                height: 1.5,
-              ),
+              style: TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 24),
             Container(
@@ -219,7 +215,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  context.go('/profile-advanced');
+                  context.go('/profile');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
@@ -267,10 +263,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               const SizedBox(height: 4),
               Text(
                 '$remaining profiles available',
-                style: const TextStyle(
-                  color: _textMuted,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: _textMuted, fontSize: 13),
               ),
             ],
           ),
@@ -329,10 +322,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           const SizedBox(height: 14),
           Text(
             'Swipe requires ${user.creditsRequired} HC commitment',
-            style: const TextStyle(
-              color: _textDarkMuted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: _textDarkMuted, fontSize: 12),
           ),
         ],
       ),
@@ -343,9 +333,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     return Container(
       decoration: BoxDecoration(
         color: _bgMid.withOpacity(0.86),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.10)),
-        ),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.10))),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
@@ -354,7 +342,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           _BottomNavItem(
             icon: Icons.person_outline,
             label: 'Profile',
-            onTap: () => context.go('/profile-advanced'),
+            onTap: () => context.go('/profile'),
           ),
           _BottomNavItem(
             icon: Icons.trending_up,
@@ -468,10 +456,7 @@ class _MatchCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '📍 ${user.location}',
-                    style: const TextStyle(
-                      color: _textMuted,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: _textMuted, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -515,8 +500,11 @@ class _MatchCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.shield_outlined,
-                                size: 12, color: _green),
+                            const Icon(
+                              Icons.shield_outlined,
+                              size: 12,
+                              color: _green,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${user.trustScore}% Trust',
@@ -558,11 +546,7 @@ class _MatchCard extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           user.bio,
-          style: const TextStyle(
-            color: _textSoft,
-            fontSize: 14,
-            height: 1.6,
-          ),
+          style: const TextStyle(color: _textSoft, fontSize: 14, height: 1.6),
         ),
       ],
     );
@@ -590,10 +574,12 @@ class _MatchCard extends StatelessWidget {
         const SizedBox(height: 12),
         Column(
           children: user.canTeach
-              .map((skill) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _TeachSkillCard(skill: skill),
-                  ))
+              .map(
+                (skill) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _TeachSkillCard(skill: skill),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -718,10 +704,7 @@ class _MatchCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              _violet.withOpacity(0.20),
-              _cyan.withOpacity(0.20),
-            ],
+            colors: [_violet.withOpacity(0.20), _cyan.withOpacity(0.20)],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _violet.withOpacity(0.30)),
@@ -794,10 +777,7 @@ class _TeachSkillCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     const Text(
                       'Expert Level',
-                      style: TextStyle(
-                        color: _textMuted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: _textMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1034,8 +1014,5 @@ class _LearnGoal {
   final String name;
   final String emoji;
 
-  const _LearnGoal({
-    required this.name,
-    required this.emoji,
-  });
+  const _LearnGoal({required this.name, required this.emoji});
 }
