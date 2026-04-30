@@ -11,8 +11,8 @@ class FirebaseProfileRepository implements ProfileRepository {
   FirebaseProfileRepository({
     FirebaseAuth? firebaseAuth,
     FirebaseFirestore? firestore,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
@@ -59,10 +59,10 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
-    await _firestore.collection('users').doc(firebaseUser.uid).set(
-          user.toMap(),
-          SetOptions(merge: true),
-        );
+    await _firestore.collection('users').doc(firebaseUser.uid).set({
+      ...user.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
     await firebaseUser.updateDisplayName(user.name);
 
     return loadProfile();
@@ -75,11 +75,15 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
-    await _firestore.collection('users').doc(userId).collection('teachSkills').doc(skill.id).set(
-          skill.toMap(),
-          SetOptions(merge: true),
-        );
+    final userDoc = _firestore.collection('users').doc(userId);
+    final teachSkill = skill.copyWith(teachable: true);
 
+    await userDoc
+        .collection('teachSkills')
+        .doc(teachSkill.id)
+        .set(teachSkill.toMap(), SetOptions(merge: true));
+
+    await _syncSkillSummary(userDoc);
     return loadProfile();
   }
 
@@ -90,7 +94,9 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
-    await _firestore.collection('users').doc(userId).collection('teachSkills').doc(skillId).delete();
+    final userDoc = _firestore.collection('users').doc(userId);
+    await userDoc.collection('teachSkills').doc(skillId).delete();
+    await _syncSkillSummary(userDoc);
     return loadProfile();
   }
 
@@ -101,11 +107,18 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
-    await _firestore.collection('users').doc(userId).collection('learnSkills').doc(skill.id).set(
-          skill.toMap(),
-          SetOptions(merge: true),
-        );
+    final userDoc = _firestore.collection('users').doc(userId);
+    final learnSkill = skill.copyWith(
+      learnable: true,
+      level: skill.level.clamp(1, 7),
+    );
 
+    await userDoc
+        .collection('learnSkills')
+        .doc(learnSkill.id)
+        .set(learnSkill.toMap(), SetOptions(merge: true));
+
+    await _syncSkillSummary(userDoc);
     return loadProfile();
   }
 
@@ -116,17 +129,38 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
-    await _firestore.collection('users').doc(userId).collection('learnSkills').doc(skillId).delete();
+    final userDoc = _firestore.collection('users').doc(userId);
+    await userDoc.collection('learnSkills').doc(skillId).delete();
+    await _syncSkillSummary(userDoc);
     return loadProfile();
   }
 
-  Future<List<SkillModel>> _readSkills(CollectionReference<Map<String, dynamic>> collection) async {
+  Future<List<SkillModel>> _readSkills(
+    CollectionReference<Map<String, dynamic>> collection,
+  ) async {
     final snapshot = await collection.get();
     return snapshot.docs.map((doc) {
-      return SkillModel.fromMap({
-        'id': doc.id,
-        ...doc.data(),
-      });
+      return SkillModel.fromMap({'id': doc.id, ...doc.data()});
     }).toList();
+  }
+
+  Future<void> _syncSkillSummary(
+    DocumentReference<Map<String, dynamic>> userDoc,
+  ) async {
+    final teachSkills = await _readSkills(userDoc.collection('teachSkills'));
+    final learnSkills = await _readSkills(userDoc.collection('learnSkills'));
+
+    await userDoc.set({
+      'skills': teachSkills.map((skill) => skill.toMap()).toList(),
+      'teachSkillNames': teachSkills
+          .map((skill) => skill.name.trim().toLowerCase())
+          .where((name) => name.isNotEmpty)
+          .toList(),
+      'learnSkillNames': learnSkills
+          .map((skill) => skill.name.trim().toLowerCase())
+          .where((name) => name.isNotEmpty)
+          .toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

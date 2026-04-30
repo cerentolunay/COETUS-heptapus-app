@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 // Auth
@@ -25,10 +24,7 @@ class AppRouter {
     initialLocation: '/',
     debugLogDiagnostics: true,
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const SplashPage(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(
         path: '/welcome',
         builder: (context, state) => const WelcomePage(),
@@ -37,10 +33,7 @@ class AppRouter {
         path: '/onboarding',
         builder: (context, state) => const OnboardingIntroPage(),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),
@@ -58,7 +51,7 @@ class AppRouter {
       // Şimdilik seni MatchingFeedPage'e veya Profile'a atsın:
       GoRoute(
         path: '/home',
-        builder: (context, state) => const SkillProfilePage(), 
+        builder: (context, state) => const SkillProfilePage(),
       ),
       // -------------------------------------------
       GoRoute(
