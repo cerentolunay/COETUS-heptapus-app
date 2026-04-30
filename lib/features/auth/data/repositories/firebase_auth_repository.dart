@@ -65,8 +65,7 @@ class FirebaseAuthRepository implements AuthRepository {
       user: firebaseUser,
       fallbackName: firebaseUser.displayName ?? email.split('@').first,
     );
-    await _syncUserProfile(profile);
-    return profile;
+    return _syncUserProfile(profile);
   }
 
   @override
@@ -93,8 +92,7 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: fullName.trim(),
       bio: 'Ready to exchange skills',
     );
-    await _syncUserProfile(profile, includeCreatedAt: true);
-    return profile;
+    return _syncUserProfile(profile, includeCreatedAt: true);
   }
 
   @override
@@ -126,11 +124,10 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: firebaseUser.displayName ?? 'Google User',
       bio: 'Ready to exchange skills',
     );
-    await _syncUserProfile(
+    return _syncUserProfile(
       profile,
       includeCreatedAt: userCredential.additionalUserInfo?.isNewUser ?? false,
     );
-    return profile;
   }
 
   @override
@@ -154,10 +151,28 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
-  Future<void> _syncUserProfile(
+  Future<AppUser> _syncUserProfile(
     AppUser profile, {
     bool includeCreatedAt = false,
   }) async {
+    final userDoc = _firestore.collection('users').doc(profile.id);
+    final snapshot = await userDoc.get().timeout(_requestTimeout);
+
+    if (snapshot.exists) {
+      await userDoc
+          .set({
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .timeout(_requestTimeout);
+
+      final data = snapshot.data() ?? <String, dynamic>{};
+      return AppUser.fromMap({
+        'id': profile.id,
+        'email': profile.email,
+        ...data,
+      });
+    }
+
     final data = <String, dynamic>{
       ...profile.toMap(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -167,10 +182,7 @@ class FirebaseAuthRepository implements AuthRepository {
       data['createdAt'] = FieldValue.serverTimestamp();
     }
 
-    await _firestore
-        .collection('users')
-        .doc(profile.id)
-        .set(data, SetOptions(merge: true))
-        .timeout(_requestTimeout);
+    await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
+    return profile;
   }
 }
