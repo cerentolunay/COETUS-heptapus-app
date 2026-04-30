@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashPage extends StatefulWidget {
@@ -23,10 +24,16 @@ class _SplashPageState extends State<SplashPage> {
 
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     if (!mounted) return;
 
-    context.go(hasSeenOnboarding ? '/welcome' : '/onboarding');
+    if (!hasSeenOnboarding) {
+      context.go('/onboarding');
+      return;
+    }
+
+    context.go(currentUser == null ? '/login' : '/home');
   }
 
   @override
@@ -35,10 +42,7 @@ class _SplashPageState extends State<SplashPage> {
       body: Center(
         child: Text(
           'COETUS',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
       ),
     );

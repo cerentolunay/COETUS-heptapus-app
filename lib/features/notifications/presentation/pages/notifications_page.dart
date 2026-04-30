@@ -109,7 +109,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         const Text('Notifications', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: _violet.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(color: _violet.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
           child: Text('$unread New', style: const TextStyle(color: _violetSoft, fontWeight: FontWeight.bold)),
         )
       ],
@@ -127,7 +127,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               gradient: isActive ? const LinearGradient(colors: [_violet, _cyan]) : null,
-              color: isActive ? null : Colors.white.withOpacity(0.05),
+              color: isActive ? null : Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(_filters[index], style: const TextStyle(color: Colors.white)),
@@ -144,7 +144,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget _buildBottomNavigation(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(color: _bg2, border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1)))),
+      decoration: BoxDecoration(color: _bg2, border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1)))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -176,7 +176,7 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.1))),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.1))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

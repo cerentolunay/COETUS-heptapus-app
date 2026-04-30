@@ -110,12 +110,12 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                   decoration: InputDecoration(
                     hintText: 'Skill name',
                     hintStyle: TextStyle(
-                      color: Colors.white.withOpacity(0.40),
+                      color: Colors.white.withValues(alpha: 0.40),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withValues(alpha: 0.12),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -128,7 +128,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                 Text(
                   'Level: ${selectedLevel.toInt()}/7',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -138,7 +138,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                   max: 7,
                   divisions: 6,
                   activeColor: _indigo,
-                  inactiveColor: Colors.white.withOpacity(0.15),
+                  inactiveColor: Colors.white.withValues(alpha: 0.15),
                   onChanged: (value) {
                     setDialogState(() {
                       selectedLevel = value;
@@ -154,7 +154,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
             ),
           ),
           ElevatedButton(
@@ -210,7 +210,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
         content: Text(
           '${skill.name} skillini silmek istiyor musun?',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.80),
+            color: Colors.white.withValues(alpha: 0.80),
           ),
         ),
         actions: [
@@ -218,7 +218,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
             ),
           ),
           ElevatedButton(
@@ -427,7 +427,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
                 Text(
                   _user.email,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.55),
+                    color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 14,
                   ),
                 ),
@@ -435,7 +435,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
                 Text(
                   _user.bio,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.70),
+                    color: Colors.white.withValues(alpha: 0.70),
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -447,12 +447,12 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
                   children: [
                     _InfoChip(
                       text: '${_skills.length} skills',
-                      background: _indigo.withOpacity(0.20),
+                      background: _indigo.withValues(alpha: 0.20),
                       textColor: _indigoText,
                     ),
                     _InfoChip(
                       text: '${_learningGoals.length} goals',
-                      background: _violet.withOpacity(0.20),
+                      background: _violet.withValues(alpha: 0.20),
                       textColor: _violetText,
                     ),
                   ],
@@ -560,7 +560,7 @@ Future<void> _showDeleteSkillDialog(SkillModel skill) async {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: _violet.withOpacity(0.20),
+                    backgroundColor: _violet.withValues(alpha: 0.20),
                     child: Text(
                       _skillAvatarText(goal.name),
                       style: const TextStyle(
@@ -660,7 +660,7 @@ class _SkillCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: _indigo.withOpacity(0.20),
+                backgroundColor: _indigo.withValues(alpha: 0.20),
                 child: Text(
                   skill.name.isNotEmpty ? skill.name[0].toUpperCase() : '?',
                   style: const TextStyle(
@@ -802,7 +802,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color = isActive ? _active : Colors.white.withOpacity(0.45);
+    final Color color = isActive ? _active : Colors.white.withValues(alpha: 0.45);
 
     return InkWell(
       onTap: onTap,
@@ -880,12 +880,12 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
             decoration: InputDecoration(
               hintText: 'Skill name',
               hintStyle: TextStyle(
-                color: Colors.white.withOpacity(0.40),
+                color: Colors.white.withValues(alpha: 0.40),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -898,7 +898,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
           Text(
             'Level: ${_selectedLevel.toInt()}/7',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -908,7 +908,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
             max: 7,
             divisions: 6,
             activeColor: _indigo,
-            inactiveColor: Colors.white.withOpacity(0.15),
+            inactiveColor: Colors.white.withValues(alpha: 0.15),
             label: _selectedLevel.toInt().toString(),
             onChanged: (value) {
               setState(() {
@@ -924,7 +924,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.70),
+              color: Colors.white.withValues(alpha: 0.70),
             ),
           ),
         ),
@@ -1006,12 +1006,12 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
             decoration: InputDecoration(
               labelText: 'Name',
               labelStyle: TextStyle(
-                color: Colors.white.withOpacity(0.70),
+                color: Colors.white.withValues(alpha: 0.70),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -1028,12 +1028,12 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
             decoration: InputDecoration(
               labelText: 'Bio',
               labelStyle: TextStyle(
-                color: Colors.white.withOpacity(0.70),
+                color: Colors.white.withValues(alpha: 0.70),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -1050,7 +1050,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.70),
+              color: Colors.white.withValues(alpha: 0.70),
             ),
           ),
         ),

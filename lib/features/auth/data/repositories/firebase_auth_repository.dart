@@ -11,8 +11,8 @@ class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({
     FirebaseAuth? firebaseAuth,
     FirebaseFirestore? firestore,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
@@ -20,33 +20,13 @@ class FirebaseAuthRepository implements AuthRepository {
   static const Duration _requestTimeout = Duration(seconds: 15);
 
   @override
+  Stream<AppUser?> authStateChanges() {
+    return _firebaseAuth.userChanges().asyncMap(_mapFirebaseUser);
+  }
+
+  @override
   Future<AppUser?> getCurrentUser() async {
-    final firebaseUser = _firebaseAuth.currentUser;
-    if (firebaseUser == null) {
-      return null;
-    }
-
-    final snapshot = await _firestore
-      .collection('users')
-      .doc(firebaseUser.uid)
-      .get()
-      .timeout(_requestTimeout);
-    final data = snapshot.data();
-
-    if (data == null) {
-      return AppUser(
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? '',
-        email: firebaseUser.email ?? '',
-        bio: '',
-      );
-    }
-
-    return AppUser.fromMap({
-      'id': firebaseUser.uid,
-      'email': firebaseUser.email ?? data['email'] ?? '',
-      ...data,
-    });
+    return _mapFirebaseUser(_firebaseAuth.currentUser);
   }
 
   @override
@@ -55,10 +35,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     final credential = await _firebaseAuth
-        .signInWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .signInWithEmailAndPassword(email: email.trim(), password: password)
         .timeout(_requestTimeout);
 
     final firebaseUser = credential.user;
@@ -81,10 +58,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     final credential = await _firebaseAuth
-        .createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .createUserWithEmailAndPassword(email: email.trim(), password: password)
         .timeout(_requestTimeout);
 
     final firebaseUser = credential.user;
@@ -92,7 +66,9 @@ class FirebaseAuthRepository implements AuthRepository {
       throw StateError('Firebase user could not be created.');
     }
 
-    await firebaseUser.updateDisplayName(fullName.trim()).timeout(_requestTimeout);
+    await firebaseUser
+        .updateDisplayName(fullName.trim())
+        .timeout(_requestTimeout);
 
     final profile = _buildProfile(
       user: firebaseUser,
@@ -105,9 +81,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> signInWithGoogle() async {
-    final googleSignIn = GoogleSignIn(
-      scopes: <String>['email'],
-    );
+    final googleSignIn = GoogleSignIn(scopes: <String>['email']);
 
     final googleUser = await googleSignIn.signIn().timeout(_requestTimeout);
     if (googleUser == null) {
@@ -165,10 +139,7 @@ class FirebaseAuthRepository implements AuthRepository {
         await _firestore
             .collection('users')
             .doc(profile.id)
-            .set(
-              profile.toMap(),
-              SetOptions(merge: true),
-            )
+            .set(profile.toMap(), SetOptions(merge: true))
             .timeout(_requestTimeout);
       } on TimeoutException {
         // Firestore is optional for unblocking auth; retry can happen later.
@@ -176,5 +147,33 @@ class FirebaseAuthRepository implements AuthRepository {
         // Ignore background profile sync failures.
       }
     }());
+  }
+
+  Future<AppUser?> _mapFirebaseUser(User? firebaseUser) async {
+    if (firebaseUser == null) {
+      return null;
+    }
+
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get()
+        .timeout(_requestTimeout);
+    final data = snapshot.data();
+
+    if (data == null) {
+      return AppUser(
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName ?? '',
+        email: firebaseUser.email ?? '',
+        bio: '',
+      );
+    }
+
+    return AppUser.fromMap({
+      'id': firebaseUser.uid,
+      'email': firebaseUser.email ?? data['email'] ?? '',
+      ...data,
+    });
   }
 }

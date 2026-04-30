@@ -360,7 +360,7 @@ class _RegisterPageState extends State<RegisterPage>
                           textAlign: TextAlign.center,
                           text: TextSpan(
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.42),
+                              color: Colors.white.withValues(alpha: 0.42),
                               fontSize: 12,
                               height: 1.5,
                             ),
@@ -393,7 +393,7 @@ class _RegisterPageState extends State<RegisterPage>
                           Expanded(
                             child: Container(
                               height: 1,
-                              color: Colors.white.withOpacity(0.10),
+                              color: Colors.white.withValues(alpha: 0.10),
                             ),
                           ),
                           Padding(
@@ -401,7 +401,7 @@ class _RegisterPageState extends State<RegisterPage>
                             child: Text(
                               'OR',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.35),
+                                color: Colors.white.withValues(alpha: 0.35),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -410,7 +410,7 @@ class _RegisterPageState extends State<RegisterPage>
                           Expanded(
                             child: Container(
                               height: 1,
-                              color: Colors.white.withOpacity(0.10),
+                              color: Colors.white.withValues(alpha: 0.10),
                             ),
                           ),
                         ],
@@ -429,7 +429,7 @@ class _RegisterPageState extends State<RegisterPage>
                             Text(
                               'Already have an account? ',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.55),
+                                color: Colors.white.withValues(alpha: 0.55),
                                 fontSize: 14,
                               ),
                             ),
@@ -506,7 +506,7 @@ class _RegisterHeaderSection extends StatelessWidget {
           'Join the professional skill-swapping ecosystem',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.50),
+            color: Colors.white.withValues(alpha: 0.50),
             fontSize: 14,
           ),
         ),
@@ -580,7 +580,7 @@ class _RegisterFormSection extends StatelessWidget {
             onPressed: onTogglePassword,
             icon: Icon(
               showPassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withOpacity(0.55),
+              color: Colors.white.withValues(alpha: 0.55),
             ),
           ),
         ),
@@ -588,7 +588,7 @@ class _RegisterFormSection extends StatelessWidget {
         Text(
           'Must be at least 8 characters',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.35),
+            color: Colors.white.withValues(alpha: 0.35),
             fontSize: 12,
           ),
         ),
@@ -605,7 +605,7 @@ class _RegisterFormSection extends StatelessWidget {
             onPressed: onToggleConfirmPassword,
             icon: Icon(
               showConfirmPassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withOpacity(0.55),
+              color: Colors.white.withValues(alpha: 0.55),
             ),
           ),
         ),
@@ -624,7 +624,7 @@ class _FieldLabel extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.50),
+        color: Colors.white.withValues(alpha: 0.50),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -662,7 +662,7 @@ class _GlassInput extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
-          color: Colors.white.withOpacity(0.35),
+          color: Colors.white.withValues(alpha: 0.35),
           fontSize: 14,
         ),
         errorStyle: const TextStyle(
@@ -671,11 +671,11 @@ class _GlassInput extends StatelessWidget {
         ),
         prefixIcon: Icon(
           prefixIcon,
-          color: Colors.white.withOpacity(0.50),
+          color: Colors.white.withValues(alpha: 0.50),
         ),
         suffixIcon: suffix,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.white.withValues(alpha: 0.05),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 18,
@@ -683,7 +683,7 @@ class _GlassInput extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.10),
+            color: Colors.white.withValues(alpha: 0.10),
           ),
         ),
         focusedBorder: OutlineInputBorder(
@@ -803,11 +803,11 @@ class _SecondaryButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.05),
+        backgroundColor: Colors.white.withValues(alpha: 0.05),
         shadowColor: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
         side: BorderSide(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),

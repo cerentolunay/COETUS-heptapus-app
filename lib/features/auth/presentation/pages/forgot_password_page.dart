@@ -184,7 +184,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: _purple.withOpacity(0.30),
+                color: _purple.withValues(alpha: 0.30),
                 blurRadius: 18,
                 offset: const Offset(0, 10),
               ),

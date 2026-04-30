@@ -278,9 +278,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.10)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             ),
             child: const Icon(
               Icons.my_location_outlined,
@@ -303,7 +303,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             children: [
               _ActionButton(
                 size: 64,
-                borderColor: Colors.white.withOpacity(0.10),
+                borderColor: Colors.white.withValues(alpha: 0.10),
                 icon: Icons.close,
                 iconColor: Colors.redAccent,
                 onTap: () => _handleSwipe('left'),
@@ -319,7 +319,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               const SizedBox(width: 24),
               _ActionButton(
                 size: 64,
-                borderColor: _cyan.withOpacity(0.35),
+                borderColor: _cyan.withValues(alpha: 0.35),
                 icon: Icons.auto_awesome,
                 iconColor: _cyan,
                 onTap: () {},
@@ -342,9 +342,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   Widget _buildBottomNav(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _bgMid.withOpacity(0.86),
+        color: _bgMid.withValues(alpha: 0.86),
         border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.10)),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
@@ -486,12 +486,12 @@ class _MatchCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              _violet.withOpacity(0.20),
-                              _cyan.withOpacity(0.20),
+                              _violet.withValues(alpha: 0.20),
+                              _cyan.withValues(alpha: 0.20),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: _violet.withOpacity(0.30)),
+                          border: Border.all(color: _violet.withValues(alpha: 0.30)),
                         ),
                         child: Text(
                           '${user.matchPercentage}% Match',
@@ -508,9 +508,9 @@ class _MatchCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: _green.withOpacity(0.18),
+                          color: _green.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: _green.withOpacity(0.30)),
+                          border: Border.all(color: _green.withValues(alpha: 0.30)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -535,9 +535,9 @@ class _MatchCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: _cyan.withOpacity(0.18),
+                          color: _cyan.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: _cyan.withOpacity(0.30)),
+                          border: Border.all(color: _cyan.withValues(alpha: 0.30)),
                         ),
                         child: Text(
                           '${user.totalSwaps} Swaps',
@@ -634,9 +634,9 @@ class _MatchCard extends StatelessWidget {
             final goal = user.wantToLearn[index];
             return Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.10)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -691,9 +691,9 @@ class _MatchCard extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.10)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                   ),
                   child: Text(
                     trait,
@@ -719,12 +719,12 @@ class _MatchCard extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              _violet.withOpacity(0.20),
-              _cyan.withOpacity(0.20),
+              _violet.withValues(alpha: 0.20),
+              _cyan.withValues(alpha: 0.20),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _violet.withOpacity(0.30)),
+          border: Border.all(color: _violet.withValues(alpha: 0.30)),
         ),
         child: Row(
           children: [
@@ -769,9 +769,9 @@ class _TeachSkillCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Column(
         children: [
@@ -835,7 +835,7 @@ class _TeachSkillCard extends StatelessWidget {
                     gradient: active
                         ? const LinearGradient(colors: [_violet, _cyan])
                         : null,
-                    color: active ? null : Colors.white.withOpacity(0.10),
+                    color: active ? null : Colors.white.withValues(alpha: 0.10),
                   ),
                 ),
               );
@@ -865,7 +865,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withOpacity(0.05),
+      color: Colors.white.withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: onTap,
@@ -913,7 +913,7 @@ class _GradientActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: _violet.withOpacity(0.35),
+                color: _violet.withValues(alpha: 0.35),
                 blurRadius: 24,
                 offset: const Offset(0, 10),
               ),
@@ -945,7 +945,7 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.55);
+    final color = isActive ? _active : Colors.white.withValues(alpha: 0.55);
 
     return InkWell(
       onTap: onTap,

@@ -130,9 +130,9 @@ class ExchangePage extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: Colors.white.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.10)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
@@ -165,7 +165,7 @@ class ExchangePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: _violet.withOpacity(0.28),
+            color: _violet.withValues(alpha: 0.28),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -179,7 +179,7 @@ class ExchangePage extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -216,7 +216,7 @@ class ExchangePage extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Text(
@@ -231,7 +231,7 @@ class ExchangePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Container(height: 1, color: Colors.white.withOpacity(0.20)),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.20)),
           const SizedBox(height: 12),
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -266,9 +266,9 @@ class ExchangePage extends StatelessWidget {
   Widget _buildBottomNavigation(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _bg2.withOpacity(0.86),
+        color: _bg2.withValues(alpha: 0.86),
         border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.10)),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
@@ -321,7 +321,7 @@ class _ExchangeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: visual.color.withOpacity(0.28)),
+        border: Border.all(color: visual.color.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,8 +334,8 @@ class _ExchangeCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      visual.color.withOpacity(0.90),
-                      visual.secondaryColor.withOpacity(0.90),
+                      visual.color.withValues(alpha: 0.90),
+                      visual.secondaryColor.withValues(alpha: 0.90),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(14),
@@ -377,9 +377,9 @@ class _ExchangeCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Column(
               children: [
@@ -418,8 +418,8 @@ class _ExchangeCard extends StatelessWidget {
                   onPressed: () => context.go('/exchange-detail'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withOpacity(0.12)),
-                    backgroundColor: Colors.white.withOpacity(0.04),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                    backgroundColor: Colors.white.withValues(alpha: 0.04),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -552,9 +552,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: visual.color.withOpacity(0.14),
+        color: visual.color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: visual.color.withOpacity(0.22)),
+        border: Border.all(color: visual.color.withValues(alpha: 0.22)),
       ),
       child: Text(
         visual.label,
@@ -585,7 +585,7 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.55);
+    final color = isActive ? _active : Colors.white.withValues(alpha: 0.55);
 
     return InkWell(
       onTap: onTap,
