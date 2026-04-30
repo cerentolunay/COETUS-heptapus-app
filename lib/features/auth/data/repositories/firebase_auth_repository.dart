@@ -18,6 +18,11 @@ class FirebaseAuthRepository implements AuthRepository {
   static const Duration _requestTimeout = Duration(seconds: 15);
 
   @override
+  Stream<AppUser?> authStateChanges() {
+    return _firebaseAuth.userChanges().asyncMap(_mapFirebaseUser);
+  }
+
+  @override
   Future<AppUser?> getCurrentUser() async {
     final firebaseUser = _firebaseAuth.currentUser;
     if (firebaseUser == null) {
@@ -191,6 +196,34 @@ class FirebaseAuthRepository implements AuthRepository {
       'id': profile.id,
       'email': profile.email,
       ...existingData,
+    });
+  }
+
+  Future<AppUser?> _mapFirebaseUser(User? firebaseUser) async {
+    if (firebaseUser == null) {
+      return null;
+    }
+
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get()
+        .timeout(_requestTimeout);
+    final data = snapshot.data();
+
+    if (data == null) {
+      return AppUser(
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName ?? '',
+        email: firebaseUser.email ?? '',
+        bio: '',
+      );
+    }
+
+    return AppUser.fromMap({
+      'id': firebaseUser.uid,
+      'email': firebaseUser.email ?? data['email'] ?? '',
+      ...data,
     });
   }
 }
