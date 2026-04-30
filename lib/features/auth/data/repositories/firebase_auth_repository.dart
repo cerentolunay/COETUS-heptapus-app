@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,8 +9,8 @@ class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({
     FirebaseAuth? firebaseAuth,
     FirebaseFirestore? firestore,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
@@ -27,10 +25,10 @@ class FirebaseAuthRepository implements AuthRepository {
     }
 
     final snapshot = await _firestore
-      .collection('users')
-      .doc(firebaseUser.uid)
-      .get()
-      .timeout(_requestTimeout);
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get()
+        .timeout(_requestTimeout);
     final data = snapshot.data();
 
     if (data == null) {
@@ -55,10 +53,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     final credential = await _firebaseAuth
-        .signInWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .signInWithEmailAndPassword(email: email.trim(), password: password)
         .timeout(_requestTimeout);
 
     final firebaseUser = credential.user;
@@ -70,7 +65,7 @@ class FirebaseAuthRepository implements AuthRepository {
       user: firebaseUser,
       fallbackName: firebaseUser.displayName ?? email.split('@').first,
     );
-    _syncUserProfile(profile);
+    await _syncUserProfile(profile);
     return profile;
   }
 
@@ -81,10 +76,7 @@ class FirebaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     final credential = await _firebaseAuth
-        .createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .createUserWithEmailAndPassword(email: email.trim(), password: password)
         .timeout(_requestTimeout);
 
     final firebaseUser = credential.user;
@@ -92,22 +84,22 @@ class FirebaseAuthRepository implements AuthRepository {
       throw StateError('Firebase user could not be created.');
     }
 
-    await firebaseUser.updateDisplayName(fullName.trim()).timeout(_requestTimeout);
+    await firebaseUser
+        .updateDisplayName(fullName.trim())
+        .timeout(_requestTimeout);
 
     final profile = _buildProfile(
       user: firebaseUser,
       fallbackName: fullName.trim(),
       bio: 'Ready to exchange skills',
     );
-    _syncUserProfile(profile);
+    await _syncUserProfile(profile, includeCreatedAt: true);
     return profile;
   }
 
   @override
   Future<AppUser> signInWithGoogle() async {
-    final googleSignIn = GoogleSignIn(
-      scopes: <String>['email'],
-    );
+    final googleSignIn = GoogleSignIn(scopes: <String>['email']);
 
     final googleUser = await googleSignIn.signIn().timeout(_requestTimeout);
     if (googleUser == null) {
@@ -134,7 +126,10 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: firebaseUser.displayName ?? 'Google User',
       bio: 'Ready to exchange skills',
     );
-    _syncUserProfile(profile);
+    await _syncUserProfile(
+      profile,
+      includeCreatedAt: userCredential.additionalUserInfo?.isNewUser ?? false,
+    );
     return profile;
   }
 
@@ -159,22 +154,23 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
-  void _syncUserProfile(AppUser profile) {
-    unawaited(() async {
-      try {
-        await _firestore
-            .collection('users')
-            .doc(profile.id)
-            .set(
-              profile.toMap(),
-              SetOptions(merge: true),
-            )
-            .timeout(_requestTimeout);
-      } on TimeoutException {
-        // Firestore is optional for unblocking auth; retry can happen later.
-      } catch (_) {
-        // Ignore background profile sync failures.
-      }
-    }());
+  Future<void> _syncUserProfile(
+    AppUser profile, {
+    bool includeCreatedAt = false,
+  }) async {
+    final data = <String, dynamic>{
+      ...profile.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (includeCreatedAt) {
+      data['createdAt'] = FieldValue.serverTimestamp();
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(profile.id)
+        .set(data, SetOptions(merge: true))
+        .timeout(_requestTimeout);
   }
 }
