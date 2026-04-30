@@ -129,9 +129,19 @@ class _LoginPageState extends State<LoginPage>
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_mapEmailPasswordError(error.code))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_mapEmailAuthError(error.code))));
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_mapFirestoreError(error.code))));
     } on TimeoutException {
       if (!mounted) return;
 
@@ -141,7 +151,9 @@ class _LoginPageState extends State<LoginPage>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Giris istegi zaman asimina ugradi. Tekrar dene.'),
+          content: Text(
+            'İstek zaman aşımına uğradı. İnternet bağlantını kontrol et.',
+          ),
         ),
       );
     } catch (_) {
@@ -157,22 +169,33 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
-  String _mapEmailPasswordError(String code) {
+  String _mapEmailAuthError(String code) {
     switch (code) {
-      case 'invalid-credential':
-      case 'wrong-password':
-      case 'user-not-found':
-        return 'Email veya sifre hatali.';
       case 'invalid-email':
-        return 'Gecerli bir email adresi gir.';
+        return 'Geçerli bir e-posta adresi gir.';
+      case 'invalid-credential':
+      case 'user-not-found':
+      case 'wrong-password':
+        return 'E-posta veya şifre hatalı.';
       case 'user-disabled':
-        return 'Bu hesap devre disi birakilmis.';
-      case 'too-many-requests':
-        return 'Cok fazla deneme yapildi. Daha sonra tekrar dene.';
+        return 'Bu kullanıcı devre dışı bırakılmış.';
       case 'network-request-failed':
-        return 'Ag hatasi olustu. Baglantini kontrol et.';
+        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
+      case 'too-many-requests':
+        return 'Çok fazla deneme yapıldı. Bir süre sonra tekrar dene.';
       default:
-        return 'Giris yapilamadi. ($code)';
+        return 'Giriş yapılamadı. ($code)';
+    }
+  }
+
+  String _mapFirestoreError(String code) {
+    switch (code) {
+      case 'permission-denied':
+        return 'Profil bilgisi okunamadı. Firestore kurallarını kontrol et.';
+      case 'unavailable':
+        return 'Firestore şu an kullanılamıyor. Lütfen tekrar dene.';
+      default:
+        return 'Profil bilgisi alınamadı. ($code)';
     }
   }
 
@@ -307,7 +330,7 @@ class _LoginPageState extends State<LoginPage>
                           Expanded(
                             child: Container(
                               height: 1,
-                              color: Colors.white.withValues(alpha: 0.10),
+                              color: Colors.white.withOpacity(0.10),
                             ),
                           ),
                           Padding(
@@ -315,7 +338,7 @@ class _LoginPageState extends State<LoginPage>
                             child: Text(
                               'OR',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.35),
+                                color: Colors.white.withOpacity(0.35),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -324,7 +347,7 @@ class _LoginPageState extends State<LoginPage>
                           Expanded(
                             child: Container(
                               height: 1,
-                              color: Colors.white.withValues(alpha: 0.10),
+                              color: Colors.white.withOpacity(0.10),
                             ),
                           ),
                         ],
@@ -343,7 +366,7 @@ class _LoginPageState extends State<LoginPage>
                             Text(
                               "Don't have an account? ",
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.55),
+                                color: Colors.white.withOpacity(0.55),
                                 fontSize: 14,
                               ),
                             ),
@@ -415,7 +438,7 @@ class _HeaderSection extends StatelessWidget {
         Text(
           'Login to continue your skill-swapping journey',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.50), fontSize: 14),
+          style: TextStyle(color: Colors.white.withOpacity(0.50), fontSize: 14),
         ),
       ],
     );
@@ -466,7 +489,7 @@ class _InputSection extends StatelessWidget {
             onPressed: onTogglePassword,
             icon: Icon(
               showPassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withValues(alpha: 0.55),
+              color: Colors.white.withOpacity(0.55),
             ),
           ),
         ),
@@ -485,7 +508,7 @@ class _FieldLabel extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.50),
+        color: Colors.white.withOpacity(0.50),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -523,21 +546,21 @@ class _GlassInput extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
-          color: Colors.white.withValues(alpha: 0.35),
+          color: Colors.white.withOpacity(0.35),
           fontSize: 14,
         ),
         errorStyle: const TextStyle(color: Color(0xFFFFB4B4), fontSize: 12),
-        prefixIcon: Icon(prefixIcon, color: Colors.white.withValues(alpha: 0.50)),
+        prefixIcon: Icon(prefixIcon, color: Colors.white.withOpacity(0.50)),
         suffixIcon: suffix,
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
+        fillColor: Colors.white.withOpacity(0.05),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 18,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
@@ -643,10 +666,10 @@ class _SecondaryButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withValues(alpha: 0.05),
+        backgroundColor: Colors.white.withOpacity(0.05),
         shadowColor: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+        side: BorderSide(color: Colors.white.withOpacity(0.10)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       child: Row(

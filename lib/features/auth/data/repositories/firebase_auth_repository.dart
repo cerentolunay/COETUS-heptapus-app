@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -20,13 +18,33 @@ class FirebaseAuthRepository implements AuthRepository {
   static const Duration _requestTimeout = Duration(seconds: 15);
 
   @override
-  Stream<AppUser?> authStateChanges() {
-    return _firebaseAuth.userChanges().asyncMap(_mapFirebaseUser);
-  }
-
-  @override
   Future<AppUser?> getCurrentUser() async {
-    return _mapFirebaseUser(_firebaseAuth.currentUser);
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) {
+      return null;
+    }
+
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get()
+        .timeout(_requestTimeout);
+    final data = snapshot.data();
+
+    if (data == null) {
+      return AppUser(
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName ?? '',
+        email: firebaseUser.email ?? '',
+        bio: '',
+      );
+    }
+
+    return AppUser.fromMap({
+      'id': firebaseUser.uid,
+      'email': firebaseUser.email ?? data['email'] ?? '',
+      ...data,
+    });
   }
 
   @override
@@ -47,8 +65,7 @@ class FirebaseAuthRepository implements AuthRepository {
       user: firebaseUser,
       fallbackName: firebaseUser.displayName ?? email.split('@').first,
     );
-    _syncUserProfile(profile);
-    return profile;
+    return _syncUserProfile(profile);
   }
 
   @override
@@ -75,8 +92,13 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: fullName.trim(),
       bio: 'Ready to exchange skills',
     );
-    _syncUserProfile(profile);
-    return profile;
+
+    try {
+      return await _syncUserProfile(profile, includeCreatedAt: true);
+    } catch (_) {
+      await firebaseUser.delete().timeout(_requestTimeout);
+      rethrow;
+    }
   }
 
   @override
@@ -108,8 +130,10 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: firebaseUser.displayName ?? 'Google User',
       bio: 'Ready to exchange skills',
     );
-    _syncUserProfile(profile);
-    return profile;
+    return _syncUserProfile(
+      profile,
+      includeCreatedAt: userCredential.additionalUserInfo?.isNewUser ?? false,
+    );
   }
 
   @override
@@ -133,47 +157,40 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
-  void _syncUserProfile(AppUser profile) {
-    unawaited(() async {
-      try {
-        await _firestore
-            .collection('users')
-            .doc(profile.id)
-            .set(profile.toMap(), SetOptions(merge: true))
-            .timeout(_requestTimeout);
-      } on TimeoutException {
-        // Firestore is optional for unblocking auth; retry can happen later.
-      } catch (_) {
-        // Ignore background profile sync failures.
-      }
-    }());
-  }
+  Future<AppUser> _syncUserProfile(
+    AppUser profile, {
+    bool includeCreatedAt = false,
+  }) async {
+    final userDoc = _firestore.collection('users').doc(profile.id);
 
-  Future<AppUser?> _mapFirebaseUser(User? firebaseUser) async {
-    if (firebaseUser == null) {
-      return null;
+    final data = <String, dynamic>{
+      ...profile.toMap(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (includeCreatedAt) {
+      data['createdAt'] = FieldValue.serverTimestamp();
+      await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
+      return profile;
     }
 
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(firebaseUser.uid)
-        .get()
+    final snapshot = await userDoc.get().timeout(_requestTimeout);
+    if (!snapshot.exists) {
+      await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
+      return profile;
+    }
+
+    await userDoc
+        .set({
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true))
         .timeout(_requestTimeout);
-    final data = snapshot.data();
 
-    if (data == null) {
-      return AppUser(
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? '',
-        email: firebaseUser.email ?? '',
-        bio: '',
-      );
-    }
-
+    final existingData = snapshot.data() ?? <String, dynamic>{};
     return AppUser.fromMap({
-      'id': firebaseUser.uid,
-      'email': firebaseUser.email ?? data['email'] ?? '',
-      ...data,
+      'id': profile.id,
+      'email': profile.email,
+      ...existingData,
     });
   }
 }
