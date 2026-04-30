@@ -162,22 +162,6 @@ class FirebaseAuthRepository implements AuthRepository {
     bool includeCreatedAt = false,
   }) async {
     final userDoc = _firestore.collection('users').doc(profile.id);
-    final snapshot = await userDoc.get().timeout(_requestTimeout);
-
-    if (snapshot.exists) {
-      await userDoc
-          .set({
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true))
-          .timeout(_requestTimeout);
-
-      final data = snapshot.data() ?? <String, dynamic>{};
-      return AppUser.fromMap({
-        'id': profile.id,
-        'email': profile.email,
-        ...data,
-      });
-    }
 
     final data = <String, dynamic>{
       ...profile.toMap(),
@@ -186,9 +170,27 @@ class FirebaseAuthRepository implements AuthRepository {
 
     if (includeCreatedAt) {
       data['createdAt'] = FieldValue.serverTimestamp();
+      await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
+      return profile;
     }
 
-    await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
-    return profile;
+    final snapshot = await userDoc.get().timeout(_requestTimeout);
+    if (!snapshot.exists) {
+      await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
+      return profile;
+    }
+
+    await userDoc
+        .set({
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true))
+        .timeout(_requestTimeout);
+
+    final existingData = snapshot.data() ?? <String, dynamic>{};
+    return AppUser.fromMap({
+      'id': profile.id,
+      'email': profile.email,
+      ...existingData,
+    });
   }
 }
