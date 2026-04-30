@@ -16,6 +16,9 @@ import 'package:coetus/features/profile/presentation/pages/advanced_skill_profil
 import 'package:coetus/features/profile/presentation/pages/skill_profile_page.dart';
 
 // Matching & Notifications (Klasör yapına göre ekledim, eğer dosya isimleri farklıysa kontrol et)
+import 'package:coetus/features/chat/presentation/pages/chat_list_page.dart';
+import 'package:coetus/features/chat/presentation/pages/secure_chat_escrow_page.dart';
+import 'package:coetus/features/exchange/presentation/pages/exchange_page.dart';
 import 'package:coetus/features/matching/presentation/pages/matching_feed_page.dart';
 import 'package:coetus/features/notifications/presentation/pages/notifications_page.dart';
 
@@ -65,6 +68,27 @@ class AppRouter {
       GoRoute(
         path: '/matching',
         builder: (context, state) => const MatchingFeedPage(),
+      ),
+      GoRoute(path: '/chat', builder: (context, state) => const ChatListPage()),
+      GoRoute(
+        path: '/chat-detail',
+        builder: (context, state) => const SecureChatEscrowPage(),
+      ),
+      GoRoute(
+        path: '/chat-escrow',
+        builder: (context, state) => const SecureChatEscrowPage(),
+      ),
+      GoRoute(
+        path: '/exchange',
+        builder: (context, state) => const ExchangePage(),
+      ),
+      GoRoute(
+        path: '/exchange-history',
+        builder: (context, state) => const ExchangePage(),
+      ),
+      GoRoute(
+        path: '/exchange-detail',
+        builder: (context, state) => const ExchangePage(),
       ),
       GoRoute(
         path: '/notifications',
