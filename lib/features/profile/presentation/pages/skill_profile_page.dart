@@ -206,7 +206,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             style: TextStyle(color: Colors.white),
           ),
           content: Text(
-            '${skill.name} skillini silmek istiyor musun?',
+            'Do you want to delete ${skill.name}?',
             style: TextStyle(color: Colors.white.withOpacity(0.80)),
           ),
           actions: [

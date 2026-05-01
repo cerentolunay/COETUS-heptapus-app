@@ -69,22 +69,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Profil yüklenemedi: $e';
+        _errorMessage = 'Failed to load profile: $e';
       });
     }
   }
 
   String? _validateDisplayName(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Display name zorunludur';
-    if (text.length < 2) return 'Display name en az 2 karakter olmalıdır';
-    if (text.length > 50) return 'Display name en fazla 50 karakter olabilir';
+    if (text.isEmpty) return 'Display name is required';
+    if (text.length < 2) return 'Display name must be at least 2 characters';
+    if (text.length > 50) return 'Display name must be at most 50 characters';
     return null;
   }
 
   String? _validateBio(String? value) {
     final text = value?.trim() ?? '';
-    if (text.length > 500) return 'Bio en fazla 500 karakter olabilir';
+    if (text.length > 500) return 'Bio must be at most 500 characters';
     return null;
   }
 
