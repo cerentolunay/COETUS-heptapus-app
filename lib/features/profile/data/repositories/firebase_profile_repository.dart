@@ -38,8 +38,12 @@ class FirebaseProfileRepository implements ProfileRepository {
     final user = AppUser.fromMap({
       'id': firebaseUser.uid,
       'email': firebaseUser.email ?? data['email'] ?? '',
+      'displayName':
+          data['displayName'] ?? data['name'] ?? firebaseUser.displayName ?? '',
       'name': firebaseUser.displayName ?? data['name'] ?? '',
       'bio': data['bio'] ?? '',
+      'location': data['location'] ?? '',
+      'photoUrl': data['photoUrl'] ?? '',
       'trustScore': data['trustScore'] ?? 0,
       'credits': data['credits'] ?? 0,
       'verified': data['verified'] ?? false,
@@ -60,7 +64,16 @@ class FirebaseProfileRepository implements ProfileRepository {
     }
 
     await _firestore.collection('users').doc(firebaseUser.uid).set({
-      ...user.toMap(),
+      'id': user.id,
+      'name': user.name,
+      'displayName': user.name,
+      'email': user.email,
+      'bio': user.bio,
+      'location': user.location ?? '',
+      'photoUrl': user.photoUrl ?? '',
+      'trustScore': user.trustScore,
+      'credits': user.credits,
+      'verified': user.verified,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await firebaseUser.updateDisplayName(user.name);
