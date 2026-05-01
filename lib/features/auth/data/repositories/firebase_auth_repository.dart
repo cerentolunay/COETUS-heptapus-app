@@ -48,6 +48,8 @@ class FirebaseAuthRepository implements AuthRepository {
     return AppUser.fromMap({
       'id': firebaseUser.uid,
       'email': firebaseUser.email ?? data['email'] ?? '',
+      'displayName':
+          data['displayName'] ?? data['name'] ?? firebaseUser.displayName ?? '',
       ...data,
     });
   }
@@ -223,6 +225,8 @@ class FirebaseAuthRepository implements AuthRepository {
     return AppUser.fromMap({
       'id': firebaseUser.uid,
       'email': firebaseUser.email ?? data['email'] ?? '',
+      'displayName':
+          data['displayName'] ?? data['name'] ?? firebaseUser.displayName ?? '',
       ...data,
     });
   }

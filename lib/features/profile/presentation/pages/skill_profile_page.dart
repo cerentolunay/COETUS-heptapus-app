@@ -244,24 +244,13 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showEditProfileDialog() async {
-    final AppUser? updatedUser = await showDialog<AppUser>(
-      context: context,
-      builder: (_) => _EditProfileDialog(user: _user),
-    );
-
-    if (!mounted || updatedUser == null) return;
-
-    setState(() {
-      _user = updatedUser;
-    });
-
-    await _profileRepository.updateProfile(updatedUser);
+    final bool? saved = await context.push<bool>('/profile/edit');
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Profile updated')));
+    if (saved == true) {
+      await _loadProfile();
+    }
   }
 
   Future<void> _showAddSkillDialog() async {
@@ -892,109 +881,6 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
           onPressed: _submit,
           style: ElevatedButton.styleFrom(backgroundColor: _indigo),
           child: const Text('Add', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    );
-  }
-}
-
-class _EditProfileDialog extends StatefulWidget {
-  final AppUser user;
-
-  const _EditProfileDialog({required this.user});
-
-  @override
-  State<_EditProfileDialog> createState() => _EditProfileDialogState();
-}
-
-class _EditProfileDialogState extends State<_EditProfileDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _bioController;
-
-  static const Color _card = Color(0xFF1A1A2E);
-  static const Color _indigo = Color(0xFF6366F1);
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.user.name);
-    _bioController = TextEditingController(text: widget.user.bio);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _bioController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _nameController.text.trim();
-    final bio = _bioController.text.trim();
-
-    if (name.isEmpty || bio.isEmpty) {
-      return;
-    }
-
-    Navigator.of(context).pop(widget.user.copyWith(name: name, bio: bio));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: _card,
-      title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Name',
-              labelStyle: TextStyle(color: Colors.white.withOpacity(0.70)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: _indigo),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _bioController,
-            maxLines: 3,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'Bio',
-              labelStyle: TextStyle(color: Colors.white.withOpacity(0.70)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: _indigo),
-              ),
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: Colors.white.withOpacity(0.70)),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _submit,
-          style: ElevatedButton.styleFrom(backgroundColor: _indigo),
-          child: const Text('Save', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
