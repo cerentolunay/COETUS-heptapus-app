@@ -37,8 +37,8 @@ class FirebaseProfileRepository implements ProfileRepository {
 
     final user = AppUser.fromMap({
       'id': firebaseUser.uid,
-      'email': firebaseUser.email ?? data['email'] ?? '',
-      'name': firebaseUser.displayName ?? data['name'] ?? '',
+      'email': data['email'] ?? firebaseUser.email ?? '',
+      'name': data['name'] ?? firebaseUser.displayName ?? '',
       'bio': data['bio'] ?? '',
       'trustScore': data['trustScore'] ?? 0,
       'credits': data['credits'] ?? 0,
@@ -59,11 +59,20 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
+    final updatedUser = user.copyWith(
+      id: firebaseUser.uid,
+      email: firebaseUser.email ?? user.email,
+    );
+
     await _firestore.collection('users').doc(firebaseUser.uid).set({
-      ...user.toMap(),
+      ...updatedUser.toMap(),
+      'profileCompleted':
+          updatedUser.name.trim().isNotEmpty &&
+          updatedUser.bio.trim().isNotEmpty,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-    await firebaseUser.updateDisplayName(user.name);
+    await firebaseUser.updateDisplayName(updatedUser.name);
+    await firebaseUser.reload();
 
     return loadProfile();
   }

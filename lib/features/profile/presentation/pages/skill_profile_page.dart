@@ -251,13 +251,13 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
 
     if (!mounted || updatedUser == null) return;
 
-    setState(() {
-      _user = updatedUser;
-    });
-
-    await _profileRepository.updateProfile(updatedUser);
+    final updatedProfile = await _profileRepository.updateProfile(updatedUser);
 
     if (!mounted) return;
+
+    setState(() {
+      _applyProfile(updatedProfile);
+    });
 
     ScaffoldMessenger.of(
       context,
