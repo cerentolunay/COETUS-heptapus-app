@@ -3,6 +3,8 @@ class AppUser {
   final String name;
   final String email;
   final String bio;
+  final String? location;
+  final String? photoUrl;
   final int trustScore;
   final int credits;
   final bool verified;
@@ -13,6 +15,8 @@ class AppUser {
     required this.name,
     required this.email,
     required this.bio,
+    this.location,
+    this.photoUrl,
     this.trustScore = 0,
     this.credits = 0,
     this.verified = false,
@@ -24,6 +28,8 @@ class AppUser {
     String? name,
     String? email,
     String? bio,
+    String? location,
+    String? photoUrl,
     int? trustScore,
     int? credits,
     bool? verified,
@@ -34,6 +40,8 @@ class AppUser {
       name: name ?? this.name,
       email: email ?? this.email,
       bio: bio ?? this.bio,
+      location: location ?? this.location,
+      photoUrl: photoUrl ?? this.photoUrl,
       trustScore: trustScore ?? this.trustScore,
       credits: credits ?? this.credits,
       verified: verified ?? this.verified,
@@ -42,9 +50,10 @@ class AppUser {
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final Map<String, dynamic> map = {
       'id': id,
       'name': name,
+      'displayName': name,
       'email': email,
       'bio': bio,
       'trustScore': trustScore,
@@ -52,10 +61,20 @@ class AppUser {
       'verified': verified,
       'profileCompleted': profileCompleted,
     };
+
+    if (location != null) {
+      map['location'] = location;
+    }
+
+    if (photoUrl != null) {
+      map['photoUrl'] = photoUrl;
+    }
+
+    return map;
   }
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
-    final name = map['name'] as String? ?? '';
+    final name = map['displayName'] as String? ?? map['name'] as String? ?? '';
     final bio = map['bio'] as String? ?? '';
     final completed =
         map['profileCompleted'] as bool? ??
@@ -66,6 +85,8 @@ class AppUser {
       name: name,
       email: map['email'] as String? ?? '',
       bio: bio,
+      location: map['location'] as String?,
+      photoUrl: map['photoUrl'] as String?,
       trustScore: map['trustScore'] as int? ?? 0,
       credits: map['credits'] as int? ?? 0,
       verified: map['verified'] as bool? ?? false,

@@ -91,7 +91,7 @@ class AdvancedSkillProfilePage extends StatelessWidget {
                         Text(
                           '${verifications.length} verified',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.50),
+                            color: Colors.white.withValues(alpha: 0.50),
                             fontSize: 12,
                           ),
                         ),
@@ -158,7 +158,7 @@ class _AdvancedProfileHeader extends StatelessWidget {
                 Text(
                   'Professional Skill Ecosystem',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
+                    color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 13,
                   ),
                 ),
@@ -168,10 +168,10 @@ class _AdvancedProfileHeader extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
+                  color: Colors.white.withValues(alpha: 0.10),
                 ),
               ),
               child: IconButton(
@@ -220,7 +220,7 @@ class _CreditsCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.20),
+                  color: Colors.white.withValues(alpha: 0.20),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -256,7 +256,7 @@ class _CreditsCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.20),
+                  color: Colors.white.withValues(alpha: 0.20),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -273,7 +273,7 @@ class _CreditsCard extends StatelessWidget {
           const SizedBox(height: 14),
           Container(
             height: 1,
-            color: Colors.white.withOpacity(0.20),
+            color: Colors.white.withValues(alpha: 0.20),
           ),
           const SizedBox(height: 12),
           const Row(
@@ -313,10 +313,10 @@ class _UserInfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
         ),
       ),
       child: Column(
@@ -398,13 +398,13 @@ class _UserInfoCard extends StatelessWidget {
                         Icon(
                           Icons.location_on_outlined,
                           size: 15,
-                          color: Colors.white.withOpacity(0.45),
+                          color: Colors.white.withValues(alpha: 0.45),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'San Francisco, CA',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.45),
+                            color: Colors.white.withValues(alpha: 0.45),
                             fontSize: 13,
                           ),
                         ),
@@ -444,7 +444,7 @@ class _UserInfoCard extends StatelessWidget {
           Text(
             'Full-stack developer and musician passionate about knowledge sharing. Specialized in React, Node.js, and fingerstyle guitar. Looking to improve Spanish conversation skills.',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
               fontSize: 14,
               height: 1.5,
             ),
@@ -497,10 +497,10 @@ class _SkillRadarSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
         ),
       ),
       child: Column(
@@ -509,7 +509,7 @@ class _SkillRadarSummaryCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
+              color: Colors.white.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
@@ -523,7 +523,7 @@ class _SkillRadarSummaryCard extends StatelessWidget {
                 Text(
                   'Radar chart placeholder',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.90),
+                    color: Colors.white.withValues(alpha: 0.90),
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -533,7 +533,7 @@ class _SkillRadarSummaryCard extends StatelessWidget {
                   'İstersen bir sonraki adımda gerçek radar chart için chart paketi bağlarız.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
+                    color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 12,
                     height: 1.4,
                   ),
@@ -560,7 +560,7 @@ class _SkillRadarSummaryCard extends StatelessWidget {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
@@ -617,10 +617,10 @@ class _VerificationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
         ),
       ),
       child: Column(
@@ -683,7 +683,7 @@ class _VerificationCard extends StatelessWidget {
                     Text(
                       'Verified by ${item.verifier}',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.45),
+                        color: Colors.white.withValues(alpha: 0.45),
                         fontSize: 12,
                       ),
                     ),
@@ -713,7 +713,7 @@ class _VerificationCard extends StatelessWidget {
           Text(
             item.comment,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
               fontSize: 14,
               height: 1.5,
             ),
@@ -721,7 +721,7 @@ class _VerificationCard extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             height: 1,
-            color: Colors.white.withOpacity(0.10),
+            color: Colors.white.withValues(alpha: 0.10),
           ),
           const SizedBox(height: 10),
           Row(
@@ -732,13 +732,13 @@ class _VerificationCard extends StatelessWidget {
                   Icon(
                     Icons.calendar_month_outlined,
                     size: 14,
-                    color: Colors.white.withOpacity(0.35),
+                    color: Colors.white.withValues(alpha: 0.35),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     item.date,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.35),
+                      color: Colors.white.withValues(alpha: 0.35),
                       fontSize: 12,
                     ),
                   ),
@@ -792,7 +792,7 @@ class _BottomProfileNav extends StatelessWidget {
           color: _navBg,
           border: Border(
             top: BorderSide(
-              color: Colors.white.withOpacity(0.10),
+              color: Colors.white.withValues(alpha: 0.10),
             ),
           ),
         ),
@@ -841,7 +841,7 @@ class _BottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _cyan : Colors.white.withOpacity(0.45);
+    final color = isActive ? _cyan : Colors.white.withValues(alpha: 0.45);
 
     return InkWell(
       onTap: onTap,

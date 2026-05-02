@@ -38,8 +38,12 @@ class FirebaseProfileRepository implements ProfileRepository {
     final user = AppUser.fromMap({
       'id': firebaseUser.uid,
       'email': data['email'] ?? firebaseUser.email ?? '',
+      'displayName':
+          data['displayName'] ?? data['name'] ?? firebaseUser.displayName ?? '',
       'name': data['name'] ?? firebaseUser.displayName ?? '',
       'bio': data['bio'] ?? '',
+      'location': data['location'] ?? '',
+      'photoUrl': data['photoUrl'] ?? '',
       'trustScore': data['trustScore'] ?? 0,
       'credits': data['credits'] ?? 0,
       'verified': data['verified'] ?? false,
