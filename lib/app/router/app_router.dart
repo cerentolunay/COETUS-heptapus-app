@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 
+import 'auth_route_guard.dart';
+
 // Auth
 import 'package:coetus/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:coetus/features/auth/presentation/pages/login_page.dart';
@@ -23,9 +25,41 @@ import 'package:coetus/features/matching/presentation/pages/matching_feed_page.d
 import 'package:coetus/features/notifications/presentation/pages/notifications_page.dart';
 
 class AppRouter {
+  static final AuthRouteGuard _authGuard = AuthRouteGuard();
+
   static final GoRouter router = GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: true,
+    refreshListenable: _authGuard,
+    redirect: (context, state) async {
+      if (!_authGuard.isEnabled) {
+        return null;
+      }
+
+      final path = state.uri.path;
+      final isSignedIn = _authGuard.isSignedIn;
+      final isPublicRoute = _publicRoutes.contains(path);
+      final isAuthEntryRoute = _authEntryRoutes.contains(path);
+
+      if (!isSignedIn) {
+        if (_protectedRoutes.contains(path)) {
+          return '/login';
+        }
+
+        return null;
+      }
+
+      final profileCompleted = await _authGuard.isProfileCompleted();
+      if (!profileCompleted && _requiresCompletedProfile(path)) {
+        return '/profile';
+      }
+
+      if (isPublicRoute && isAuthEntryRoute) {
+        return profileCompleted ? '/home' : '/profile';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(
@@ -96,4 +130,42 @@ class AppRouter {
       ),
     ],
   );
+
+  static const Set<String> _publicRoutes = {
+    '/',
+    '/welcome',
+    '/onboarding',
+    '/discovery',
+    '/login',
+    '/register',
+    '/forgot-password',
+  };
+
+  static const Set<String> _authEntryRoutes = {
+    '/',
+    '/welcome',
+    '/onboarding',
+    '/discovery',
+    '/login',
+    '/register',
+    '/forgot-password',
+  };
+
+  static const Set<String> _protectedRoutes = {
+    '/home',
+    '/profile',
+    '/profile-advanced',
+    '/matching',
+    '/chat',
+    '/chat-detail',
+    '/chat-escrow',
+    '/exchange',
+    '/exchange-history',
+    '/exchange-detail',
+    '/notifications',
+  };
+
+  static bool _requiresCompletedProfile(String path) {
+    return _protectedRoutes.contains(path) && path != '/profile';
+  }
 }

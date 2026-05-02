@@ -90,7 +90,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final profile = _buildProfile(
       user: firebaseUser,
       fallbackName: fullName.trim(),
-      bio: 'Ready to exchange skills',
+      bio: '',
     );
 
     try {
@@ -128,7 +128,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final profile = _buildProfile(
       user: firebaseUser,
       fallbackName: firebaseUser.displayName ?? 'Google User',
-      bio: 'Ready to exchange skills',
+      bio: '',
     );
     return _syncUserProfile(
       profile,
@@ -146,14 +146,17 @@ class FirebaseAuthRepository implements AuthRepository {
     required String fallbackName,
     String bio = 'Skill swapping enthusiast',
   }) {
+    final name = user.displayName ?? fallbackName;
+
     return AppUser(
       id: user.uid,
-      name: user.displayName ?? fallbackName,
+      name: name,
       email: user.email ?? '',
       bio: bio,
       trustScore: 0,
       credits: 0,
       verified: false,
+      profileCompleted: name.trim().isNotEmpty && bio.trim().isNotEmpty,
     );
   }
 

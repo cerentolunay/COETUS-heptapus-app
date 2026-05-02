@@ -6,6 +6,7 @@ class AppUser {
   final int trustScore;
   final int credits;
   final bool verified;
+  final bool profileCompleted;
 
   const AppUser({
     required this.id,
@@ -15,6 +16,7 @@ class AppUser {
     this.trustScore = 0,
     this.credits = 0,
     this.verified = false,
+    this.profileCompleted = false,
   });
 
   AppUser copyWith({
@@ -25,6 +27,7 @@ class AppUser {
     int? trustScore,
     int? credits,
     bool? verified,
+    bool? profileCompleted,
   }) {
     return AppUser(
       id: id ?? this.id,
@@ -34,6 +37,7 @@ class AppUser {
       trustScore: trustScore ?? this.trustScore,
       credits: credits ?? this.credits,
       verified: verified ?? this.verified,
+      profileCompleted: profileCompleted ?? this.profileCompleted,
     );
   }
 
@@ -46,18 +50,26 @@ class AppUser {
       'trustScore': trustScore,
       'credits': credits,
       'verified': verified,
+      'profileCompleted': profileCompleted,
     };
   }
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
+    final name = map['name'] as String? ?? '';
+    final bio = map['bio'] as String? ?? '';
+    final completed =
+        map['profileCompleted'] as bool? ??
+        (name.trim().isNotEmpty && bio.trim().isNotEmpty);
+
     return AppUser(
       id: map['id'] as String? ?? '',
-      name: map['name'] as String? ?? '',
+      name: name,
       email: map['email'] as String? ?? '',
-      bio: map['bio'] as String? ?? '',
+      bio: bio,
       trustScore: map['trustScore'] as int? ?? 0,
       credits: map['credits'] as int? ?? 0,
       verified: map['verified'] as bool? ?? false,
+      profileCompleted: completed,
     );
   }
 }

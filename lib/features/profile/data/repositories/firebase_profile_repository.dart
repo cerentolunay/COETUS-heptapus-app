@@ -43,6 +43,7 @@ class FirebaseProfileRepository implements ProfileRepository {
       'trustScore': data['trustScore'] ?? 0,
       'credits': data['credits'] ?? 0,
       'verified': data['verified'] ?? false,
+      'profileCompleted': data['profileCompleted'],
     });
 
     return ProfileData(
@@ -59,16 +60,16 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
+    final profileCompleted =
+        user.name.trim().isNotEmpty && user.bio.trim().isNotEmpty;
     final updatedUser = user.copyWith(
       id: firebaseUser.uid,
       email: firebaseUser.email ?? user.email,
+      profileCompleted: profileCompleted,
     );
 
     await _firestore.collection('users').doc(firebaseUser.uid).set({
       ...updatedUser.toMap(),
-      'profileCompleted':
-          updatedUser.name.trim().isNotEmpty &&
-          updatedUser.bio.trim().isNotEmpty,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await firebaseUser.updateDisplayName(updatedUser.name);

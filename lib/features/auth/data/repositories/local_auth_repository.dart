@@ -25,6 +25,7 @@ class LocalAuthRepository implements AuthRepository {
       trustScore: 12,
       credits: 50,
       verified: false,
+      profileCompleted: true,
     );
 
     _currentUser = user;
@@ -46,6 +47,7 @@ class LocalAuthRepository implements AuthRepository {
       trustScore: 0,
       credits: 0,
       verified: false,
+      profileCompleted: true,
     );
 
     _currentUser = user;
@@ -62,6 +64,7 @@ class LocalAuthRepository implements AuthRepository {
       trustScore: 12,
       credits: 50,
       verified: true,
+      profileCompleted: true,
     );
 
     _currentUser = user;
