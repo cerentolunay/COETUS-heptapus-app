@@ -189,10 +189,10 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage>
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.10),
+                                  color: Colors.white.withValues(alpha: 0.10),
                                 ),
                               ),
                               child: const Row(
@@ -237,7 +237,7 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage>
                               'Answer ${_questions.length} questions to find your perfect skill matches',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.50),
+                                color: Colors.white.withValues(alpha: 0.50),
                                 fontSize: 14,
                                 height: 1.5,
                               ),
@@ -253,7 +253,7 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage>
                             Text(
                               'Question ${_currentQuestion + 1} of ${_questions.length}',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.50),
+                                color: Colors.white.withValues(alpha: 0.50),
                                 fontSize: 13,
                               ),
                             ),
@@ -361,10 +361,10 @@ class _QuestionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
         ),
         boxShadow: const [
           BoxShadow(
@@ -406,7 +406,7 @@ class _QuestionCard extends StatelessWidget {
                 Text(
                   question.category,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.80),
+                    color: Colors.white.withValues(alpha: 0.80),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -476,11 +476,11 @@ class _AnswerButton extends StatelessWidget {
             gradient: isSelected
                 ? const LinearGradient(colors: [_purple, _cyan])
                 : null,
-            color: isSelected ? null : Colors.white.withOpacity(0.05),
+            color: isSelected ? null : Colors.white.withValues(alpha: 0.05),
             border: Border.all(
               color: isSelected
                   ? Colors.transparent
-                  : Colors.white.withOpacity(0.10),
+                  : Colors.white.withValues(alpha: 0.10),
             ),
           ),
           child: Row(
@@ -499,7 +499,7 @@ class _AnswerButton extends StatelessWidget {
                 Icons.chevron_right,
                 color: isSelected
                     ? Colors.white
-                    : Colors.white.withOpacity(0.45),
+                    : Colors.white.withValues(alpha: 0.45),
                 size: 22,
               ),
             ],
@@ -528,7 +528,7 @@ class _ProgressBar extends StatelessWidget {
         child: Stack(
           children: [
             Container(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
             ),
             FractionallySizedBox(
               widthFactor: progress / 100,

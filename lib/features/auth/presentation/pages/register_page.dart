@@ -53,15 +53,10 @@ class _RegisterPageState extends State<RegisterPage>
       curve: Curves.easeOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
 
     _animationController.forward();
   }
@@ -147,42 +142,38 @@ class _RegisterPageState extends State<RegisterPage>
 
     try {
       await _authRepository.signUp(
-            fullName: _fullNameController.text,
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
+        fullName: _fullNameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kayıt başarılı'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Kayıt başarılı')));
 
       context.go('/home');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_mapAuthError(error.code)),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_mapAuthError(error.code))));
     } on FirebaseException catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_mapFirestoreError(error.code)),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_mapFirestoreError(error))));
     } on TimeoutException {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('İstek zaman aşımına uğradı. İnternet bağlantını kontrol et.'),
+          content: Text(
+            'İstek zaman aşımına uğradı. İnternet bağlantını kontrol et.',
+          ),
         ),
       );
     } catch (_) {
@@ -217,35 +208,27 @@ class _RegisterPageState extends State<RegisterPage>
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google ile kayıt başarılı'),
-        ),
+        const SnackBar(content: Text('Google ile kayıt başarılı')),
       );
 
       context.go('/home');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_mapGoogleAuthError(error.code)),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_mapGoogleAuthError(error.code))));
     } on TimeoutException {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google oturumu zaman aşımına uğradı.'),
-        ),
+        const SnackBar(content: Text('Google oturumu zaman aşımına uğradı.')),
       );
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google ile kayıt oluşturulamadı.'),
-        ),
+        const SnackBar(content: Text('Google ile kayıt oluşturulamadı.')),
       );
     } finally {
       if (mounted) {
@@ -288,14 +271,19 @@ class _RegisterPageState extends State<RegisterPage>
     }
   }
 
-  String _mapFirestoreError(String code) {
-    switch (code) {
+  String _mapFirestoreError(FirebaseException error) {
+    final details = error.message;
+
+    switch (error.code) {
       case 'permission-denied':
         return 'Veri yazma izni yok. Firestore kurallarını kontrol et.';
       case 'unavailable':
-        return 'Firestore şu an kullanılamıyor. Lütfen tekrar dene.';
+        if (details == null || details.isEmpty) {
+          return 'Firestore şu an kullanılamıyor. Lütfen tekrar dene.';
+        }
+        return 'Firestore kullanılamıyor: $details';
       default:
-        return 'Profil kaydedilemedi. ($code)';
+        return 'Profil kaydedilemedi. (${error.code})';
     }
   }
 
@@ -349,7 +337,9 @@ class _RegisterPageState extends State<RegisterPage>
                       ),
                       const SizedBox(height: 18),
                       _GradientButton(
-                        text: _isLoading ? 'Creating account...' : 'Create Account',
+                        text: _isLoading
+                            ? 'Creating account...'
+                            : 'Create Account',
                         icon: _isLoading ? null : Icons.arrow_forward,
                         isLoading: _isLoading,
                         onTap: _isLoading ? null : _handleRegister,
@@ -366,7 +356,8 @@ class _RegisterPageState extends State<RegisterPage>
                             ),
                             children: const [
                               TextSpan(
-                                text: 'By creating an account, you agree to our ',
+                                text:
+                                    'By creating an account, you agree to our ',
                               ),
                               TextSpan(
                                 text: 'Terms of Service',
@@ -485,11 +476,7 @@ class _RegisterHeaderSection extends StatelessWidget {
               colors: [_purple, _cyan],
             ),
           ),
-          child: const Icon(
-            Icons.auto_awesome,
-            color: Colors.white,
-            size: 28,
-          ),
+          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -505,10 +492,7 @@ class _RegisterHeaderSection extends StatelessWidget {
         Text(
           'Join the professional skill-swapping ecosystem',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.50),
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.white.withOpacity(0.50), fontSize: 14),
         ),
       ],
     );
@@ -587,10 +571,7 @@ class _RegisterFormSection extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Must be at least 8 characters',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.35),
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 12),
         ),
         const SizedBox(height: 18),
         const _FieldLabel(text: 'Confirm Password'),
@@ -665,14 +646,8 @@ class _GlassInput extends StatelessWidget {
           color: Colors.white.withOpacity(0.35),
           fontSize: 14,
         ),
-        errorStyle: const TextStyle(
-          color: Color(0xFFFFB4B4),
-          fontSize: 12,
-        ),
-        prefixIcon: Icon(
-          prefixIcon,
-          color: Colors.white.withOpacity(0.50),
-        ),
+        errorStyle: const TextStyle(color: Color(0xFFFFB4B4), fontSize: 12),
+        prefixIcon: Icon(prefixIcon, color: Colors.white.withOpacity(0.50)),
         suffixIcon: suffix,
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
@@ -682,28 +657,19 @@ class _GlassInput extends StatelessWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.10),
-          ),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(
-            color: Color(0x8006B6D4),
-          ),
+          borderSide: const BorderSide(color: Color(0x8006B6D4)),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(
-            color: Color(0xFFFF6B6B),
-          ),
+          borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(
-            color: Color(0xFFFF6B6B),
-            width: 1.2,
-          ),
+          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.2),
         ),
       ),
     );
@@ -730,9 +696,7 @@ class _GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_purple, _cyan],
-        ),
+        gradient: const LinearGradient(colors: [_purple, _cyan]),
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
@@ -775,11 +739,7 @@ class _GradientButton extends StatelessWidget {
             ),
             if (!isLoading && icon != null) const SizedBox(width: 8),
             if (!isLoading && icon != null)
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 20,
-              ),
+              Icon(icon, color: Colors.white, size: 20),
           ],
         ),
       ),
@@ -806,12 +766,8 @@ class _SecondaryButton extends StatelessWidget {
         backgroundColor: Colors.white.withOpacity(0.05),
         shadowColor: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
-        side: BorderSide(
-          color: Colors.white.withOpacity(0.10),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        side: BorderSide(color: Colors.white.withOpacity(0.10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

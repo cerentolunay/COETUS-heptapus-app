@@ -1,10 +1,19 @@
+import 'dart:async';
+
 import '../../domain/models/app_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 
 class LocalAuthRepository implements AuthRepository {
   static AppUser? _currentUser;
+  static final StreamController<AppUser?> _authController =
+      StreamController<AppUser?>.broadcast();
 
   static AppUser? get currentUser => _currentUser;
+
+  @override
+  Stream<AppUser?> authStateChanges() {
+    return _authController.stream;
+  }
 
   @override
   Future<AppUser?> getCurrentUser() async {
@@ -28,6 +37,7 @@ class LocalAuthRepository implements AuthRepository {
     );
 
     _currentUser = user;
+    _authController.add(_currentUser);
     return user;
   }
 
@@ -49,6 +59,7 @@ class LocalAuthRepository implements AuthRepository {
     );
 
     _currentUser = user;
+    _authController.add(_currentUser);
     return user;
   }
 
@@ -65,12 +76,14 @@ class LocalAuthRepository implements AuthRepository {
     );
 
     _currentUser = user;
+    _authController.add(_currentUser);
     return user;
   }
 
   @override
   Future<void> signOut() async {
     _currentUser = null;
+    _authController.add(_currentUser);
   }
 
   String _buildUserId(String email) {

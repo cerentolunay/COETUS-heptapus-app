@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,6 +67,12 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
     await prefs.setBool('has_seen_onboarding', true);
 
     if (!mounted) return;
+
+    if (FirebaseAuth.instance.currentUser != null) {
+      context.go('/home');
+      return;
+    }
+
     context.go(route);
   }
 
@@ -107,7 +114,8 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: List.generate(6, (i) {
-                      final angle = math.sin(
+                      final angle =
+                          math.sin(
                             (_backgroundController.value * 2 * math.pi) + i,
                           ) *
                           0.16;
@@ -213,10 +221,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage>
 class _SlideContent extends StatelessWidget {
   final _OnboardingSlide slide;
 
-  const _SlideContent({
-    super.key,
-    required this.slide,
-  });
+  const _SlideContent({super.key, required this.slide});
 
   static const Color _cyan = Color(0xFF06B6D4);
   static const Color _purple = Color(0xFF7C3AED);
@@ -310,9 +315,7 @@ class _ProgressIndicators extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: isActive
-                ? const LinearGradient(
-                    colors: [_purple, _cyan],
-                  )
+                ? const LinearGradient(colors: [_purple, _cyan])
                 : null,
             color: isActive ? null : Colors.white.withValues(alpha: 0.20),
           ),
@@ -340,9 +343,7 @@ class _GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_purple, _cyan],
-        ),
+        gradient: const LinearGradient(colors: [_purple, _cyan]),
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
@@ -374,11 +375,7 @@ class _GradientButton extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 20,
-            ),
+            Icon(icon, color: Colors.white, size: 20),
           ],
         ),
       ),

@@ -34,7 +34,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _NotificationItem(
       id: '1',
       title: 'New Match Found',
-      message: 'You matched with Sarah Martinez. Start your first skill swap now.',
+      message:
+          'You matched with Sarah Martinez. Start your first skill swap now.',
       time: '2 min ago',
       type: NotificationType.match,
       isUnread: true,
@@ -89,7 +90,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       const SizedBox(height: 24),
                       _buildFilterBar(),
                       const SizedBox(height: 24),
-                      if (items.isEmpty) _buildEmptyState() else ...items.map((item) => _NotificationCard(item: item)),
+                      if (items.isEmpty)
+                        _buildEmptyState()
+                      else
+                        ...items.map((item) => _NotificationCard(item: item)),
                     ],
                   ),
                 ),
@@ -106,12 +110,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Notifications', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+        const Text(
+          'Notifications',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: _violet.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-          child: Text('$unread New', style: const TextStyle(color: _violetSoft, fontWeight: FontWeight.bold)),
-        )
+          decoration: BoxDecoration(
+            color: _violet.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$unread New',
+            style: const TextStyle(
+              color: _violetSoft,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -126,11 +146,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              gradient: isActive ? const LinearGradient(colors: [_violet, _cyan]) : null,
+              gradient: isActive
+                  ? const LinearGradient(colors: [_violet, _cyan])
+                  : null,
               color: isActive ? null : Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(_filters[index], style: const TextStyle(color: Colors.white)),
+            child: Text(
+              _filters[index],
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         );
       }),
@@ -138,19 +163,33 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(child: Text("No notifications", style: TextStyle(color: _textMuted)));
+    return const Center(
+      child: Text("No notifications", style: TextStyle(color: _textMuted)),
+    );
   }
 
   Widget _buildBottomNavigation(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(color: _bg2, border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1)))),
+      decoration: BoxDecoration(
+        color: _bg2,
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          IconButton(icon: const Icon(Icons.person_outline, color: Colors.white54), onPressed: () => context.go('/profile-advanced')),
-          IconButton(icon: const Icon(Icons.trending_up, color: Colors.white54), onPressed: () => context.go('/matching')),
-          IconButton(icon: const Icon(Icons.notifications, color: _cyan), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: Colors.white54),
+            onPressed: () => context.go('/profile'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.trending_up, color: Colors.white54),
+            onPressed: () => context.go('/matching'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications, color: _cyan),
+            onPressed: () {},
+          ),
         ],
       ),
     );
@@ -164,7 +203,14 @@ class _NotificationItem {
   final String id, title, message, time;
   final NotificationType type;
   final bool isUnread;
-  const _NotificationItem({required this.id, required this.title, required this.message, required this.time, required this.type, required this.isUnread});
+  const _NotificationItem({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.time,
+    required this.type,
+    required this.isUnread,
+  });
 }
 
 class _NotificationCard extends StatelessWidget {
@@ -176,15 +222,31 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.1))),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(item.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            item.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(item.message, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            item.message,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
           const SizedBox(height: 8),
-          Text(item.time, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          Text(
+            item.time,
+            style: const TextStyle(color: Colors.white38, fontSize: 11),
+          ),
         ],
       ),
     );
