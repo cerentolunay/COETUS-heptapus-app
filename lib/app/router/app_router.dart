@@ -22,6 +22,7 @@ import 'package:coetus/features/onboarding/presentation/pages/splash_page.dart';
 import 'package:coetus/features/onboarding/presentation/pages/welcome_page.dart';
 
 // Matching & Notifications
+import 'package:coetus/features/chat/presentation/pages/chat_interface_page.dart';
 import 'package:coetus/features/chat/presentation/pages/chat_list_page.dart';
 import 'package:coetus/features/chat/presentation/pages/secure_chat_escrow_page.dart';
 import 'package:coetus/features/exchange/presentation/pages/exchange_page.dart';
@@ -221,7 +222,7 @@ class AppRouter {
       GoRoute(path: '/chat', builder: (context, state) => const ChatListPage()),
       GoRoute(
         path: '/chat-detail',
-        builder: (context, state) => const SecureChatEscrowPage(),
+        builder: (context, state) => const ChatInterfacePage(),
       ),
       GoRoute(
         path: '/chat-escrow',

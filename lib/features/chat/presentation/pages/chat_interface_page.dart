@@ -1,279 +1,288 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class ChatListPage extends StatefulWidget {
-  const ChatListPage({super.key});
+class ChatInterfacePage extends StatefulWidget {
+  const ChatInterfacePage({super.key});
 
   @override
-  State<ChatListPage> createState() => _ChatListPageState();
+  State<ChatInterfacePage> createState() => _ChatInterfacePageState();
 }
 
-class _ChatListPageState extends State<ChatListPage> {
-  final TextEditingController _searchController = TextEditingController();
+class _ChatInterfacePageState extends State<ChatInterfacePage> {
+  final TextEditingController _messageController = TextEditingController();
 
-  final List<_ChatItemData> _allChats = const [
-    _ChatItemData(
-      id: '1',
-      name: 'Sofia Rodriguez',
-      lastMessage: 'Perfect timing! See you then! 🎸',
-      timestamp: '10:35 AM',
-      unread: 0,
-      skills: ['🇪🇸 Spanish', '🎹 Piano'],
+  final String matchedUserName = 'Sofia Rodriguez';
+  final String matchedUserSubtitle = 'Spanish • Guitar exchange';
+
+  final List<_Message> _messages = [
+    _Message(
+      text: 'Hey! So excited we matched! 🎉',
+      isMe: false,
+      time: '10:30',
     ),
-    _ChatItemData(
-      id: '2',
-      name: 'James Park',
-      lastMessage: 'I can show you some advanced photography techniques!',
-      timestamp: 'Yesterday',
-      unread: 2,
-      skills: ['📷 Photography', '🎬 Video'],
+    _Message(
+      text: "Me too! I'd love to help you with your guitar practice.",
+      isMe: true,
+      time: '10:32',
     ),
-    _ChatItemData(
-      id: '3',
-      name: 'Maya Patel',
-      lastMessage: "Let's schedule our first yoga session",
-      timestamp: '2 days ago',
-      unread: 0,
-      skills: ['🧘 Yoga', '👨‍🍳 Cooking'],
+    _Message(
+      text:
+          'That sounds amazing. I can help you with Spanish conversation in return.',
+      isMe: false,
+      time: '10:33',
+    ),
+    _Message(
+      text: 'Perfect. Maybe we can start with a short session tomorrow?',
+      isMe: true,
+      time: '10:34',
+    ),
+    _Message(
+      text: 'Yes, tomorrow works for me. 3 PM?',
+      isMe: false,
+      time: '10:35',
+    ),
+    _Message(
+      text: 'Perfect timing! See you then 🎸',
+      isMe: true,
+      time: '10:36',
     ),
   ];
 
   static const Color _bg = Color(0xFF0A0A0F);
+  static const Color _panel = Color(0xFF16162A);
   static const Color _card = Color(0xFF1A1A2E);
-  static const Color _card2 = Color(0xFF16162A);
   static const Color _border = Color(0xFF2A2A3E);
   static const Color _indigo = Color(0xFF6366F1);
   static const Color _violet = Color(0xFF8B5CF6);
-  static const Color _indigoText = Color(0xFF818CF8);
   static const Color _gray = Color(0xFF9CA3AF);
+  static const Color _green = Color(0xFF22C55E);
 
-  List<_ChatItemData> get _filteredChats {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return _allChats;
+  void _sendMessage() {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
 
-    return _allChats.where((chat) {
-      final matchesName = chat.name.toLowerCase().contains(query);
-      final matchesMessage = chat.lastMessage.toLowerCase().contains(query);
-      final matchesSkill = chat.skills.any(
-        (skill) => skill.toLowerCase().contains(query),
+    setState(() {
+      _messages.add(
+        _Message(
+          text: text,
+          isMe: true,
+          time: 'Now',
+        ),
       );
-      return matchesName || matchesMessage || matchesSkill;
-    }).toList();
+      _messageController.clear();
+    });
   }
-
-  int get _activeCount => _allChats.length;
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final chats = _filteredChats;
-
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
         child: Column(
           children: [
+            _buildChatHeader(context),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 20),
-                    _buildSearchBar(),
-                    const SizedBox(height: 20),
-                    _buildChatList(context, chats),
-                    const SizedBox(height: 24),
-                    _buildTipCard(),
-                  ],
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                children: [
+                  _buildDateDivider('Today'),
+                  const SizedBox(height: 14),
+                  ..._messages.map(
+                    (message) => _MessageBubble(message: message),
+                  ),
+                ],
+              ),
+            ),
+            _buildInputBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: const BoxDecoration(
+        color: _panel,
+        border: Border(
+          bottom: BorderSide(color: _border),
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => context.go('/chat'),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+          ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [_violet, _indigo]),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
-            ),
-            _buildBottomNavigation(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'Messages',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
+              Positioned(
+                right: 0,
+                bottom: 1,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: _green,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _panel, width: 2),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_indigo.withOpacity(0.20), _violet.withOpacity(0.20)],
-            ),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _indigo.withOpacity(0.30)),
-          ),
-          child: Text(
-            '$_activeCount Active',
-            style: const TextStyle(
-              color: _indigoText,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _border),
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (_) => setState(() {}),
-        style: const TextStyle(color: Colors.white),
-        decoration: const InputDecoration(
-          prefixIcon: Icon(Icons.search, color: _gray),
-          hintText: 'Search conversations...',
-          hintStyle: TextStyle(color: _gray, fontSize: 14),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatList(BuildContext context, List<_ChatItemData> chats) {
-    if (chats.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: _border),
-        ),
-        child: const Column(
-          children: [
-            Icon(Icons.chat_bubble_outline, color: _gray, size: 34),
-            SizedBox(height: 12),
-            Text(
-              'No conversations found',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+          const SizedBox(width: 12),
+          Expanded(
+            child: InkWell(
+              onTap: () {},
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    matchedUserName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    matchedUserSubtitle,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _gray,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 6),
-            Text(
-              'Try a different name, skill, or keyword.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: _gray, fontSize: 14),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: chats
-          .map(
-            (chat) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _ChatListCard(
-                chat: chat,
-                onTap: () {
-                  context.go('/chat-detail');
-                },
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _buildTipCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_card, _card2],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _indigo.withOpacity(0.30)),
-      ),
-      child: const Column(
-        children: [
-          _TipIcon(),
-          SizedBox(height: 12),
-          Text(
-            'Tip: Schedule Regular Sessions',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
           ),
-          SizedBox(height: 6),
-          Text(
-            'Use the calendar tool to set up recurring skill swaps with your matches',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _gray, fontSize: 14, height: 1.5),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.phone_outlined, color: Colors.white),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.videocam_outlined, color: Colors.white),
+          ),
+          IconButton(
+            onPressed: () => context.go('/chat-escrow'),
+            icon: const Icon(Icons.lock_outline, color: Colors.white),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomNavigation(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: _card2,
-        border: Border(top: BorderSide(color: _border)),
+  Widget _buildDateDivider(String text) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: _border),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: _gray,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+    );
+  }
+
+  Widget _buildInputBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: const BoxDecoration(
+        color: _panel,
+        border: Border(
+          top: BorderSide(color: _border),
+        ),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _ChatBottomNavItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            onTap: () {
-              context.go('/profile');
-            },
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.add_circle_outline,
+              color: _gray,
+            ),
           ),
-          _ChatBottomNavItem(
-            icon: Icons.explore_outlined,
-            label: 'Discover',
-            onTap: () {
-              context.go('/matching');
-            },
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: _card,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: _border),
+              ),
+              child: TextField(
+                controller: _messageController,
+                onSubmitted: (_) => _sendMessage(),
+                minLines: 1,
+                maxLines: 4,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Message',
+                  hintStyle: TextStyle(color: _gray),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  suffixIcon: Icon(
+                    Icons.emoji_emotions_outlined,
+                    color: _gray,
+                  ),
+                ),
+              ),
+            ),
           ),
-          _ChatBottomNavItem(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            isActive: true,
-            onTap: () {},
+          const SizedBox(width: 10),
+          InkWell(
+            onTap: _sendMessage,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [_indigo, _violet]),
+              ),
+              child: const Icon(
+                Icons.send,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
           ),
         ],
       ),
@@ -281,11 +290,10 @@ class _ChatListPageState extends State<ChatListPage> {
   }
 }
 
-class _ChatListCard extends StatelessWidget {
-  final _ChatItemData chat;
-  final VoidCallback onTap;
+class _MessageBubble extends StatelessWidget {
+  final _Message message;
 
-  const _ChatListCard({required this.chat, required this.onTap});
+  const _MessageBubble({required this.message});
 
   static const Color _card = Color(0xFF1A1A2E);
   static const Color _border = Color(0xFF2A2A3E);
@@ -295,168 +303,61 @@ class _ChatListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: _card,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _border),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [_violet, _indigo]),
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  if (chat.unread > 0)
-                    Positioned(
-                      top: -2,
-                      right: -2,
-                      child: Container(
-                        width: 22,
-                        height: 22,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(colors: [_indigo, _violet]),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${chat.unread}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            chat.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          chat.timestamp,
-                          style: const TextStyle(color: _gray, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      chat.lastMessage,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: _gray, fontSize: 14),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: chat.skills
-                          .map(
-                            (skill) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0x800A0A0F),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: _border),
-                              ),
-                              child: Text(
-                                skill,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    final isMe = message.isMe;
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.only(
+          bottom: 10,
+          left: isMe ? 56 : 0,
+          right: isMe ? 0 : 56,
         ),
-      ),
-    );
-  }
-}
-
-class _ChatBottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _ChatBottomNavItem({
-    required this.icon,
-    required this.label,
-    this.isActive = false,
-    required this.onTap,
-  });
-
-  static const Color _active = Color(0xFF818CF8);
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.45);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 7),
+        decoration: BoxDecoration(
+          gradient:
+              isMe ? const LinearGradient(colors: [_indigo, _violet]) : null,
+          color: isMe ? null : _card,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isMe ? 18 : 4),
+            bottomRight: Radius.circular(isMe ? 4 : 18),
+          ),
+          border: isMe ? null : Border.all(color: _border),
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
             Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              message.text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                height: 1.38,
               ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  message.time,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.62),
+                    fontSize: 10,
+                  ),
+                ),
+                if (isMe) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.done_all,
+                    size: 14,
+                    color: Colors.white.withOpacity(0.70),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -465,41 +366,14 @@ class _ChatBottomNavItem extends StatelessWidget {
   }
 }
 
-class _TipIcon extends StatelessWidget {
-  const _TipIcon();
+class _Message {
+  final String text;
+  final bool isMe;
+  final String time;
 
-  static const Color _indigo = Color(0xFF6366F1);
-  static const Color _violet = Color(0xFF8B5CF6);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(colors: [_indigo, _violet]),
-      ),
-      alignment: Alignment.center,
-      child: const Text('💡', style: TextStyle(fontSize: 22)),
-    );
-  }
-}
-
-class _ChatItemData {
-  final String id;
-  final String name;
-  final String lastMessage;
-  final String timestamp;
-  final int unread;
-  final List<String> skills;
-
-  const _ChatItemData({
-    required this.id,
-    required this.name,
-    required this.lastMessage,
-    required this.timestamp,
-    required this.unread,
-    required this.skills,
+  const _Message({
+    required this.text,
+    required this.isMe,
+    required this.time,
   });
 }
