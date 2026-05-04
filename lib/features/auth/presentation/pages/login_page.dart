@@ -263,7 +263,10 @@ class _LoginPageState extends State<LoginPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -272,12 +275,13 @@ class _LoginPageState extends State<LoginPage>
           ),
         ),
         child: SafeArea(
+          bottom: false,
           child: FadeTransition(
             opacity: _fadeAnimation,
             child: SlideTransition(
               position: _slideAnimation,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -388,7 +392,6 @@ class _LoginPageState extends State<LoginPage>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
