@@ -16,14 +16,15 @@ class FirebaseExchangeRepository implements ExchangeRepository {
         .collection('matches')
         .where('participants', arrayContains: userId)
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((snapshot) async {
           final offers = snapshot.docs.map(MatchOffer.fromFirestore).toList();
-          offers.sort((a, b) {
+          final enrichedOffers = await _enrichMissingOfferNames(offers);
+          enrichedOffers.sort((a, b) {
             final aDate = a.createdAt ?? a.updatedAt ?? DateTime(0);
             final bDate = b.createdAt ?? b.updatedAt ?? DateTime(0);
             return bDate.compareTo(aDate);
           });
-          return offers;
+          return enrichedOffers;
         });
   }
 
@@ -84,6 +85,9 @@ class FirebaseExchangeRepository implements ExchangeRepository {
       transaction.set(matchRef, {
         'id': matchId,
         'status': MatchOfferStatus.accepted.name,
+        'requesterName': participantNames[offer.requesterId],
+        'receiverName': participantNames[offer.receiverId],
+        'participantNames': participantNames,
         'updatedAt': now,
       }, SetOptions(merge: true));
 
@@ -208,6 +212,44 @@ class FirebaseExchangeRepository implements ExchangeRepository {
   List<String> _normalizedParticipants(List<String> participants) {
     return participants.where((id) => id.trim().isNotEmpty).toSet().toList()
       ..sort();
+  }
+
+  Future<List<MatchOffer>> _enrichMissingOfferNames(
+    List<MatchOffer> offers,
+  ) async {
+    final missingUserIds = offers
+        .expand((offer) => [offer.requesterId, offer.receiverId])
+        .where((userId) => userId.trim().isNotEmpty)
+        .where(
+          (userId) => offers.any(
+            (offer) =>
+                (offer.requesterId == userId &&
+                    offer.requesterName.trim().isEmpty) ||
+                (offer.receiverId == userId &&
+                    offer.receiverName.trim().isEmpty),
+          ),
+        )
+        .toSet();
+
+    if (missingUserIds.isEmpty) return offers;
+
+    final fetchedNames = <String, String>{};
+    for (final userId in missingUserIds) {
+      final snapshot = await _firestore.collection('users').doc(userId).get();
+      final name = _readUserName(snapshot);
+      if (name.trim().isNotEmpty) fetchedNames[userId] = name;
+    }
+
+    return offers.map((offer) {
+      return offer.copyWith(
+        requesterName: offer.requesterName.trim().isNotEmpty
+            ? offer.requesterName
+            : fetchedNames[offer.requesterId],
+        receiverName: offer.receiverName.trim().isNotEmpty
+            ? offer.receiverName
+            : fetchedNames[offer.receiverId],
+      );
+    }).toList();
   }
 }
 

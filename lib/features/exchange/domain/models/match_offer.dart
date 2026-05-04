@@ -18,6 +18,8 @@ class MatchOffer {
   final String id;
   final String requesterId;
   final String receiverId;
+  final String requesterName;
+  final String receiverName;
   final List<String> participants;
   final String skill;
   final int credits;
@@ -29,6 +31,8 @@ class MatchOffer {
     required this.id,
     required this.requesterId,
     required this.receiverId,
+    this.requesterName = '',
+    this.receiverName = '',
     required this.participants,
     required this.skill,
     required this.credits,
@@ -37,9 +41,7 @@ class MatchOffer {
     this.updatedAt,
   });
 
-  factory MatchOffer.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  factory MatchOffer.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     return MatchOffer.fromMap({'id': doc.id, ...?doc.data()});
   }
 
@@ -48,6 +50,14 @@ class MatchOffer {
       id: map['id'] as String? ?? '',
       requesterId: map['requesterId'] as String? ?? '',
       receiverId: map['receiverId'] as String? ?? '',
+      requesterName:
+          map['requesterName'] as String? ??
+          _readStringMap(map['participantNames'])[map['requesterId']] ??
+          '',
+      receiverName:
+          map['receiverName'] as String? ??
+          _readStringMap(map['participantNames'])[map['receiverId']] ??
+          '',
       participants: _readStringList(map['participants']),
       skill:
           map['skill'] as String? ??
@@ -65,6 +75,8 @@ class MatchOffer {
     String? id,
     String? requesterId,
     String? receiverId,
+    String? requesterName,
+    String? receiverName,
     List<String>? participants,
     String? skill,
     int? credits,
@@ -76,6 +88,8 @@ class MatchOffer {
       id: id ?? this.id,
       requesterId: requesterId ?? this.requesterId,
       receiverId: receiverId ?? this.receiverId,
+      requesterName: requesterName ?? this.requesterName,
+      receiverName: receiverName ?? this.receiverName,
       participants: participants ?? this.participants,
       skill: skill ?? this.skill,
       credits: credits ?? this.credits,
@@ -90,6 +104,8 @@ class MatchOffer {
       'id': id,
       'requesterId': requesterId,
       'receiverId': receiverId,
+      'requesterName': requesterName,
+      'receiverName': receiverName,
       'participants': participants,
       'skill': skill,
       'credits': credits,
@@ -103,6 +119,13 @@ class MatchOffer {
 List<String> _readStringList(Object? value) {
   if (value is! List) return [];
   return value.whereType<String>().toList();
+}
+
+Map<String, String> _readStringMap(Object? value) {
+  if (value is! Map) return {};
+  return value.map(
+    (key, item) => MapEntry(key.toString(), item?.toString() ?? ''),
+  );
 }
 
 int _readInt(Object? value) {
