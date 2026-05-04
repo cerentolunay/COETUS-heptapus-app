@@ -37,16 +37,17 @@ class FirebaseProfileRepository implements ProfileRepository {
 
     final user = AppUser.fromMap({
       'id': firebaseUser.uid,
-      'email': firebaseUser.email ?? data['email'] ?? '',
+      'email': data['email'] ?? firebaseUser.email ?? '',
       'displayName':
           data['displayName'] ?? data['name'] ?? firebaseUser.displayName ?? '',
-      'name': firebaseUser.displayName ?? data['name'] ?? '',
+      'name': data['name'] ?? firebaseUser.displayName ?? '',
       'bio': data['bio'] ?? '',
       'location': data['location'] ?? '',
       'photoUrl': data['photoUrl'] ?? '',
       'trustScore': data['trustScore'] ?? 0,
       'credits': data['credits'] ?? 0,
       'verified': data['verified'] ?? false,
+      'profileCompleted': data['profileCompleted'],
     });
 
     return ProfileData(
@@ -63,20 +64,20 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
+    final profileCompleted =
+        user.name.trim().isNotEmpty && user.bio.trim().isNotEmpty;
+    final updatedUser = user.copyWith(
+      id: firebaseUser.uid,
+      email: firebaseUser.email ?? user.email,
+      profileCompleted: profileCompleted,
+    );
+
     await _firestore.collection('users').doc(firebaseUser.uid).set({
-      'id': user.id,
-      'name': user.name,
-      'displayName': user.name,
-      'email': user.email,
-      'bio': user.bio,
-      'location': user.location ?? '',
-      'photoUrl': user.photoUrl ?? '',
-      'trustScore': user.trustScore,
-      'credits': user.credits,
-      'verified': user.verified,
+      ...updatedUser.toMap(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-    await firebaseUser.updateDisplayName(user.name);
+    await firebaseUser.updateDisplayName(updatedUser.name);
+    await firebaseUser.reload();
 
     return loadProfile();
   }

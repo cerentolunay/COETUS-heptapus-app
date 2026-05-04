@@ -166,7 +166,6 @@ class AppRouter {
       // 8. Yönlendirme yok
       return null;
     },
-
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(
