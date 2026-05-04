@@ -74,8 +74,12 @@ class _ChatListPageState extends State<ChatListPage> {
           );
         }
 
+        final uniqueChats = _deduplicateChatsByParticipant(
+          snapshot.data ?? const <ChatThread>[],
+          userId,
+        );
         final query = _searchController.text.trim().toLowerCase();
-        final chats = (snapshot.data ?? const <ChatThread>[])
+        final chats = uniqueChats
             .where(
               (chat) =>
                   query.isEmpty ||
@@ -95,7 +99,7 @@ class _ChatListPageState extends State<ChatListPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(snapshot.data?.length ?? 0),
+              _buildHeader(uniqueChats.length),
               const SizedBox(height: 20),
               _buildSearchBar(),
               const SizedBox(height: 20),
@@ -154,6 +158,38 @@ class _ChatListPageState extends State<ChatListPage> {
         ),
       ],
     );
+  }
+
+  List<ChatThread> _deduplicateChatsByParticipant(
+    List<ChatThread> chats,
+    String userId,
+  ) {
+    final latestByParticipant = <String, ChatThread>{};
+
+    for (final chat in chats) {
+      final otherId = chat.otherParticipantId(userId);
+      final key = otherId.trim().isEmpty ? chat.id : otherId;
+      final existing = latestByParticipant[key];
+
+      if (existing == null ||
+          _chatSortDate(chat).isAfter(_chatSortDate(existing))) {
+        latestByParticipant[key] = chat;
+      }
+    }
+
+    final uniqueChats = latestByParticipant.values.toList();
+    uniqueChats.sort((first, second) {
+      return _chatSortDate(second).compareTo(_chatSortDate(first));
+    });
+
+    return uniqueChats;
+  }
+
+  DateTime _chatSortDate(ChatThread chat) {
+    return chat.updatedAt ??
+        chat.lastMessageAt ??
+        chat.createdAt ??
+        DateTime(0);
   }
 
   Widget _buildSearchBar() {
