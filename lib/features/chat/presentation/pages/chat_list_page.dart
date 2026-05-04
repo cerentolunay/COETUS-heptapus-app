@@ -15,6 +15,7 @@ class ChatListPage extends StatefulWidget {
 class _ChatListPageState extends State<ChatListPage> {
   final TextEditingController _searchController = TextEditingController();
   late final ChatRepository _repository = ChatRepositoryFactory.create();
+  String _lastSearchQuery = '';
 
   static const Color _bg = Color(0xFF0A0A0F);
   static const Color _card = Color(0xFF1A1A2E);
@@ -48,6 +49,10 @@ class _ChatListPageState extends State<ChatListPage> {
               )
             : Column(
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                    child: _buildSearchBar(),
+                  ),
                   Expanded(child: _buildContent(userId)),
                   _buildBottomNavigation(context),
                 ],
@@ -78,7 +83,7 @@ class _ChatListPageState extends State<ChatListPage> {
           snapshot.data ?? const <ChatThread>[],
           userId,
         );
-        final query = _searchController.text.trim().toLowerCase();
+        final query = _lastSearchQuery.toLowerCase();
         final chats = uniqueChats
             .where(
               (chat) =>
@@ -95,13 +100,11 @@ class _ChatListPageState extends State<ChatListPage> {
             .toList();
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(uniqueChats.length),
-              const SizedBox(height: 20),
-              _buildSearchBar(),
               const SizedBox(height: 20),
               if (chats.isEmpty)
                 _buildEmptyChats()
@@ -201,7 +204,13 @@ class _ChatListPageState extends State<ChatListPage> {
       ),
       child: TextField(
         controller: _searchController,
-        onChanged: (_) => setState(() {}),
+        onChanged: (value) {
+          if (_lastSearchQuery != value.trim()) {
+            setState(() {
+              _lastSearchQuery = value.trim();
+            });
+          }
+        },
         style: const TextStyle(color: Colors.white),
         decoration: const InputDecoration(
           prefixIcon: Icon(Icons.search, color: _gray),
