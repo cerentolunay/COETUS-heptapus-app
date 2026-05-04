@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:coetus/features/profile/presentation/pages/other_user_profile_page.dart';
+
 class SkillDiscoveryPage extends StatefulWidget {
   const SkillDiscoveryPage({super.key});
 
@@ -51,6 +53,11 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
       description:
           'Figma akislari, component dusuncesi ve mobil ekran hiyerarsisini birebir feedback ile gelistir.',
       tags: ['Figma', 'Mobile UX', 'Design System'],
+      bio:
+          'Mobil urun ekiplerinde UI sistemleri ve kullanici akislari uzerine calisiyor.',
+      trustScore: 94,
+      teachSkills: ['Figma', 'Mobile UX', 'Design System'],
+      learnSkills: ['Flutter UI', 'Product Analytics'],
       availability: 'Bu hafta 3 bos slot',
       accent: _cyan,
     ),
@@ -69,6 +76,11 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
       description:
           'Gunluk konusma pratigi, telaffuz duzeltmeleri ve hedef odakli mini odevlerle ilerle.',
       tags: ['Speaking', 'Pronunciation', 'Interview'],
+      bio:
+          'Sinav hazirligi ve is gorusmesi odakli Ingilizce pratikleri tasarlar.',
+      trustScore: 91,
+      teachSkills: ['Speaking', 'Pronunciation', 'Interview English'],
+      learnSkills: ['Turkish Culture', 'Presentation'],
       availability: 'Aksam saatleri uygun',
       accent: _blue,
     ),
@@ -87,6 +99,11 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
       description:
           'Widget mimarisi, state management ve hizli prototipleme uzerinden gercek urun mantigiyle ilerle.',
       tags: ['Flutter', 'Firebase', 'Architecture'],
+      bio:
+          'Flutter ve Firebase ile MVP cikarma, refactor ve mimari kararlar konusunda mentorluk verir.',
+      trustScore: 96,
+      teachSkills: ['Flutter', 'Firebase', 'Architecture'],
+      learnSkills: ['UI Design', 'Growth'],
       availability: 'Hafta ici 19:00 sonrasi',
       accent: _cyan,
     ),
@@ -105,6 +122,11 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
       description:
           'Ritim, akor gecisleri ve calisma rutini ile ilk sarkilarini kisa surede calmaya basla.',
       tags: ['Chord', 'Rhythm', 'Practice Plan'],
+      bio:
+          'Yeni baslayanlar icin akustik gitar egzersizleri ve haftalik calisma planlari hazirlar.',
+      trustScore: 88,
+      teachSkills: ['Akustik Gitar', 'Ritim', 'Akor'],
+      learnSkills: ['Music Production'],
       availability: 'Hafta sonu atolyeleri acik',
       accent: _amber,
     ),
@@ -123,6 +145,11 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
       description:
           'Pitch deck akisi, hikaye kurgusu ve ikna gucu yuksek sunum teknikleri icin uygulamali destek al.',
       tags: ['Pitch', 'Storytelling', 'Public Speaking'],
+      bio:
+          'Startup pitch, ekip ici sunum ve hikaye kurgusu icin pratik odakli destek verir.',
+      trustScore: 93,
+      teachSkills: ['Pitch', 'Storytelling', 'Public Speaking'],
+      learnSkills: ['No-code', 'Data Visualization'],
       availability: 'Uzaktan birebir gorusme',
       accent: _blue,
     ),
@@ -130,11 +157,13 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
 
   String _selectedCategory = 'Hepsi';
   bool _onlyHighMatch = true;
+  bool _isLoading = true;
+  _DiscoverySortOption _sortOption = _DiscoverySortOption.matchScore;
 
   List<_SkillDiscoveryItem> get _filteredSkills {
     final query = _searchController.text.trim().toLowerCase();
 
-    return _skills.where((skill) {
+    final filtered = _skills.where((skill) {
       final matchesCategory =
           _selectedCategory == 'Hepsi' || skill.category == _selectedCategory;
       final matchesHighMatch = !_onlyHighMatch || skill.matchScore >= 90;
@@ -146,6 +175,27 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
 
       return matchesCategory && matchesHighMatch && matchesQuery;
     }).toList();
+
+    filtered.sort((first, second) {
+      switch (_sortOption) {
+        case _DiscoverySortOption.matchScore:
+          return second.matchScore.compareTo(first.matchScore);
+        case _DiscoverySortOption.credit:
+          return first.sessionCredits.compareTo(second.sessionCredits);
+        case _DiscoverySortOption.rating:
+          return second.rating.compareTo(first.rating);
+      }
+    });
+
+    return filtered;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 280), () {
+      if (mounted) setState(() => _isLoading = false);
+    });
   }
 
   @override
@@ -181,7 +231,10 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
                     height: 44,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [skill.accent, Colors.white.withValues(alpha: 0.18)],
+                        colors: [
+                          skill.accent,
+                          Colors.white.withValues(alpha: 0.18),
+                        ],
                       ),
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -250,7 +303,7 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    this.context.go('/matching-feed');
+                    this.context.go('/matching');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: skill.accent,
@@ -287,81 +340,100 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(),
-                            const SizedBox(height: 20),
-                            _buildHeroCard(filteredSkills.length),
-                            const SizedBox(height: 18),
-                            _buildSearchField(),
-                            const SizedBox(height: 16),
-                            _buildFilterRow(),
-                            const SizedBox(height: 18),
-                            _buildInsightStrip(),
-                            const SizedBox(height: 20),
-                            Text(
-                              'One cikan skill oturumlari',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.96),
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: _cyan))
+              : Column(
+                  children: [
+                    Expanded(
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildHeader(),
+                                  const SizedBox(height: 20),
+                                  _buildHeroCard(filteredSkills.length),
+                                  const SizedBox(height: 18),
+                                  _buildSearchField(),
+                                  const SizedBox(height: 16),
+                                  _buildFilterRow(),
+                                  const SizedBox(height: 12),
+                                  _buildSortRow(),
+                                  const SizedBox(height: 18),
+                                  _buildInsightStrip(),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    'One cikan skill oturumlari',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.96,
+                                      ),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${filteredSkills.length} uygun skill bulundu',
+                                    style: const TextStyle(
+                                      color: _textMuted,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${filteredSkills.length} uygun skill bulundu',
-                              style: const TextStyle(
-                                color: _textMuted,
-                                fontSize: 13,
+                          ),
+                          if (filteredSkills.isEmpty)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _EmptyDiscoveryState(),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                0,
+                                24,
+                                120,
+                              ),
+                              sliver: SliverList.separated(
+                                itemCount: filteredSkills.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  final skill = filteredSkills[index];
+                                  return _SkillDiscoveryCard(
+                                    item: skill,
+                                    onViewProfile: () =>
+                                        _openMentorProfile(skill),
+                                    onSendOffer: () => _showOfferSheet(skill),
+                                  );
+                                },
                               ),
                             ),
-                            const SizedBox(height: 14),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
-                    if (filteredSkills.isEmpty)
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _EmptyDiscoveryState(),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
-                        sliver: SliverList.separated(
-                          itemCount: filteredSkills.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final skill = filteredSkills[index];
-                            return _SkillDiscoveryCard(
-                              item: skill,
-                              onViewProfile: () =>
-                                  context.go('/profile-advanced'),
-                              onSendOffer: () => _showOfferSheet(skill),
-                            );
-                          },
-                        ),
-                      ),
+                    _DiscoveryBottomNav(
+                      onProfileTap: () => context.go('/profile-advanced'),
+                      onChatTap: () => context.go('/chat'),
+                    ),
                   ],
                 ),
-              ),
-              _DiscoveryBottomNav(
-                onProfileTap: () => context.go('/profile-advanced'),
-                onChatTap: () => context.go('/chat'),
-              ),
-            ],
-          ),
         ),
+      ),
+    );
+  }
+
+  void _openMentorProfile(_SkillDiscoveryItem skill) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OtherUserProfilePage(profile: skill.toProfileData()),
       ),
     );
   }
@@ -578,6 +650,49 @@ class _SkillDiscoveryPageState extends State<SkillDiscoveryPage> {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSortRow() {
+    return Row(
+      children: [
+        const Icon(Icons.sort, color: _textMuted, size: 18),
+        const SizedBox(width: 8),
+        const Text(
+          'Sirala',
+          style: TextStyle(
+            color: _textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const Spacer(),
+        DropdownButtonHideUnderline(
+          child: DropdownButton<_DiscoverySortOption>(
+            value: _sortOption,
+            dropdownColor: _bgMid,
+            borderRadius: BorderRadius.circular(14),
+            iconEnabledColor: _cyan,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+            items: _DiscoverySortOption.values
+                .map(
+                  (option) => DropdownMenuItem(
+                    value: option,
+                    child: Text(option.label),
+                  ),
+                )
+                .toList(),
+            onChanged: (option) {
+              if (option == null) return;
+              setState(() => _sortOption = option);
+            },
           ),
         ),
       ],
@@ -932,7 +1047,9 @@ class _DiscoveryBottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xCC10203A),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.10))),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
@@ -1112,6 +1229,10 @@ class _SkillDiscoveryItem {
   final int reviewCount;
   final String description;
   final List<String> tags;
+  final String bio;
+  final int trustScore;
+  final List<String> teachSkills;
+  final List<String> learnSkills;
   final String availability;
   final Color accent;
 
@@ -1129,7 +1250,44 @@ class _SkillDiscoveryItem {
     required this.reviewCount,
     required this.description,
     required this.tags,
+    required this.bio,
+    required this.trustScore,
+    required this.teachSkills,
+    required this.learnSkills,
     required this.availability,
     required this.accent,
   });
+
+  OtherUserProfileData toProfileData() {
+    return OtherUserProfileData(
+      id: id,
+      name: mentorName,
+      location: location,
+      bio: bio,
+      trustScore: trustScore,
+      verified: matchScore >= 90,
+      matchScore: matchScore,
+      creditsRequired: sessionCredits,
+      matchReason:
+          '$title oturumu $category kategorisinde, $levelLabel seviyesinde ve $sessionCredits HC ile uygun gorunuyor.',
+      teachSkills: teachSkills
+          .map((skill) => OtherUserSkillData(name: skill, category: category))
+          .toList(),
+      learnSkills: learnSkills
+          .map(
+            (skill) => OtherUserSkillData(name: skill, category: 'Ilgi alani'),
+          )
+          .toList(),
+    );
+  }
+}
+
+enum _DiscoverySortOption {
+  matchScore('En yuksek uyum'),
+  credit('Dusuk kredi'),
+  rating('En yuksek puan');
+
+  final String label;
+
+  const _DiscoverySortOption(this.label);
 }
