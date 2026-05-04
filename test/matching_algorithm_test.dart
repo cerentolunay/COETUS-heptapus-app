@@ -200,6 +200,45 @@ void main() {
       expect(matches.first.creditsRequired, 70);
     });
 
+    test('matches same skill names even when user-created ids differ', () {
+      const currentProfile = ProfileData(
+        user: AppUser(
+          id: 'current',
+          name: 'Current User',
+          email: 'current@example.com',
+          bio: 'Learning Spanish',
+        ),
+        teachSkills: [],
+        learnSkills: [
+          SkillModel(id: 'learn-123', name: 'Spanish', level: 1),
+        ],
+      );
+
+      const candidates = [
+        ProfileData(
+          user: AppUser(
+            id: 'teacher',
+            name: 'Teacher',
+            email: 'teacher@example.com',
+            bio: 'Spanish teacher',
+            trustScore: 70,
+          ),
+          teachSkills: [
+            SkillModel(id: 'teach-456', name: 'Spanish', level: 5),
+          ],
+          learnSkills: [],
+        ),
+      ];
+
+      final matches = const MatchingService().getRecommendedMatches(
+        currentProfile: currentProfile,
+        candidateProfiles: candidates,
+      );
+
+      expect(matches, hasLength(1));
+      expect(matches.first.teacherSkill.name, 'Spanish');
+    });
+
     test('can match related skills when skill graph service is provided', () {
       const currentProfile = ProfileData(
         user: AppUser(

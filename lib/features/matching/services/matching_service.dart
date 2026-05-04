@@ -143,11 +143,18 @@ class MatchingService {
   }
 
   bool _isSameSkill(SkillModel first, SkillModel second) {
+    final firstName = first.name.trim().toLowerCase();
+    final secondName = second.name.trim().toLowerCase();
+
+    if (firstName.isNotEmpty && secondName.isNotEmpty) {
+      return firstName == secondName;
+    }
+
     if (first.id.isNotEmpty && second.id.isNotEmpty) {
       return first.id == second.id;
     }
 
-    return first.name.trim().toLowerCase() == second.name.trim().toLowerCase();
+    return false;
   }
 
   double _calculateProfileCompleteness(ProfileData profile) {
