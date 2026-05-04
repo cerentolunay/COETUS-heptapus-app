@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coetus/features/matching/models/match_candidate.dart';
 import 'package:coetus/features/matching/services/matching_service.dart';
+import 'package:coetus/features/matching/models/match_explanation.dart';
+import 'package:coetus/features/matching/presentation/pages/skill_discovery_page.dart';
 import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
 import 'package:coetus/features/profile/domain/models/profile_data.dart';
 import 'package:coetus/features/profile/domain/models/skill_model.dart';
 import 'package:coetus/features/profile/domain/repositories/profile_repository.dart';
+import 'package:coetus/features/profile/presentation/pages/other_user_profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +34,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   bool _isSendingOffer = false;
   String? _selectedSkill;
   String? _errorMessage;
+  _MatchSortOption _sortOption = _MatchSortOption.bestMatch;
 
   static const Color _bgTop = Color(0xFF0B1120);
   static const Color _bgMid = Color(0xFF0F172A);
@@ -60,7 +64,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   List<_UserMatch> get _visibleUsers {
     final query = _searchController.text.trim().toLowerCase();
 
-    return _users.where((user) {
+    final filtered = _users.where((user) {
       final matchesSearch =
           query.isEmpty ||
           user.name.toLowerCase().contains(query) ||
@@ -80,6 +84,19 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
       return matchesSearch && matchesSkill;
     }).toList();
+
+    filtered.sort((first, second) {
+      switch (_sortOption) {
+        case _MatchSortOption.bestMatch:
+          return second.matchPercentage.compareTo(first.matchPercentage);
+        case _MatchSortOption.trust:
+          return second.trustScore.compareTo(first.trustScore);
+        case _MatchSortOption.lowCredit:
+          return first.creditsRequired.compareTo(second.creditsRequired);
+      }
+    });
+
+    return filtered;
   }
 
   Future<void> _loadMatches() async {
@@ -148,7 +165,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       name: candidate.user.name.isEmpty
           ? 'Isimsiz Kullanici'
           : candidate.user.name,
-      location: 'Konum belirtilmedi',
+      location: candidate.user.location?.trim().isNotEmpty == true
+          ? candidate.user.location!
+          : 'Konum belirtilmedi',
       trustScore: candidate.user.trustScore,
       bio: candidate.user.bio,
       verified: candidate.user.verified,
@@ -167,6 +186,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       ],
       personalityTraits: traits.isEmpty ? const ['New member'] : traits,
       matchPercentage: (candidate.matchScore * 100).round(),
+      matchReason: _buildMatchReason(candidate.explanation),
       creditsRequired: candidate.creditsRequired,
       totalSwaps: 0,
     );
@@ -186,7 +206,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     return _UserMatch(
       id: profile.user.id,
       name: profile.user.name.isEmpty ? 'Isimsiz Kullanici' : profile.user.name,
-      location: 'Konum belirtilmedi',
+      location: profile.user.location?.trim().isNotEmpty == true
+          ? profile.user.location!
+          : 'Konum belirtilmedi',
       trustScore: profile.user.trustScore,
       bio: profile.user.bio,
       verified: profile.user.verified,
@@ -194,9 +216,26 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       wantToLearn: learnGoals,
       personalityTraits: traits.isEmpty ? const ['New member'] : traits,
       matchPercentage: 0,
+      matchReason:
+          'Discovery profilinde skill ve profil bilgileri gorunuyor; net match skoru icin kendi ogrenme hedeflerinle ortak skill gerekir.',
       creditsRequired: 50,
       totalSwaps: 0,
     );
+  }
+
+  String _buildMatchReason(MatchExplanation explanation) {
+    final skillPart = explanation.skillMatchType == SkillMatchType.exact
+        ? 'Ogrenmek istedigin skill ile birebir eslesiyor'
+        : 'Iliskili bir skill uzerinden onerildi';
+    final trustPart =
+        'ortalama trust ${(explanation.averageTrustScore * 100).round()}%';
+    final profilePart =
+        'profil dolulugu ${(explanation.profileCompleteness * 100).round()}%';
+    final availabilityPart = explanation.hasAvailabilityOverlap
+        ? 'uygun zaman cakismasi var'
+        : 'zaman uygunlugu henuz net degil';
+
+    return '$skillPart; $trustPart, $profilePart ve $availabilityPart.';
   }
 
   _TeachSkill _mapTeachSkill(SkillModel skill) {
@@ -579,6 +618,50 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.sort, color: _textMuted, size: 18),
+              const SizedBox(width: 8),
+              const Text(
+                'Sirala',
+                style: TextStyle(
+                  color: _textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<_MatchSortOption>(
+                  value: _sortOption,
+                  dropdownColor: _bgMid,
+                  borderRadius: BorderRadius.circular(14),
+                  iconEnabledColor: _cyan,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  items: _MatchSortOption.values
+                      .map(
+                        (option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (option) {
+                    if (option == null) return;
+                    setState(() {
+                      _sortOption = option;
+                      _currentIndex = 0;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
           if (_skillFilters.isNotEmpty) ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -665,79 +748,10 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   }
 
   void _showProfileDetails(_UserMatch user) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: _bgMid,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OtherUserProfilePage(profile: user.toProfileData()),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        user.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: _textMuted),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(user.location, style: const TextStyle(color: _textMuted)),
-                const SizedBox(height: 16),
-                Text(
-                  user.bio,
-                  style: const TextStyle(color: _textSoft, height: 1.5),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Ogretir',
-                  style: TextStyle(color: _cyan, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: user.canTeach
-                      .map((skill) => _SkillChip(label: skill.name))
-                      .toList(),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Ogrenmek istiyor',
-                  style: TextStyle(
-                    color: _violetSoft,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: user.wantToLearn
-                      .map((goal) => _SkillChip(label: goal.name))
-                      .toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -837,7 +851,11 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             icon: Icons.trending_up,
             label: 'Discover',
             isActive: true,
-            onTap: () {},
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SkillDiscoveryPage(),
+              ),
+            ),
           ),
           _BottomNavItem(
             icon: Icons.chat_bubble_outline,
@@ -966,6 +984,7 @@ class _MatchCard extends StatelessWidget {
                         label: '${user.matchPercentage}% Match',
                         color: _violetSoft,
                         borderColor: _violet,
+                        icon: Icons.favorite_outline,
                       ),
                       _MetricChip(
                         label: '${user.trustScore}% Trust',
@@ -986,11 +1005,46 @@ class _MatchCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
+        _buildReasonCard(),
+        const SizedBox(height: 16),
         Text(
           user.bio.isEmpty ? 'Bu kullanici henuz bio eklememis.' : user.bio,
           style: const TextStyle(color: _textSoft, fontSize: 14, height: 1.6),
         ),
       ],
+    );
+  }
+
+  Widget _buildReasonCard() {
+    if (user.matchReason.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _cyan.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _cyan.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome_outlined, color: _cyan, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              user.matchReason,
+              style: const TextStyle(
+                color: _textSoft,
+                fontSize: 13,
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1564,6 +1618,7 @@ class _UserMatch {
   final List<_LearnGoal> wantToLearn;
   final List<String> personalityTraits;
   final int matchPercentage;
+  final String matchReason;
   final int creditsRequired;
   final int totalSwaps;
 
@@ -1578,9 +1633,39 @@ class _UserMatch {
     required this.wantToLearn,
     required this.personalityTraits,
     required this.matchPercentage,
+    required this.matchReason,
     required this.creditsRequired,
     required this.totalSwaps,
   });
+
+  OtherUserProfileData toProfileData() {
+    return OtherUserProfileData(
+      id: id,
+      name: name,
+      location: location,
+      bio: bio,
+      trustScore: trustScore,
+      verified: verified,
+      matchScore: matchPercentage,
+      creditsRequired: creditsRequired,
+      matchReason: matchReason,
+      teachSkills: canTeach
+          .map(
+            (skill) => OtherUserSkillData(
+              name: skill.name,
+              category: skill.category,
+              level: skill.level,
+            ),
+          )
+          .toList(),
+      learnSkills: wantToLearn
+          .map(
+            (goal) =>
+                OtherUserSkillData(name: goal.name, category: goal.category),
+          )
+          .toList(),
+    );
+  }
 }
 
 class _TeachSkill {
@@ -1600,4 +1685,14 @@ class _LearnGoal {
   final String category;
 
   const _LearnGoal({required this.name, required this.category});
+}
+
+enum _MatchSortOption {
+  bestMatch('En iyi match'),
+  trust('Trust score'),
+  lowCredit('Dusuk kredi');
+
+  final String label;
+
+  const _MatchSortOption(this.label);
 }
