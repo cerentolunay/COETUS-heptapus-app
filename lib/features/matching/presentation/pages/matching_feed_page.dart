@@ -1,4 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:coetus/features/matching/models/match_candidate.dart';
+import 'package:coetus/features/matching/services/matching_service.dart';
+import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
+import 'package:coetus/features/profile/domain/models/profile_data.dart';
+import 'package:coetus/features/profile/domain/models/skill_model.dart';
+import 'package:coetus/features/profile/domain/repositories/profile_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +20,8 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   final TextEditingController _searchController = TextEditingController();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProfileRepository _profileRepository =
+      ProfileRepositoryFactory.create();
 
   List<_UserMatch> _users = [];
   List<String> _skillFilters = [];
@@ -75,67 +83,26 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   }
 
   Future<void> _loadMatches() async {
-    final currentUser = _firebaseAuth.currentUser;
-    if (currentUser == null) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Discover icin once giris yapmalisin.';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final currentUserDoc = _firestore
-          .collection('users')
-          .doc(currentUser.uid);
-      final myTeachSkills = await _readSkills(
-        currentUserDoc.collection('teachSkills'),
-      );
-      final myLearnSkills = await _readSkills(
-        currentUserDoc.collection('learnSkills'),
+      final currentProfile = await _profileRepository.loadProfile();
+      final candidates = await _profileRepository.loadDiscoverableProfiles();
+
+      final matches = const MatchingService().getRecommendedMatches(
+        currentProfile: currentProfile,
+        candidateProfiles: candidates,
       );
 
-      final usersSnapshot = await _firestore
-          .collection('users')
-          .orderBy('updatedAt', descending: true)
-          .limit(50)
-          .get();
-
-      final matches = <_UserMatch>[];
-      for (final doc in usersSnapshot.docs) {
-        if (doc.id == currentUser.uid) continue;
-
-        final data = doc.data();
-        final teachSkills = await _readSkills(
-          doc.reference.collection('teachSkills'),
-        );
-        final learnSkills = await _readSkills(
-          doc.reference.collection('learnSkills'),
-        );
-
-        matches.add(
-          _UserMatch.fromFirestore(
-            id: doc.id,
-            data: data,
-            teachSkills: teachSkills,
-            learnSkills: learnSkills,
-            matchPercentage: _calculateMatchPercentage(
-              myTeachSkills: myTeachSkills,
-              myLearnSkills: myLearnSkills,
-              theirTeachSkills: teachSkills,
-              theirLearnSkills: learnSkills,
-            ),
-          ),
-        );
-      }
+      final userMatches = matches.isEmpty
+          ? candidates.map(_mapProfileToUserMatch).toList()
+          : matches.map(_mapCandidateToUserMatch).toList();
 
       final filters =
-          matches
+          userMatches
               .expand(
                 (user) => [
                   ...user.canTeach.map((skill) => skill.name),
@@ -149,7 +116,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
       if (!mounted) return;
       setState(() {
-        _users = matches;
+        _users = userMatches;
         _skillFilters = filters;
         _currentIndex = 0;
         _isLoading = false;
@@ -169,46 +136,75 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     }
   }
 
-  Future<List<_TeachSkill>> _readSkills(
-    CollectionReference<Map<String, dynamic>> collection,
-  ) async {
-    final snapshot = await collection.get();
-    return snapshot.docs
-        .map((doc) {
-          final data = doc.data();
-          return _TeachSkill(
-            name: data['name'] as String? ?? '',
-            level: _readInt(data['level'], fallback: 1).clamp(1, 7),
-            category: data['category'] as String? ?? '',
-          );
-        })
-        .where((skill) => skill.name.trim().isNotEmpty)
-        .toList();
+  _UserMatch _mapCandidateToUserMatch(MatchCandidate candidate) {
+    final traits = <String>[
+      if (candidate.user.verified) 'Verified',
+      'Match ${(candidate.matchScore * 100).round()}%',
+      'Profile ${(candidate.profileCompleteness * 100).round()}%',
+    ];
+
+    return _UserMatch(
+      id: candidate.user.id,
+      name: candidate.user.name.isEmpty
+          ? 'Isimsiz Kullanici'
+          : candidate.user.name,
+      location: 'Konum belirtilmedi',
+      trustScore: candidate.user.trustScore,
+      bio: candidate.user.bio,
+      verified: candidate.user.verified,
+      canTeach: [
+        _TeachSkill(
+          name: candidate.teacherSkill.name,
+          level: candidate.teacherSkill.level,
+          category: candidate.teacherSkill.category,
+        ),
+      ],
+      wantToLearn: [
+        _LearnGoal(
+          name: candidate.studentSkill.name,
+          category: candidate.studentSkill.category,
+        ),
+      ],
+      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
+      matchPercentage: (candidate.matchScore * 100).round(),
+      creditsRequired: candidate.creditsRequired,
+      totalSwaps: 0,
+    );
   }
 
-  int _calculateMatchPercentage({
-    required List<_TeachSkill> myTeachSkills,
-    required List<_TeachSkill> myLearnSkills,
-    required List<_TeachSkill> theirTeachSkills,
-    required List<_TeachSkill> theirLearnSkills,
-  }) {
-    final myTeach = myTeachSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-    final myLearn = myLearnSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-    final theirTeach = theirTeachSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-    final theirLearn = theirLearnSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
+  _UserMatch _mapProfileToUserMatch(ProfileData profile) {
+    final teachSkills = profile.teachSkills.map(_mapTeachSkill).toList();
+    final learnGoals = profile.learnSkills
+        .map((skill) => _LearnGoal(name: skill.name, category: skill.category))
+        .toList();
+    final traits = <String>[
+      if (profile.user.verified) 'Verified',
+      if (teachSkills.isNotEmpty) '${teachSkills.length} teach skill',
+      if (learnGoals.isNotEmpty) '${learnGoals.length} learn goal',
+    ];
 
-    final theyTeachWhatILearn = theirTeach.intersection(myLearn).length;
-    final iTeachWhatTheyLearn = myTeach.intersection(theirLearn).length;
-    final score = 72 + (theyTeachWhatILearn * 10) + (iTeachWhatTheyLearn * 8);
-    return score.clamp(72, 98);
+    return _UserMatch(
+      id: profile.user.id,
+      name: profile.user.name.isEmpty ? 'Isimsiz Kullanici' : profile.user.name,
+      location: 'Konum belirtilmedi',
+      trustScore: profile.user.trustScore,
+      bio: profile.user.bio,
+      verified: profile.user.verified,
+      canTeach: teachSkills,
+      wantToLearn: learnGoals,
+      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
+      matchPercentage: 0,
+      creditsRequired: 50,
+      totalSwaps: 0,
+    );
+  }
+
+  _TeachSkill _mapTeachSkill(SkillModel skill) {
+    return _TeachSkill(
+      name: skill.name,
+      level: skill.level,
+      category: skill.category,
+    );
   }
 
   void _resetIndexForFilters() {
@@ -291,6 +287,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'skillName': skill.name,
           'lastMessage': '${skill.name} icin teklif gonderildi.',
           'lastSenderId': currentUser.uid,
+          'lastMessageAt': FieldValue.serverTimestamp(),
           'unreadCount': 0,
           'credits': user.creditsRequired,
           'status': 'pending',
@@ -527,9 +524,17 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               ),
             ],
           ),
-          IconButton(
-            onPressed: _loadMatches,
-            icon: const Icon(Icons.refresh, color: _cyan),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => context.go('/notifications'),
+                icon: const Icon(Icons.notifications_outlined, color: _cyan),
+              ),
+              IconButton(
+                onPressed: _loadMatches,
+                icon: const Icon(Icons.refresh, color: _cyan),
+              ),
+            ],
           ),
         ],
       ),
@@ -1570,41 +1575,6 @@ class _UserMatch {
     required this.creditsRequired,
     required this.totalSwaps,
   });
-
-  factory _UserMatch.fromFirestore({
-    required String id,
-    required Map<String, dynamic> data,
-    required List<_TeachSkill> teachSkills,
-    required List<_TeachSkill> learnSkills,
-    required int matchPercentage,
-  }) {
-    final name = data['name'] as String? ?? 'Isimsiz Kullanici';
-    final location = data['location'] as String? ?? 'Konum belirtilmedi';
-    final traits = <String>[
-      if ((data['verified'] as bool? ?? false)) 'Verified',
-      if (teachSkills.isNotEmpty) '${teachSkills.length} teach skill',
-      if (learnSkills.isNotEmpty) '${learnSkills.length} learn goal',
-    ];
-
-    return _UserMatch(
-      id: id,
-      name: name,
-      location: location,
-      trustScore: _readInt(data['trustScore'], fallback: 80).clamp(0, 100),
-      bio: data['bio'] as String? ?? '',
-      verified: data['verified'] as bool? ?? false,
-      canTeach: teachSkills,
-      wantToLearn: learnSkills
-          .map(
-            (skill) => _LearnGoal(name: skill.name, category: skill.category),
-          )
-          .toList(),
-      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
-      matchPercentage: matchPercentage,
-      creditsRequired: 50,
-      totalSwaps: _readInt(data['totalSwaps'], fallback: 0),
-    );
-  }
 }
 
 class _TeachSkill {
@@ -1624,11 +1594,4 @@ class _LearnGoal {
   final String category;
 
   const _LearnGoal({required this.name, required this.category});
-}
-
-int _readInt(Object? value, {required int fallback}) {
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  if (value is String) return int.tryParse(value) ?? fallback;
-  return fallback;
 }

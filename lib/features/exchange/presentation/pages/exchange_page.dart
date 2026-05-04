@@ -1,61 +1,63 @@
+import 'package:coetus/features/exchange/data/repositories/exchange_repository_factory.dart';
+import 'package:coetus/features/exchange/domain/models/exchange_session.dart';
+import 'package:coetus/features/exchange/domain/models/match_offer.dart';
+import 'package:coetus/features/exchange/domain/repositories/exchange_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class ExchangePage extends StatelessWidget {
-  const ExchangePage({super.key});
+class ExchangePage extends StatefulWidget {
+  const ExchangePage({super.key, this.sessionId});
+
+  final String? sessionId;
+
+  @override
+  State<ExchangePage> createState() => _ExchangePageState();
+}
+
+class _ExchangePageState extends State<ExchangePage> {
+  late final ExchangeRepository _repository = ExchangeRepositoryFactory.create();
 
   static const Color _bg = Color(0xFF0A0F1C);
   static const Color _bg2 = Color(0xFF0F172A);
   static const Color _bg3 = Color(0xFF1E1B4B);
-
-  static const Color _card = Color(0x14FFFFFF);
-  static const Color _border = Color(0x1AFFFFFF);
-
   static const Color _cyan = Color(0xFF06B6D4);
   static const Color _violet = Color(0xFF7C3AED);
-  static const Color _violetSoft = Color(0xFFA78BFA);
-  static const Color _green = Color(0xFF4ADE80);
-  static const Color _amber = Color(0xFFF59E0B);
-  static const Color _red = Color(0xFFF87171);
-
   static const Color _textMuted = Color(0xFF94A3B8);
-  static const Color _textSoft = Color(0xFFCBD5E1);
 
-  static const List<_ExchangeItem> _activeExchanges = [
-    _ExchangeItem(
-      id: '1',
-      partnerName: 'Sarah Martinez',
-      title: 'Guitar & Spanish Exchange',
-      date: 'Tomorrow • 4:00 PM',
-      credits: 50,
-      status: ExchangeStatus.locked,
-      teachesYou: 'Spanish',
-      youTeach: 'Guitar',
-    ),
-    _ExchangeItem(
-      id: '2',
-      partnerName: 'David Kim',
-      title: 'Coding & English Session',
-      date: 'Fri • 6:30 PM',
-      credits: 40,
-      status: ExchangeStatus.scheduled,
-      teachesYou: 'Coding',
-      youTeach: 'English',
-    ),
-    _ExchangeItem(
-      id: '3',
-      partnerName: 'Emily Chen',
-      title: 'Design Feedback Swap',
-      date: 'Completed • Yesterday',
-      credits: 30,
-      status: ExchangeStatus.completed,
-      teachesYou: 'Design',
-      youTeach: 'Spanish',
-    ),
-  ];
+  String? get _userId => FirebaseAuth.instance.currentUser?.uid;
+
+  Future<void> _acceptOffer(MatchOffer offer) async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      await _repository.acceptOffer(offer.id, userId);
+      _showSnack('Teklif kabul edildi.');
+    } catch (error) {
+      _showSnack('Teklif kabul edilemedi: $error');
+    }
+  }
+
+  Future<void> _rejectOffer(MatchOffer offer) async {
+    final userId = _userId;
+    if (userId == null) return;
+    try {
+      await _repository.rejectOffer(offer.id, userId);
+      _showSnack('Teklif reddedildi.');
+    } catch (error) {
+      _showSnack('Teklif reddedilemedi: $error');
+    }
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
+    final userId = _userId;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -66,35 +68,101 @@ class ExchangePage extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(context),
-                      const SizedBox(height: 18),
-                      _buildCreditSummary(),
-                      const SizedBox(height: 18),
-                      _buildSectionHeader(),
-                      const SizedBox(height: 14),
-                      ..._activeExchanges.map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _ExchangeCard(item: item),
-                        ),
-                      ),
-                    ],
-                  ),
+          child: userId == null
+              ? _buildSignedOutState(context)
+              : Column(
+                  children: [
+                    Expanded(child: _buildContent(userId)),
+                    _buildBottomNavigation(context),
+                  ],
                 ),
-              ),
-              _buildBottomNavigation(context),
-            ],
-          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(String userId) {
+    return StreamBuilder<List<MatchOffer>>(
+      stream: _repository.streamUserOffers(userId),
+      builder: (context, offerSnapshot) {
+        return StreamBuilder<List<ExchangeSession>>(
+          stream: _repository.streamUserSessions(userId),
+          builder: (context, sessionSnapshot) {
+            if (offerSnapshot.hasError || sessionSnapshot.hasError) {
+              return _buildState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Exchange yuklenemedi',
+                subtitle: '${offerSnapshot.error ?? sessionSnapshot.error}',
+              );
+            }
+
+            if (offerSnapshot.connectionState == ConnectionState.waiting ||
+                sessionSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: _cyan),
+              );
+            }
+
+            final offers = offerSnapshot.data ?? const <MatchOffer>[];
+            final sessions = sessionSnapshot.data ?? const <ExchangeSession>[];
+            final pendingOffers = offers
+                .where((offer) => offer.status == MatchOfferStatus.pending)
+                .toList();
+            final visibleSessions = widget.sessionId == null
+                ? sessions
+                : sessions
+                      .where((session) => session.id == widget.sessionId)
+                      .toList();
+
+            if (pendingOffers.isEmpty && visibleSessions.isEmpty) {
+              return _buildState(
+                icon: Icons.swap_horiz,
+                title: 'Henuz exchange yok',
+                subtitle: 'Teklifler ve aktif sessionlar burada gorunecek.',
+              );
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 18),
+                  _buildCreditSummary(visibleSessions),
+                  if (pendingOffers.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    _buildSectionHeader('Bekleyen Teklifler', Icons.inbox),
+                    const SizedBox(height: 12),
+                    ...pendingOffers.map(
+                      (offer) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _OfferCard(
+                          offer: offer,
+                          isReceiver: offer.receiverId == userId,
+                          onAccept: () => _acceptOffer(offer),
+                          onReject: () => _rejectOffer(offer),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (visibleSessions.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    _buildSectionHeader('Sessionlar', Icons.event_available),
+                    const SizedBox(height: 12),
+                    ...visibleSessions.map(
+                      (session) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _SessionCard(session: session),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -115,44 +183,32 @@ class ExchangePage extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                'Manage your sessions, credits, and swap history',
+                'Tekliflerini ve sessionlarini yonet',
                 style: TextStyle(color: _textMuted, fontSize: 13),
               ),
             ],
           ),
         ),
-        InkWell(
-          onTap: () => context.go('/exchange-history'),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.10)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.history, color: _cyan, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'History',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        IconButton(
+          onPressed: () => context.go('/notifications'),
+          icon: const Icon(Icons.notifications_none, color: _cyan),
         ),
       ],
     );
   }
 
-  Widget _buildCreditSummary() {
+  Widget _buildCreditSummary(List<ExchangeSession> sessions) {
+    final lockedCredits = sessions
+        .where(
+          (session) =>
+              session.status == ExchangeSessionStatus.active ||
+              session.status == ExchangeSessionStatus.scheduled,
+        )
+        .fold<int>(0, (total, session) => total + session.credits);
+    final completed = sessions
+        .where((session) => session.status == ExchangeSessionStatus.completed)
+        .length;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -166,94 +222,75 @@ class ExchangePage extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.savings_outlined,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Available Credits',
-                      style: TextStyle(color: Color(0xD9FFFFFF), fontSize: 13),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      '450 HC',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Text(
-                  'Top Up',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+          const Icon(Icons.savings_outlined, color: Colors.white, size: 32),
+          const SizedBox(width: 14),
+          Expanded(
+            child: _MiniStat(label: 'Kilitli', value: '$lockedCredits HC'),
           ),
-          const SizedBox(height: 14),
-          Container(height: 1, color: Colors.white.withOpacity(0.20)),
-          const SizedBox(height: 12),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _MiniStat(label: 'Locked', value: '50 HC'),
-              _MiniStat(label: 'Completed', value: '18'),
-              _MiniStat(label: 'Success', value: '98%'),
-            ],
-          ),
+          _MiniStat(label: 'Tamamlanan', value: '$completed'),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader() {
-    return const Row(
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
       children: [
-        Icon(Icons.swap_horiz, color: _cyan, size: 20),
-        SizedBox(width: 8),
+        Icon(icon, color: _cyan, size: 20),
+        const SizedBox(width: 8),
         Text(
-          'Active Exchanges',
-          style: TextStyle(
+          title,
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: _cyan, size: 44),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _textMuted, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignedOutState(BuildContext context) {
+    return _buildState(
+      icon: Icons.lock_outline,
+      title: 'Giris gerekli',
+      subtitle: 'Exchange bilgilerini gormek icin giris yapmalisin.',
     );
   }
 
@@ -289,160 +326,104 @@ class ExchangePage extends StatelessWidget {
   }
 }
 
-class _ExchangeCard extends StatelessWidget {
-  final _ExchangeItem item;
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({
+    required this.offer,
+    required this.isReceiver,
+    required this.onAccept,
+    required this.onReject,
+  });
 
-  const _ExchangeCard({required this.item});
-
-  static const Color _card = Color(0x14FFFFFF);
-  static const Color _border = Color(0x1AFFFFFF);
-  static const Color _textMuted = Color(0xFF94A3B8);
-  static const Color _textSoft = Color(0xFFCBD5E1);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _green = Color(0xFF4ADE80);
-  static const Color _amber = Color(0xFFF59E0B);
+  final MatchOffer offer;
+  final bool isReceiver;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
 
   @override
   Widget build(BuildContext context) {
-    final visual = _ExchangeStatusVisual.fromStatus(item.status);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: visual.color.withOpacity(0.28)),
-      ),
+    return _Panel(
+      borderColor: _ExchangeColors.amber.withOpacity(0.32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      visual.color.withOpacity(0.90),
-                      visual.secondaryColor.withOpacity(0.90),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(visual.icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.partnerName,
-                      style: const TextStyle(color: _textMuted, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              _StatusChip(visual: visual),
-            ],
+          _TitleRow(
+            icon: Icons.handshake_outlined,
+            color: _ExchangeColors.amber,
+            title: offer.skill.isEmpty ? 'Skill teklifi' : offer.skill,
+            status: 'Bekliyor',
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: Column(
+          const SizedBox(height: 12),
+          _InfoRow(label: 'Kredi', value: '${offer.credits} HC'),
+          _InfoRow(
+            label: isReceiver ? 'Gonderen' : 'Alici',
+            value: isReceiver ? offer.requesterId : offer.receiverId,
+          ),
+          if (isReceiver) ...[
+            const SizedBox(height: 14),
+            Row(
               children: [
-                _InfoRow(
-                  label: 'Date',
-                  value: item.date,
-                  icon: Icons.calendar_today_outlined,
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onReject,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _ExchangeColors.red,
+                    ),
+                    child: const Text('Reddet'),
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: 'You teach',
-                  value: item.youTeach,
-                  icon: Icons.arrow_upward,
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: 'You learn',
-                  value: item.teachesYou,
-                  icon: Icons.arrow_downward,
-                ),
-                const SizedBox(height: 10),
-                _InfoRow(
-                  label: 'Credits',
-                  value: '${item.credits} HC',
-                  icon: Icons.monetization_on_outlined,
-                  valueColor: _cyan,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onAccept,
+                    child: const Text('Kabul Et'),
+                  ),
                 ),
               ],
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SessionCard extends StatelessWidget {
+  const _SessionCard({required this.session});
+
+  final ExchangeSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _SessionVisual.fromStatus(session.status);
+    return _Panel(
+      borderColor: visual.color.withOpacity(0.28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TitleRow(
+            icon: visual.icon,
+            color: visual.color,
+            title: session.skill.isEmpty ? 'Exchange session' : session.skill,
+            status: visual.label,
           ),
+          const SizedBox(height: 12),
+          _InfoRow(label: 'Kredi', value: '${session.credits} HC'),
+          _InfoRow(label: 'Ogretici', value: session.teacherId),
+          _InfoRow(label: 'Ogrenci', value: session.studentId),
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => context.go('/exchange-detail'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withOpacity(0.12)),
-                    backgroundColor: Colors.white.withOpacity(0.04),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'View Details',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  onPressed: () => context.go('/exchange-detail/${session.id}'),
+                  child: const Text('Detay'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [visual.color, visual.secondaryColor],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/chat-escrow'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      item.status == ExchangeStatus.completed
-                          ? 'Review'
-                          : 'Open Chat',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                child: ElevatedButton(
+                  onPressed: () => context.go('/chat-detail/${session.id}'),
+                  child: const Text('Chat'),
                 ),
               ),
             ],
@@ -453,28 +434,70 @@ class _ExchangeCard extends StatelessWidget {
   }
 }
 
-class _MiniStat extends StatelessWidget {
-  final String label;
-  final String value;
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child, required this.borderColor});
 
-  const _MiniStat({required this.label, required this.value});
+  final Widget child;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _ExchangeColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _TitleRow extends StatelessWidget {
+  const _TitleRow({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.status,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
+        Icon(icon, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            status,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ],
     );
@@ -482,74 +505,63 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value});
+
   final String label;
   final String value;
-  final IconData icon;
-  final Color? valueColor;
-
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.valueColor,
-  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: _ExchangeColors.textMuted)),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              value.isEmpty ? '-' : value,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: const Color(0xFF94A3B8), size: 16),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-        ),
-        const Spacer(),
         Text(
           value,
-          style: TextStyle(
-            color: valueColor ?? Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
           ),
         ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Color(0xD9FFFFFF))),
       ],
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  final _ExchangeStatusVisual visual;
-
-  const _StatusChip({required this.visual});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: visual.color.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: visual.color.withOpacity(0.22)),
-      ),
-      child: Text(
-        visual.label,
-        style: TextStyle(
-          color: visual.color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
   const _BottomNavItem({
     required this.icon,
     required this.label,
@@ -557,12 +569,14 @@ class _BottomNavItem extends StatelessWidget {
     this.isActive = false,
   });
 
-  static const Color _active = Color(0xFF06B6D4);
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.55);
-
+    final color = isActive ? _ExchangeColors.cyan : Colors.white54;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -573,14 +587,7 @@ class _BottomNavItem extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
+            Text(label, style: TextStyle(color: color, fontSize: 12)),
           ],
         ),
       ),
@@ -588,66 +595,59 @@ class _BottomNavItem extends StatelessWidget {
   }
 }
 
-enum ExchangeStatus { locked, scheduled, completed }
-
-class _ExchangeItem {
-  final String id;
-  final String partnerName;
-  final String title;
-  final String date;
-  final int credits;
-  final ExchangeStatus status;
-  final String teachesYou;
-  final String youTeach;
-
-  const _ExchangeItem({
-    required this.id,
-    required this.partnerName,
-    required this.title,
-    required this.date,
-    required this.credits,
-    required this.status,
-    required this.teachesYou,
-    required this.youTeach,
-  });
-}
-
-class _ExchangeStatusVisual {
-  final IconData icon;
-  final Color color;
-  final Color secondaryColor;
-  final String label;
-
-  const _ExchangeStatusVisual({
+class _SessionVisual {
+  const _SessionVisual({
     required this.icon,
     required this.color,
-    required this.secondaryColor,
     required this.label,
   });
 
-  factory _ExchangeStatusVisual.fromStatus(ExchangeStatus status) {
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  factory _SessionVisual.fromStatus(ExchangeSessionStatus status) {
     switch (status) {
-      case ExchangeStatus.locked:
-        return const _ExchangeStatusVisual(
-          icon: Icons.lock_outline,
-          color: Color(0xFFF59E0B),
-          secondaryColor: Color(0xFF7C3AED),
-          label: 'Locked',
+      case ExchangeSessionStatus.requested:
+        return const _SessionVisual(
+          icon: Icons.hourglass_top,
+          color: _ExchangeColors.amber,
+          label: 'Bekliyor',
         );
-      case ExchangeStatus.scheduled:
-        return const _ExchangeStatusVisual(
+      case ExchangeSessionStatus.active:
+        return const _SessionVisual(
+          icon: Icons.play_circle_outline,
+          color: _ExchangeColors.cyan,
+          label: 'Aktif',
+        );
+      case ExchangeSessionStatus.scheduled:
+        return const _SessionVisual(
           icon: Icons.event_available_outlined,
-          color: Color(0xFF06B6D4),
-          secondaryColor: Color(0xFF7C3AED),
-          label: 'Scheduled',
+          color: _ExchangeColors.violet,
+          label: 'Planlandi',
         );
-      case ExchangeStatus.completed:
-        return const _ExchangeStatusVisual(
+      case ExchangeSessionStatus.completed:
+        return const _SessionVisual(
           icon: Icons.check_circle_outline,
-          color: Color(0xFF4ADE80),
-          secondaryColor: Color(0xFF06B6D4),
-          label: 'Completed',
+          color: _ExchangeColors.green,
+          label: 'Tamamlandi',
+        );
+      case ExchangeSessionStatus.cancelled:
+        return const _SessionVisual(
+          icon: Icons.cancel_outlined,
+          color: _ExchangeColors.red,
+          label: 'Iptal edildi',
         );
     }
   }
+}
+
+class _ExchangeColors {
+  static const Color card = Color(0x14FFFFFF);
+  static const Color cyan = Color(0xFF06B6D4);
+  static const Color violet = Color(0xFF7C3AED);
+  static const Color green = Color(0xFF4ADE80);
+  static const Color amber = Color(0xFFF59E0B);
+  static const Color red = Color(0xFFF87171);
+  static const Color textMuted = Color(0xFF94A3B8);
 }

@@ -5,6 +5,7 @@ import '../models/skill_model.dart';
 
 abstract class ProfileRepository {
   Future<ProfileData> loadProfile();
+  Future<List<ProfileData>> loadDiscoverableProfiles({int limit = 50});
   Future<ProfileData> updateProfile(AppUser user);
   Future<ProfileData> saveTeachSkill(SkillModel skill);
   Future<ProfileData> deleteTeachSkill(String skillId);

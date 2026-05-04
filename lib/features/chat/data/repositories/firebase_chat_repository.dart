@@ -1,49 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../domain/models/chat_models.dart';
+import '../../domain/models/chat_message.dart';
+import '../../domain/models/chat_thread.dart';
+import '../../domain/repositories/chat_repository.dart';
 
-class FirebaseChatRepository {
-  FirebaseChatRepository({
-    FirebaseAuth? firebaseAuth,
-    FirebaseFirestore? firestore,
-  }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+class FirebaseChatRepository implements ChatRepository {
+  FirebaseChatRepository({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
 
-  User? get currentUser => _firebaseAuth.currentUser;
-
-  Stream<List<ChatThread>> watchThreads() {
-    final user = currentUser;
-    if (user == null) return Stream.value(const []);
-
+  @override
+  Stream<List<ChatThread>> streamUserChats(String userId) {
     return _firestore
         .collection('chats')
-        .where('participants', arrayContains: user.uid)
+        .where('participants', arrayContains: userId)
         .snapshots()
         .map((snapshot) {
-          final threads = snapshot.docs.map(ChatThread.fromSnapshot).toList()
-            ..sort((a, b) {
-              final aTime =
-                  a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-              final bTime =
-                  b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-              return bTime.compareTo(aTime);
-            });
-          return threads;
+          final chats = snapshot.docs.map(ChatThread.fromFirestore).toList();
+          chats.sort((a, b) {
+            final aDate = a.updatedAt ?? a.lastMessageAt ?? DateTime(0);
+            final bDate = b.updatedAt ?? b.lastMessageAt ?? DateTime(0);
+            return bDate.compareTo(aDate);
+          });
+          return chats;
         });
   }
 
-  Stream<ChatThread?> watchThread(String chatId) {
-    return _firestore.collection('chats').doc(chatId).snapshots().map((doc) {
-      if (!doc.exists) return null;
-      return ChatThread.fromSnapshot(doc);
-    });
-  }
-
-  Stream<List<ChatMessage>> watchMessages(String chatId) {
+  @override
+  Stream<List<ChatMessage>> streamMessages(String chatId) {
     return _firestore
         .collection('chats')
         .doc(chatId)
@@ -51,88 +36,88 @@ class FirebaseChatRepository {
         .orderBy('createdAt')
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs.map(ChatMessage.fromSnapshot).toList(),
+          (snapshot) => snapshot.docs.map(ChatMessage.fromFirestore).toList(),
         );
   }
 
-  Future<void> sendTextMessage({
-    required String chatId,
-    required String text,
-  }) async {
-    final user = currentUser;
-    final trimmed = text.trim();
-    if (user == null || trimmed.isEmpty) return;
+  @override
+  Future<void> sendMessage(String chatId, String senderId, String text) async {
+    final trimmedText = text.trim();
+    if (trimmedText.isEmpty) return;
 
     final chatRef = _firestore.collection('chats').doc(chatId);
     final messageRef = chatRef.collection('messages').doc();
-    final senderName = await _currentUserName(user);
+
+    await _firestore.runTransaction((transaction) async {
+      final chatSnapshot = await transaction.get(chatRef);
+      if (!chatSnapshot.exists) {
+        throw StateError('Chat $chatId was not found.');
+      }
+
+      final chat = ChatThread.fromFirestore(chatSnapshot);
+      if (!chat.participants.contains(senderId)) {
+        throw StateError('Only a participant can send messages.');
+      }
+
+      final now = FieldValue.serverTimestamp();
+
+      transaction.set(messageRef, {
+        'id': messageRef.id,
+        'senderId': senderId,
+        'text': trimmedText,
+        'type': ChatMessageType.text.name,
+        'readBy': [senderId],
+        'createdAt': now,
+      });
+
+      transaction.set(chatRef, {
+        'id': chatId,
+        'lastMessage': trimmedText,
+        'lastSenderId': senderId,
+        'lastMessageAt': now,
+        'updatedAt': now,
+      }, SetOptions(merge: true));
+
+      for (final receiverId in chat.participants.where(
+        (participantId) => participantId != senderId,
+      )) {
+        final notificationRef = _firestore.collection('notifications').doc();
+        transaction.set(notificationRef, {
+          'id': notificationRef.id,
+          'userId': receiverId,
+          'senderId': senderId,
+          'type': 'new_message',
+          'title': 'Yeni mesaj',
+          'message': trimmedText,
+          'targetRoute': '/chat-detail',
+          'targetId': chatId,
+          'matchId': chat.matchId,
+          'sessionId': chat.sessionId,
+          'read': false,
+          'createdAt': now,
+        });
+      }
+    });
+  }
+
+  @override
+  Future<void> markMessagesAsRead(String chatId, String userId) async {
+    final messages = await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .get();
 
     final batch = _firestore.batch();
-    batch.set(messageRef, {
-      'id': messageRef.id,
-      'senderId': user.uid,
-      'senderName': senderName,
-      'text': trimmed,
-      'type': 'text',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    batch.update(chatRef, {
-      'lastMessage': trimmed,
-      'lastSenderId': user.uid,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    for (final doc in messages.docs) {
+      final message = ChatMessage.fromFirestore(doc);
+      if (!message.readBy.contains(userId)) {
+        batch.set(doc.reference, {
+          'readBy': FieldValue.arrayUnion([userId]),
+        }, SetOptions(merge: true));
+      }
+    }
 
     await batch.commit();
-  }
-
-  Future<String> createOrUpdateThread({
-    required String otherUserId,
-    required String otherUserName,
-    required String skillName,
-    String? matchId,
-    String? sessionId,
-    int credits = 0,
-  }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw StateError('Chat olusturmak icin once giris yapmalisin.');
-    }
-
-    final participants = [user.uid, otherUserId]..sort();
-    final chatId = participants.join('_');
-    final userName = await _currentUserName(user);
-
-    await _firestore.collection('chats').doc(chatId).set({
-      'id': chatId,
-      'participants': participants,
-      'participantNames': {user.uid: userName, otherUserId: otherUserName},
-      'participantSkills': {
-        otherUserId: [skillName],
-      },
-      'matchId': matchId,
-      'sessionId': sessionId,
-      'skillName': skillName,
-      'lastMessage': '$skillName icin sohbet baslatildi.',
-      'lastSenderId': user.uid,
-      'unreadCount': 0,
-      'credits': credits,
-      'status': 'active',
-      'updatedAt': FieldValue.serverTimestamp(),
-      'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    return chatId;
-  }
-
-  Future<String> _currentUserName(User user) async {
-    if (user.displayName?.trim().isNotEmpty == true) {
-      return user.displayName!.trim();
-    }
-
-    final snapshot = await _firestore.collection('users').doc(user.uid).get();
-    final data = snapshot.data();
-    final name = data?['displayName'] as String? ?? data?['name'] as String?;
-    if (name?.trim().isNotEmpty == true) return name!.trim();
-    return user.email?.split('@').first ?? 'Kullanici';
   }
 }

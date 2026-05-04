@@ -99,6 +99,7 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'lastMessage',
           'lastSenderId',
+          'lastMessageAt',
           'updatedAt',
           'unreadCount',
           'status'
@@ -113,7 +114,10 @@ service cloud.firestore {
           request.resource.data.senderId == request.auth.uid &&
           request.resource.data.text is string;
 
-        allow update, delete: if false;
+        allow update: if isChatParticipant(chatId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+
+        allow delete: if false;
       }
     }
 

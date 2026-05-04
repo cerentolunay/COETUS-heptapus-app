@@ -193,7 +193,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
 
     return Scaffold(
+      backgroundColor: _bgMiddle,
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,

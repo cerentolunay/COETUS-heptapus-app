@@ -341,21 +341,43 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(colors: [_indigo, _violet]),
-          ),
-          child: IconButton(
-            onPressed: _showEditProfileDialog,
-            icon: const Icon(
-              Icons.edit_outlined,
-              color: Colors.white,
-              size: 20,
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.06),
+                border: Border.all(color: _border),
+              ),
+              child: IconButton(
+                onPressed: () => context.go('/notifications'),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: _indigoText,
+                  size: 20,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [_indigo, _violet]),
+              ),
+              child: IconButton(
+                onPressed: _showEditProfileDialog,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
