@@ -161,7 +161,7 @@ class FirebaseAuthRepository implements AuthRepository {
       email: user.email ?? '',
       bio: bio,
       trustScore: 0,
-      credits: 0,
+      credits: 200,
       verified: false,
       profileCompleted: name.trim().isNotEmpty && bio.trim().isNotEmpty,
     );
@@ -175,6 +175,8 @@ class FirebaseAuthRepository implements AuthRepository {
 
     final data = <String, dynamic>{
       ...profile.toMap(),
+      'lockedCredits': 0,
+      'creditInitialized': true,
       'updatedAt': FieldValue.serverTimestamp(),
     };
 

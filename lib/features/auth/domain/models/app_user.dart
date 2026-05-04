@@ -18,7 +18,7 @@ class AppUser {
     this.location,
     this.photoUrl,
     this.trustScore = 0,
-    this.credits = 0,
+    this.credits = 200,
     this.verified = false,
     this.profileCompleted = false,
   });
@@ -88,7 +88,7 @@ class AppUser {
       location: map['location'] as String?,
       photoUrl: map['photoUrl'] as String?,
       trustScore: map['trustScore'] as int? ?? 0,
-      credits: map['credits'] as int? ?? 0,
+      credits: map['credits'] as int? ?? 200,
       verified: map['verified'] as bool? ?? false,
       profileCompleted: completed,
     );

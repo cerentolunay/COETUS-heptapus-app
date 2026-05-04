@@ -277,6 +277,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     try {
       final matchRef = _firestore.collection('matches').doc();
       final sessionRef = _firestore.collection('sessions').doc();
+      final requesterRef = _firestore.collection('users').doc(currentUser.uid);
       final participants = [currentUser.uid, user.id]..sort();
       final chatRef = _firestore
           .collection('chats')
@@ -287,6 +288,26 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'Kullanici';
 
       await _firestore.runTransaction((transaction) async {
+        final requesterSnapshot = await transaction.get(requesterRef);
+        final requesterData =
+            requesterSnapshot.data() ?? <String, dynamic>{};
+        final availableCredits = _availableCreditsForOffer(requesterData);
+        final requiredCredits = user.creditsRequired;
+
+        if (availableCredits < requiredCredits) {
+          throw _InsufficientCreditsException(
+            availableCredits: availableCredits,
+            requiredCredits: requiredCredits,
+          );
+        }
+
+        transaction.set(requesterRef, {
+          'credits': availableCredits - requiredCredits,
+          'lockedCredits': FieldValue.increment(requiredCredits),
+          'creditInitialized': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         transaction.set(matchRef, {
           'id': matchRef.id,
           'participants': participants,
@@ -300,7 +321,10 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           },
           'skillName': skill.name,
           'status': 'pending',
-          'credits': user.creditsRequired,
+          'credits': requiredCredits,
+          'escrowStatus': 'locked',
+          'creditsLocked': true,
+          'payerId': currentUser.uid,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -312,7 +336,10 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'studentId': currentUser.uid,
           'skillName': skill.name,
           'status': 'requested',
-          'credits': user.creditsRequired,
+          'credits': requiredCredits,
+          'escrowStatus': 'locked',
+          'creditsLocked': true,
+          'payerId': currentUser.uid,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -334,7 +361,8 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'lastSenderId': currentUser.uid,
           'lastMessageAt': FieldValue.serverTimestamp(),
           'unreadCount': 0,
-          'credits': user.creditsRequired,
+          'credits': requiredCredits,
+          'escrowStatus': 'locked',
           'status': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
@@ -358,6 +386,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       Navigator.of(context).pop();
       _showSnack('${user.name} icin teklif gonderildi.');
       _handleSwipe('right');
+    } on _InsufficientCreditsException catch (_) {
+      if (!mounted) return;
+      _showSnack('Coinleriniz bitti, istek gonderemezsiniz.');
     } on FirebaseException catch (error) {
       if (!mounted) return;
       _showSnack(_mapFirestoreError(error));
@@ -1702,4 +1733,35 @@ enum _MatchSortOption {
   final String label;
 
   const _MatchSortOption(this.label);
+}
+
+int _availableCreditsForOffer(Map<String, dynamic> data) {
+  final creditInitialized = data['creditInitialized'] as bool? ?? false;
+  if (creditInitialized) {
+    return _readInt(data['credits'], fallback: 0);
+  }
+
+  final storedCredits = _readInt(data['credits'], fallback: 0);
+  if (storedCredits > 0) {
+    return storedCredits;
+  }
+
+  return 200;
+}
+
+int _readInt(Object? value, {required int fallback}) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+class _InsufficientCreditsException implements Exception {
+  final int availableCredits;
+  final int requiredCredits;
+
+  const _InsufficientCreditsException({
+    required this.availableCredits,
+    required this.requiredCredits,
+  });
 }

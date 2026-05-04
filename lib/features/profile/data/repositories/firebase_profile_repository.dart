@@ -45,7 +45,7 @@ class FirebaseProfileRepository implements ProfileRepository {
       'location': data['location'] ?? '',
       'photoUrl': data['photoUrl'] ?? '',
       'trustScore': data['trustScore'] ?? 0,
-      'credits': data['credits'] ?? 0,
+      'credits': data['credits'] ?? 200,
       'verified': data['verified'] ?? false,
       'profileCompleted': data['profileCompleted'],
     });

@@ -20,10 +20,29 @@ service cloud.firestore {
 
     function immutableProfileFieldsUnchanged() {
       return request.resource.data.credits == resource.data.credits &&
+             request.resource.data.lockedCredits == resource.data.lockedCredits &&
+             request.resource.data.creditInitialized == resource.data.creditInitialized &&
              request.resource.data.trustScore == resource.data.trustScore &&
              request.resource.data.verified == resource.data.verified &&
              request.resource.data.email == resource.data.email &&
              request.resource.data.id == resource.data.id;
+    }
+
+    function isCreditLockUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let oldCredits = resource.data.creditInitialized == true &&
+        resource.data.credits is int ? resource.data.credits : 200;
+      let oldLockedCredits = resource.data.lockedCredits is int ? resource.data.lockedCredits : 0;
+      let newCredits = request.resource.data.credits;
+      let newLockedCredits = request.resource.data.lockedCredits;
+
+      return changed.hasOnly(['credits', 'lockedCredits', 'creditInitialized', 'updatedAt']) &&
+             newCredits is int &&
+             newLockedCredits is int &&
+             newCredits >= 0 &&
+             newCredits < oldCredits &&
+             newLockedCredits == oldLockedCredits + (oldCredits - newCredits) &&
+             request.resource.data.creditInitialized == true;
     }
 
     // User profile root document.
@@ -34,7 +53,8 @@ service cloud.firestore {
         request.resource.data.id == userId &&
         request.resource.data.email is string;
 
-      allow update: if isOwner(userId) && immutableProfileFieldsUnchanged();
+      allow update: if isOwner(userId) &&
+        (immutableProfileFieldsUnchanged() || isCreditLockUpdate());
 
       allow delete: if false;
 
@@ -100,10 +120,15 @@ service cloud.firestore {
           'lastMessage',
           'lastSenderId',
           'lastMessageAt',
+          'participantSkills',
+          'matchId',
+          'sessionId',
           'participantNames',
           'skillName',
           'credits',
+          'escrowStatus',
           'updatedAt',
+          'createdAt',
           'unreadCount',
           'status'
         ]);
