@@ -4,10 +4,7 @@ import 'package:go_router/go_router.dart';
 class MatchSuccessPage extends StatelessWidget {
   final MatchedUser user;
 
-  const MatchSuccessPage({
-    super.key,
-    required this.user,
-  });
+  const MatchSuccessPage({super.key, required this.user});
 
   static const Color _bg = Color(0xFF0A0A0F);
   static const Color _card = Color(0xFF1A1A2E);
@@ -70,15 +67,9 @@ class MatchSuccessPage extends StatelessWidget {
           height: 128,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [_indigo, _violet],
-            ),
+            gradient: LinearGradient(colors: [_indigo, _violet]),
           ),
-          child: const Icon(
-            Icons.auto_awesome,
-            color: Colors.white,
-            size: 54,
-          ),
+          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 54),
         ),
       ],
     );
@@ -106,11 +97,7 @@ class MatchSuccessPage extends StatelessWidget {
         Text(
           'You and ${user.name} can now start swapping skills',
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: _gray,
-            fontSize: 15,
-            height: 1.5,
-          ),
+          style: const TextStyle(color: _gray, fontSize: 15, height: 1.5),
         ),
       ],
     );
@@ -135,7 +122,9 @@ class MatchSuccessPage extends StatelessWidget {
           _buildExchangeCard(
             title: "You'll teach",
             items: user.learningGoals
-                .map((goal) => _ExchangeItem(name: goal.name, emoji: goal.emoji))
+                .map(
+                  (goal) => _ExchangeItem(name: goal.name, emoji: goal.emoji),
+                )
                 .toList(),
             startColor: _indigo,
             endColor: _violet,
@@ -146,7 +135,10 @@ class MatchSuccessPage extends StatelessWidget {
             title: '$firstName will teach',
             items: user.skills
                 .take(2)
-                .map((skill) => _ExchangeItem(name: skill.name, emoji: skill.emoji))
+                .map(
+                  (skill) =>
+                      _ExchangeItem(name: skill.name, emoji: skill.emoji),
+                )
                 .toList(),
             startColor: _violet,
             endColor: _indigo,
@@ -167,10 +159,7 @@ class MatchSuccessPage extends StatelessWidget {
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '❤️',
-            style: TextStyle(fontSize: 26),
-          ),
+          child: Text('❤️', style: TextStyle(fontSize: 26)),
         ),
         _UserMiniProfile(
           label: firstName,
@@ -258,9 +247,7 @@ class MatchSuccessPage extends StatelessWidget {
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [_indigo, _violet],
-            ),
+            gradient: const LinearGradient(colors: [_indigo, _violet]),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -323,10 +310,7 @@ class _UserMiniProfile extends StatelessWidget {
   final String label;
   final Gradient gradient;
 
-  const _UserMiniProfile({
-    required this.label,
-    required this.gradient,
-  });
+  const _UserMiniProfile({required this.label, required this.gradient});
 
   @override
   Widget build(BuildContext context) {
@@ -335,15 +319,8 @@ class _UserMiniProfile extends StatelessWidget {
         Container(
           width: 64,
           height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: gradient,
-          ),
-          child: const Icon(
-            Icons.person,
-            color: Colors.white,
-            size: 30,
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, gradient: gradient),
+          child: const Icon(Icons.person, color: Colors.white, size: 30),
         ),
         const SizedBox(height: 8),
         Text(
@@ -375,30 +352,21 @@ class MatchedSkill {
   final String name;
   final String emoji;
 
-  const MatchedSkill({
-    required this.name,
-    required this.emoji,
-  });
+  const MatchedSkill({required this.name, required this.emoji});
 }
 
 class MatchedGoal {
   final String name;
   final String emoji;
 
-  const MatchedGoal({
-    required this.name,
-    required this.emoji,
-  });
+  const MatchedGoal({required this.name, required this.emoji});
 }
 
 class _ExchangeItem {
   final String name;
   final String emoji;
 
-  const _ExchangeItem({
-    required this.name,
-    required this.emoji,
-  });
+  const _ExchangeItem({required this.name, required this.emoji});
 }
 
 const List<Offset> _particleOffsets = [

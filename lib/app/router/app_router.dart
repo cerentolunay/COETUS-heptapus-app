@@ -18,11 +18,12 @@ import 'package:coetus/features/profile/presentation/pages/skill_profile_page.da
 
 // Matching & Notifications (Klasör yapına göre ekledim, eğer dosya isimleri farklıysa kontrol et)
 import 'package:coetus/features/matching/presentation/pages/matching_feed_page.dart';
+import 'package:coetus/features/matching/presentation/pages/match_success_page.dart';
 import 'package:coetus/features/notifications/presentation/pages/notifications_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
-    initialLocation: '/',
+    initialLocation: '/matching',
     debugLogDiagnostics: true,
     routes: [
       GoRoute(
@@ -58,7 +59,7 @@ class AppRouter {
       // Şimdilik seni MatchingFeedPage'e veya Profile'a atsın:
       GoRoute(
         path: '/home',
-        builder: (context, state) => const SkillProfilePage(), 
+        builder: (context, state) => const MatchingFeedPage(), 
       ),
       // -------------------------------------------
       GoRoute(
@@ -72,6 +73,18 @@ class AppRouter {
       GoRoute(
         path: '/matching',
         builder: (context, state) => const MatchingFeedPage(),
+      ),
+      GoRoute(
+        path: '/match-success',
+        builder: (context, state) {
+          final user = state.extra as MatchedUser?;
+
+          if (user == null) {
+            return const MatchingFeedPage();
+          }
+
+          return MatchSuccessPage(user: user);
+        },
       ),
       GoRoute(
         path: '/notifications',
