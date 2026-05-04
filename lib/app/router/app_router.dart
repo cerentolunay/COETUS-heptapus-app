@@ -27,6 +27,7 @@ import 'package:coetus/features/chat/presentation/pages/chat_list_page.dart';
 import 'package:coetus/features/chat/presentation/pages/secure_chat_escrow_page.dart';
 import 'package:coetus/features/exchange/presentation/pages/exchange_page.dart';
 import 'package:coetus/features/matching/presentation/pages/matching_feed_page.dart';
+import 'package:coetus/features/matching/presentation/pages/match_success_page.dart';
 import 'package:coetus/features/notifications/presentation/pages/notifications_page.dart';
 
 /// Global notifiers for router
@@ -96,7 +97,7 @@ class AppRouter {
   }
 
   static final GoRouter router = GoRouter(
-    initialLocation: '/',
+    initialLocation: '/matching',
     debugLogDiagnostics: true,
 
     /// Hem auth hem profile notifier'larını dinle
@@ -199,7 +200,7 @@ class AppRouter {
       // Şimdilik seni MatchingFeedPage'e veya Profile'a atsın:
       GoRoute(
         path: '/home',
-        builder: (context, state) => const SkillProfilePage(),
+        builder: (context, state) => const MatchingFeedPage(),
       ),
       // -------------------------------------------
       GoRoute(
@@ -238,6 +239,18 @@ class AppRouter {
       GoRoute(
         path: '/exchange-detail',
         builder: (context, state) => const ExchangePage(),
+      ),
+      GoRoute(
+        path: '/match-success',
+        builder: (context, state) {
+          final user = state.extra as MatchedUser?;
+
+          if (user == null) {
+            return const MatchingFeedPage();
+          }
+
+          return MatchSuccessPage(user: user);
+        },
       ),
       GoRoute(
         path: '/notifications',

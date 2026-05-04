@@ -1,4 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:coetus/features/matching/models/match_candidate.dart';
+import 'package:coetus/features/matching/presentation/pages/match_success_page.dart';
+import 'package:coetus/features/matching/services/matching_service.dart';
+import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
+import 'package:coetus/features/profile/domain/repositories/profile_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +19,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   final TextEditingController _searchController = TextEditingController();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProfileRepository _profileRepository = ProfileRepositoryFactory.create();
 
   List<_UserMatch> _users = [];
   List<String> _skillFilters = [];
@@ -75,81 +81,37 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   }
 
   Future<void> _loadMatches() async {
-    final currentUser = _firebaseAuth.currentUser;
-    if (currentUser == null) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Discover icin once giris yapmalisin.';
-      });
-      return;
-    }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final currentUserDoc = _firestore
-          .collection('users')
-          .doc(currentUser.uid);
-      final myTeachSkills = await _readSkills(
-        currentUserDoc.collection('teachSkills'),
-      );
-      final myLearnSkills = await _readSkills(
-        currentUserDoc.collection('learnSkills'),
+      final currentProfile = await _profileRepository.loadProfile();
+      final candidates = await _profileRepository.loadDiscoverableProfiles();
+
+      final matches = const MatchingService().getRecommendedMatches(
+        currentProfile: currentProfile,
+        candidateProfiles: candidates,
       );
 
-      final usersSnapshot = await _firestore
-          .collection('users')
-          .orderBy('updatedAt', descending: true)
-          .limit(50)
-          .get();
+      final userMatches = matches.map(_mapCandidateToUserMatch).toList();
 
-      final matches = <_UserMatch>[];
-      for (final doc in usersSnapshot.docs) {
-        if (doc.id == currentUser.uid) continue;
-
-        final data = doc.data();
-        final teachSkills = await _readSkills(
-          doc.reference.collection('teachSkills'),
-        );
-        final learnSkills = await _readSkills(
-          doc.reference.collection('learnSkills'),
-        );
-
-        matches.add(
-          _UserMatch.fromFirestore(
-            id: doc.id,
-            data: data,
-            teachSkills: teachSkills,
-            learnSkills: learnSkills,
-            matchPercentage: _calculateMatchPercentage(
-              myTeachSkills: myTeachSkills,
-              myLearnSkills: myLearnSkills,
-              theirTeachSkills: teachSkills,
-              theirLearnSkills: learnSkills,
-            ),
-          ),
-        );
-      }
-
-      final filters =
-          matches
-              .expand(
-                (user) => [
-                  ...user.canTeach.map((skill) => skill.name),
-                  ...user.wantToLearn.map((goal) => goal.name),
-                ],
-              )
-              .where((name) => name.trim().isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort();
+      final filters = userMatches
+          .expand(
+            (user) => [
+              ...user.canTeach.map((skill) => skill.name),
+              ...user.wantToLearn.map((goal) => goal.name),
+            ],
+          )
+          .where((name) => name.trim().isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
 
       if (!mounted) return;
       setState(() {
-        _users = matches;
+        _users = userMatches;
         _skillFilters = filters;
         _currentIndex = 0;
         _isLoading = false;
@@ -169,46 +131,38 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     }
   }
 
-  Future<List<_TeachSkill>> _readSkills(
-    CollectionReference<Map<String, dynamic>> collection,
-  ) async {
-    final snapshot = await collection.get();
-    return snapshot.docs
-        .map((doc) {
-          final data = doc.data();
-          return _TeachSkill(
-            name: data['name'] as String? ?? '',
-            level: _readInt(data['level'], fallback: 1).clamp(1, 7),
-            category: data['category'] as String? ?? '',
-          );
-        })
-        .where((skill) => skill.name.trim().isNotEmpty)
-        .toList();
-  }
+  _UserMatch _mapCandidateToUserMatch(MatchCandidate candidate) {
+    final traits = <String>[
+      if (candidate.user.verified) 'Verified',
+      'Match ${(candidate.matchScore * 100).round()}%',
+      'Profile ${(candidate.profileCompleteness * 100).round()}%',
+    ];
 
-  int _calculateMatchPercentage({
-    required List<_TeachSkill> myTeachSkills,
-    required List<_TeachSkill> myLearnSkills,
-    required List<_TeachSkill> theirTeachSkills,
-    required List<_TeachSkill> theirLearnSkills,
-  }) {
-    final myTeach = myTeachSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-    final myLearn = myLearnSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-    final theirTeach = theirTeachSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-    final theirLearn = theirLearnSkills
-        .map((skill) => skill.name.toLowerCase())
-        .toSet();
-
-    final theyTeachWhatILearn = theirTeach.intersection(myLearn).length;
-    final iTeachWhatTheyLearn = myTeach.intersection(theirLearn).length;
-    final score = 72 + (theyTeachWhatILearn * 10) + (iTeachWhatTheyLearn * 8);
-    return score.clamp(72, 98);
+    return _UserMatch(
+      id: candidate.user.id,
+      name: candidate.user.name.isEmpty ? 'Isimsiz Kullanici' : candidate.user.name,
+      location: 'Konum belirtilmedi',
+      trustScore: candidate.user.trustScore,
+      bio: candidate.user.bio,
+      verified: candidate.user.verified,
+      canTeach: [
+        _TeachSkill(
+          name: candidate.teacherSkill.name,
+          level: candidate.teacherSkill.level,
+          category: candidate.teacherSkill.category,
+        ),
+      ],
+      wantToLearn: [
+        _LearnGoal(
+          name: candidate.studentSkill.name,
+          category: candidate.studentSkill.category,
+        ),
+      ],
+      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
+      matchPercentage: (candidate.matchScore * 100).round(),
+      creditsRequired: candidate.creditsRequired,
+      totalSwaps: 0,
+    );
   }
 
   void _resetIndexForFilters() {
