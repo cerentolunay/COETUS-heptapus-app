@@ -221,6 +221,11 @@ class AppRouter {
       ),
       GoRoute(path: '/chat', builder: (context, state) => const ChatListPage()),
       GoRoute(
+        path: '/chat-detail/:chatId',
+        builder: (context, state) =>
+            ChatInterfacePage(chatId: state.pathParameters['chatId']),
+      ),
+      GoRoute(
         path: '/chat-detail',
         builder: (context, state) => const ChatInterfacePage(),
       ),
@@ -235,6 +240,11 @@ class AppRouter {
       GoRoute(
         path: '/exchange-history',
         builder: (context, state) => const ExchangePage(),
+      ),
+      GoRoute(
+        path: '/exchange-detail/:sessionId',
+        builder: (context, state) =>
+            ExchangePage(sessionId: state.pathParameters['sessionId']),
       ),
       GoRoute(
         path: '/exchange-detail',

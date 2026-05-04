@@ -492,9 +492,17 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               ),
             ],
           ),
-          IconButton(
-            onPressed: _loadMatches,
-            icon: const Icon(Icons.refresh, color: _cyan),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => context.go('/notifications'),
+                icon: const Icon(Icons.notifications_outlined, color: _cyan),
+              ),
+              IconButton(
+                onPressed: _loadMatches,
+                icon: const Icon(Icons.refresh, color: _cyan),
+              ),
+            ],
           ),
         ],
       ),
