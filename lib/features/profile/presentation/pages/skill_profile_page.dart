@@ -295,6 +295,122 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     await _profileRepository.saveLearnSkill(updatedGoal);
   }
 
+  Future<void> _showEditGoalDialog(SkillModel goal) async {
+    final nameController = TextEditingController(text: goal.name);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _card,
+          title: const Text('Edit Goal', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: nameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Goal name',
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.40)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _violet),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white.withOpacity(0.70)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final updatedName = nameController.text.trim();
+                if (updatedName.isEmpty) return;
+
+                setState(() {
+                  final index = _learningGoals.indexWhere(
+                    (item) => item.id == goal.id,
+                  );
+                  if (index != -1) {
+                    _learningGoals[index] = _learningGoals[index].copyWith(
+                      name: updatedName,
+                    );
+                  }
+                });
+
+                await _profileRepository.saveLearnSkill(
+                  goal.copyWith(name: updatedName),
+                );
+
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: _violet),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    nameController.dispose();
+  }
+
+  Future<void> _showDeleteGoalDialog(SkillModel goal) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _card,
+          title: const Text(
+            'Delete Goal',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Text(
+            '${goal.name} hedefini silmek istiyor musun?',
+            style: TextStyle(color: Colors.white.withOpacity(0.80)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white.withOpacity(0.70)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                setState(() {
+                  _learningGoals.removeWhere((item) => item.id == goal.id);
+                });
+
+                await _profileRepository.deleteLearnSkill(goal.id);
+
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+              ),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -623,37 +739,10 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
           ),
           itemBuilder: (context, index) {
             final goal = _learningGoals[index];
-            return Container(
-              decoration: BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: _border),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: _violet.withOpacity(0.20),
-                    child: Text(
-                      _skillAvatarText(goal.name),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    goal.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+            return _GoalCard(
+              goal: goal,
+              onEdit: () => _showEditGoalDialog(goal),
+              onDelete: () => _showDeleteGoalDialog(goal),
             );
           },
         ),
@@ -819,6 +908,107 @@ class _SkillCard extends StatelessWidget {
                 ),
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalCard extends StatelessWidget {
+  final SkillModel goal;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _GoalCard({
+    required this.goal,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  static const Color _bg = Color(0xFF1A1A2E);
+  static const Color _border = Color(0xFF2A2A3E);
+  static const Color _violet = Color(0xFF8B5CF6);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _border),
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: _violet.withOpacity(0.20),
+                  child: Text(
+                    goal.name.isNotEmpty ? goal.name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    goal.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 2,
+            right: 2,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: onEdit,
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: Colors.white70,
+                    size: 18,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                ),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
