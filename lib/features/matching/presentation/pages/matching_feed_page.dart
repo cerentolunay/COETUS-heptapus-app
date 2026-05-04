@@ -1,3 +1,8 @@
+import 'package:coetus/features/matching/models/match_candidate.dart';
+import 'package:coetus/features/matching/presentation/pages/match_success_page.dart';
+import 'package:coetus/features/matching/services/matching_service.dart';
+import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
+import 'package:coetus/features/profile/domain/repositories/profile_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,98 +14,110 @@ class MatchingFeedPage extends StatefulWidget {
 }
 
 class _MatchingFeedPageState extends State<MatchingFeedPage> {
-  final List<_UserMatch> _users = const [
-    _UserMatch(
-      id: '1',
-      name: 'Sarah Martinez',
-      location: 'Barcelona, Spain',
-      trustScore: 96,
-      bio:
-          'Native Spanish speaker and certified language teacher. I love helping people learn through conversation and cultural immersion.',
-      canTeach: [
-        _TeachSkill(name: 'Spanish', level: 7, emoji: '🇪🇸'),
-        _TeachSkill(name: 'Guitar', level: 5, emoji: '🎸'),
-      ],
-      wantToLearn: [
-        _LearnGoal(name: 'English', emoji: '🇬🇧'),
-        _LearnGoal(name: 'Coding', emoji: '💻'),
-      ],
-      personalityTraits: [
-        'Patient Teacher',
-        'Cultural Explorer',
-        'Music Lover',
-      ],
-      matchPercentage: 94,
-      creditsRequired: 50,
-      totalSwaps: 32,
-    ),
-    _UserMatch(
-      id: '2',
-      name: 'David Kim',
-      location: 'Seoul, South Korea',
-      trustScore: 98,
-      bio:
-          'Senior software engineer at a tech startup. Passionate about teaching web development and learning new languages.',
-      canTeach: [
-        _TeachSkill(name: 'Coding', level: 7, emoji: '💻'),
-        _TeachSkill(name: 'English', level: 6, emoji: '🇬🇧'),
-      ],
-      wantToLearn: [
-        _LearnGoal(name: 'Spanish', emoji: '🇪🇸'),
-        _LearnGoal(name: 'Guitar', emoji: '🎸'),
-      ],
-      personalityTraits: [
-        'Tech Enthusiast',
-        'Structured Learner',
-        'Goal-Oriented',
-      ],
-      matchPercentage: 91,
-      creditsRequired: 50,
-      totalSwaps: 45,
-    ),
-    _UserMatch(
-      id: '3',
-      name: 'Emily Chen',
-      location: 'London, UK',
-      trustScore: 95,
-      bio:
-          'Professional guitarist and music producer. Teaching guitar for 8+ years. Want to improve my Spanish conversation.',
-      canTeach: [
-        _TeachSkill(name: 'Guitar', level: 7, emoji: '🎸'),
-        _TeachSkill(name: 'English', level: 7, emoji: '🇬🇧'),
-      ],
-      wantToLearn: [
-        _LearnGoal(name: 'Spanish', emoji: '🇪🇸'),
-        _LearnGoal(name: 'Design', emoji: '🎨'),
-      ],
-      personalityTraits: [
-        'Creative Artist',
-        'Patient Mentor',
-        'Detail-Oriented',
-      ],
-      matchPercentage: 89,
-      creditsRequired: 50,
-      totalSwaps: 28,
-    ),
-  ];
+  final ProfileRepository _profileRepository = ProfileRepositoryFactory.create();
 
-  int _currentIndex = 0;
-  int _swipeDirection = 0; // -1 left, 1 right, 0 idle
-
-  static const Color _bgTop = Color(0xFF0B1120);
-  static const Color _bgMid = Color(0xFF0F172A);
-  static const Color _bgBottom = Color(0xFF1E1B4B);
-
+  static const Color _bgTop = Color(0xFF0F172A);
+  static const Color _bgMid = Color(0xFF1E293B);
+  static const Color _bgBottom = Color(0xFF0F172A);
   static const Color _cyan = Color(0xFF06B6D4);
   static const Color _violet = Color(0xFF7C3AED);
-  static const Color _violetSoft = Color(0xFFA78BFA);
-  static const Color _green = Color(0xFF4ADE80);
-
-  static const Color _surface = Color(0x14FFFFFF);
-  static const Color _surfaceBorder = Color(0x1AFFFFFF);
   static const Color _textMuted = Color(0xFF94A3B8);
-  static const Color _textSoft = Color(0xFFCBD5E1);
   static const Color _textDarkMuted = Color(0xFF64748B);
+
+  List<_UserMatch> _users = [];
+  int _currentIndex = 0;
+  int _swipeDirection = 0;
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMatches();
+  }
+
+  Future<void> _loadMatches() async {
+    try {
+      final currentProfile = await _profileRepository.loadProfile();
+      final candidates = await _profileRepository.loadDiscoverableProfiles();
+
+      final matches = const MatchingService().getRecommendedMatches(
+        currentProfile: currentProfile,
+        candidateProfiles: candidates,
+        matchExposureCounts: const {
+          'candidate-1': 1,
+          'candidate-2': 3,
+          'candidate-3': 0,
+        },
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _users = matches.map(_mapCandidateToUserMatch).toList();
+        _currentIndex = 0;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  _UserMatch _mapCandidateToUserMatch(MatchCandidate candidate) {
+    return _UserMatch(
+      id: candidate.user.id,
+      name: candidate.user.name,
+      location: 'Location not set',
+      trustScore: candidate.user.trustScore,
+      bio: candidate.user.bio,
+      canTeach: [
+        _TeachSkill(
+          name: candidate.teacherSkill.name,
+          level: candidate.teacherSkill.level,
+          emoji: _emojiForCategory(candidate.teacherSkill.category),
+        ),
+      ],
+      wantToLearn: [
+        _LearnGoal(
+          name: candidate.studentSkill.name,
+          emoji: _emojiForCategory(candidate.studentSkill.category),
+        ),
+      ],
+      personalityTraits: [
+        'Skill Match',
+        'Skill Score ${(candidate.skillLevelScore * 100).round()}%',
+        'Profile ${(candidate.profileCompleteness * 100).round()}%',
+      ],
+      matchPercentage: (candidate.matchScore * 100).round(),
+      creditsRequired: candidate.creditsRequired,
+      totalSwaps: 0,
+    );
+  }
+
+  String _emojiForCategory(String category) {
+    switch (category.trim().toLowerCase()) {
+      case 'music':
+        return '🎸';
+      case 'language':
+        return '🗣️';
+      case 'programming':
+        return '💻';
+      case 'design':
+        return '🎨';
+      case 'sport':
+      case 'sports':
+        return '🏃';
+      case 'cooking':
+        return '🍳';
+      default:
+        return '✨';
+    }
+  }
 
   void _handleSwipe(String direction) {
     if (_currentIndex >= _users.length) return;
@@ -120,6 +137,29 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: _bgMid,
+        body: Center(child: CircularProgressIndicator(color: _cyan)),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: _bgMid,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Matches could not be loaded.\n$_errorMessage',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      );
+    }
+
     final bool isFinished = _currentIndex >= _users.length;
     final _UserMatch? currentUser = isFinished ? null : _users[_currentIndex];
 
@@ -205,11 +245,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             const Text(
               'Check back soon for more skill-swap opportunities',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _textMuted,
-                fontSize: 14,
-                height: 1.5,
-              ),
+              style: TextStyle(color: _textMuted, fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 24),
             Container(
@@ -267,10 +303,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               const SizedBox(height: 4),
               Text(
                 '$remaining profiles available',
-                style: const TextStyle(
-                  color: _textMuted,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: _textMuted, fontSize: 13),
               ),
             ],
           ),
@@ -313,7 +346,28 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
                 size: 80,
                 icon: Icons.favorite,
                 onTap: () {
-                  context.go('/match-success');
+                  context.go(
+                    '/match-success',
+                    extra: MatchedUser(
+                      name: user.name,
+                      skills: user.canTeach
+                          .map(
+                            (skill) => MatchedSkill(
+                              name: skill.name,
+                              emoji: skill.emoji,
+                            ),
+                          )
+                          .toList(),
+                      learningGoals: user.wantToLearn
+                          .map(
+                            (goal) => MatchedGoal(
+                              name: goal.name,
+                              emoji: goal.emoji,
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  );
                 },
               ),
               const SizedBox(width: 24),
@@ -329,10 +383,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           const SizedBox(height: 14),
           Text(
             'Swipe requires ${user.creditsRequired} HC commitment',
-            style: const TextStyle(
-              color: _textDarkMuted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: _textDarkMuted, fontSize: 12),
           ),
         ],
       ),
@@ -343,9 +394,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     return Container(
       decoration: BoxDecoration(
         color: _bgMid.withOpacity(0.86),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.10)),
-        ),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.10))),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
@@ -468,10 +517,7 @@ class _MatchCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '📍 ${user.location}',
-                    style: const TextStyle(
-                      color: _textMuted,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: _textMuted, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -515,8 +561,11 @@ class _MatchCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.shield_outlined,
-                                size: 12, color: _green),
+                            const Icon(
+                              Icons.shield_outlined,
+                              size: 12,
+                              color: _green,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${user.trustScore}% Trust',
@@ -558,11 +607,7 @@ class _MatchCard extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           user.bio,
-          style: const TextStyle(
-            color: _textSoft,
-            fontSize: 14,
-            height: 1.6,
-          ),
+          style: const TextStyle(color: _textSoft, fontSize: 14, height: 1.6),
         ),
       ],
     );
@@ -590,10 +635,12 @@ class _MatchCard extends StatelessWidget {
         const SizedBox(height: 12),
         Column(
           children: user.canTeach
-              .map((skill) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _TeachSkillCard(skill: skill),
-                  ))
+              .map(
+                (skill) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _TeachSkillCard(skill: skill),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -718,10 +765,7 @@ class _MatchCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              _violet.withOpacity(0.20),
-              _cyan.withOpacity(0.20),
-            ],
+            colors: [_violet.withOpacity(0.20), _cyan.withOpacity(0.20)],
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _violet.withOpacity(0.30)),
@@ -794,10 +838,7 @@ class _TeachSkillCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     const Text(
                       'Expert Level',
-                      style: TextStyle(
-                        color: _textMuted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: _textMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1034,8 +1075,5 @@ class _LearnGoal {
   final String name;
   final String emoji;
 
-  const _LearnGoal({
-    required this.name,
-    required this.emoji,
-  });
+  const _LearnGoal({required this.name, required this.emoji});
 }
