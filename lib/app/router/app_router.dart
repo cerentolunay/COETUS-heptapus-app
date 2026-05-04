@@ -79,6 +79,7 @@ class AppRouter {
     '/profile-advanced',
     '/matching',
     '/chat',
+    '/chat/',
     '/chat-detail',
     '/chat-escrow',
     '/exchange',
@@ -219,13 +220,12 @@ class AppRouter {
       ),
       GoRoute(path: '/chat', builder: (context, state) => const ChatListPage()),
       GoRoute(
-        path: '/chat-detail',
-        builder: (context, state) => const SecureChatEscrowPage(),
+        path: '/chat/:chatId',
+        builder: (context, state) =>
+            SecureChatEscrowPage(chatId: state.pathParameters['chatId'] ?? ''),
       ),
-      GoRoute(
-        path: '/chat-escrow',
-        builder: (context, state) => const SecureChatEscrowPage(),
-      ),
+      GoRoute(path: '/chat-detail', redirect: (context, state) => '/chat'),
+      GoRoute(path: '/chat-escrow', redirect: (context, state) => '/chat'),
       GoRoute(
         path: '/exchange',
         builder: (context, state) => const ExchangePage(),

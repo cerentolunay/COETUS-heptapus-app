@@ -118,10 +118,13 @@ class _ChatListPageState extends State<ChatListPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [_indigo.withOpacity(0.20), _violet.withOpacity(0.20)],
+              colors: [
+                _indigo.withValues(alpha: 0.20),
+                _violet.withValues(alpha: 0.20),
+              ],
             ),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _indigo.withOpacity(0.30)),
+            border: Border.all(color: _indigo.withValues(alpha: 0.30)),
           ),
           child: Text(
             '$_activeCount Active',
@@ -219,7 +222,7 @@ class _ChatListPageState extends State<ChatListPage> {
           colors: [_card, _card2],
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _indigo.withOpacity(0.30)),
+        border: Border.all(color: _indigo.withValues(alpha: 0.30)),
       ),
       child: const Column(
         children: [
@@ -438,7 +441,7 @@ class _ChatBottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.45);
+    final color = isActive ? _active : Colors.white.withValues(alpha: 0.45);
 
     return InkWell(
       onTap: onTap,

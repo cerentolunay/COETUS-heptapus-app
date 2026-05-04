@@ -242,11 +242,19 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     try {
       final matchRef = _firestore.collection('matches').doc();
       final sessionRef = _firestore.collection('sessions').doc();
+      final participants = [currentUser.uid, user.id]..sort();
+      final chatRef = _firestore
+          .collection('chats')
+          .doc(participants.join('_'));
+      final currentUserName =
+          currentUser.displayName ??
+          currentUser.email?.split('@').first ??
+          'Kullanici';
 
       await _firestore.runTransaction((transaction) async {
         transaction.set(matchRef, {
           'id': matchRef.id,
-          'participants': [currentUser.uid, user.id],
+          'participants': participants,
           'requesterId': currentUser.uid,
           'receiverId': user.id,
           'skillName': skill.name,
@@ -267,6 +275,28 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
+
+        transaction.set(chatRef, {
+          'id': chatRef.id,
+          'participants': participants,
+          'participantNames': {
+            currentUser.uid: currentUserName,
+            user.id: user.name,
+          },
+          'participantSkills': {
+            user.id: [skill.name],
+          },
+          'matchId': matchRef.id,
+          'sessionId': sessionRef.id,
+          'skillName': skill.name,
+          'lastMessage': '${skill.name} icin teklif gonderildi.',
+          'lastSenderId': currentUser.uid,
+          'unreadCount': 0,
+          'credits': user.creditsRequired,
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
 
         transaction.set(_firestore.collection('notifications').doc(), {
           'userId': user.id,

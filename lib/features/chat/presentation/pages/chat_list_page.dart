@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/repositories/firebase_chat_repository.dart';
+import '../../domain/models/chat_models.dart';
+
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
 
@@ -10,33 +13,7 @@ class ChatListPage extends StatefulWidget {
 
 class _ChatListPageState extends State<ChatListPage> {
   final TextEditingController _searchController = TextEditingController();
-
-  final List<_ChatItemData> _allChats = const [
-    _ChatItemData(
-      id: '1',
-      name: 'Sofia Rodriguez',
-      lastMessage: 'Perfect timing! See you then! 🎸',
-      timestamp: '10:35 AM',
-      unread: 0,
-      skills: ['🇪🇸 Spanish', '🎹 Piano'],
-    ),
-    _ChatItemData(
-      id: '2',
-      name: 'James Park',
-      lastMessage: 'I can show you some advanced photography techniques!',
-      timestamp: 'Yesterday',
-      unread: 2,
-      skills: ['📷 Photography', '🎬 Video'],
-    ),
-    _ChatItemData(
-      id: '3',
-      name: 'Maya Patel',
-      lastMessage: "Let's schedule our first yoga session",
-      timestamp: '2 days ago',
-      unread: 0,
-      skills: ['🧘 Yoga', '👨‍🍳 Cooking'],
-    ),
-  ];
+  final FirebaseChatRepository _chatRepository = FirebaseChatRepository();
 
   static const Color _bg = Color(0xFF0A0A0F);
   static const Color _card = Color(0xFF1A1A2E);
@@ -47,11 +24,11 @@ class _ChatListPageState extends State<ChatListPage> {
   static const Color _indigoText = Color(0xFF818CF8);
   static const Color _gray = Color(0xFF9CA3AF);
 
-  List<_ChatItemData> get _filteredChats {
+  List<_ChatItemData> _filteredChats(List<_ChatItemData> allChats) {
     final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return _allChats;
+    if (query.isEmpty) return allChats;
 
-    return _allChats.where((chat) {
+    return allChats.where((chat) {
       final matchesName = chat.name.toLowerCase().contains(query);
       final matchesMessage = chat.lastMessage.toLowerCase().contains(query);
       final matchesSkill = chat.skills.any(
@@ -61,8 +38,6 @@ class _ChatListPageState extends State<ChatListPage> {
     }).toList();
   }
 
-  int get _activeCount => _allChats.length;
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -71,38 +46,59 @@ class _ChatListPageState extends State<ChatListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final chats = _filteredChats;
-
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 20),
-                    _buildSearchBar(),
-                    const SizedBox(height: 20),
-                    _buildChatList(context, chats),
-                    const SizedBox(height: 24),
-                    _buildTipCard(),
-                  ],
+        child: StreamBuilder<List<ChatThread>>(
+          stream: _chatRepository.watchThreads(),
+          builder: (context, snapshot) {
+            final currentUser = _chatRepository.currentUser;
+            final allChats = currentUser == null
+                ? <_ChatItemData>[]
+                : (snapshot.data ?? const <ChatThread>[])
+                      .map(
+                        (thread) =>
+                            _ChatItemData.fromThread(thread, currentUser.uid),
+                      )
+                      .toList();
+            final chats = _filteredChats(allChats);
+
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(allChats.length),
+                        const SizedBox(height: 20),
+                        _buildSearchBar(),
+                        const SizedBox(height: 20),
+                        if (snapshot.connectionState == ConnectionState.waiting)
+                          const _ChatLoadingCard()
+                        else if (snapshot.hasError)
+                          _ChatErrorCard(
+                            message: _mapFirestoreError(snapshot.error),
+                          )
+                        else
+                          _buildChatList(context, chats),
+                        const SizedBox(height: 24),
+                        _buildTipCard(),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            _buildBottomNavigation(context),
-          ],
+                _buildBottomNavigation(context),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(int activeCount) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -118,13 +114,16 @@ class _ChatListPageState extends State<ChatListPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [_indigo.withOpacity(0.20), _violet.withOpacity(0.20)],
+              colors: [
+                _indigo.withValues(alpha: 0.20),
+                _violet.withValues(alpha: 0.20),
+              ],
             ),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _indigo.withOpacity(0.30)),
+            border: Border.all(color: _indigo.withValues(alpha: 0.30)),
           ),
           child: Text(
-            '$_activeCount Active',
+            '$activeCount Active',
             style: const TextStyle(
               color: _indigoText,
               fontSize: 14,
@@ -173,7 +172,7 @@ class _ChatListPageState extends State<ChatListPage> {
             Icon(Icons.chat_bubble_outline, color: _gray, size: 34),
             SizedBox(height: 12),
             Text(
-              'No conversations found',
+              'No conversations yet',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -182,7 +181,7 @@ class _ChatListPageState extends State<ChatListPage> {
             ),
             SizedBox(height: 6),
             Text(
-              'Try a different name, skill, or keyword.',
+              'Start from a match offer, then your real messages will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(color: _gray, fontSize: 14),
             ),
@@ -198,9 +197,7 @@ class _ChatListPageState extends State<ChatListPage> {
               padding: const EdgeInsets.only(bottom: 10),
               child: _ChatListCard(
                 chat: chat,
-                onTap: () {
-                  context.go('/chat-detail');
-                },
+                onTap: () => context.go('/chat/${chat.id}'),
               ),
             ),
           )
@@ -219,7 +216,7 @@ class _ChatListPageState extends State<ChatListPage> {
           colors: [_card, _card2],
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _indigo.withOpacity(0.30)),
+        border: Border.all(color: _indigo.withValues(alpha: 0.30)),
       ),
       child: const Column(
         children: [
@@ -258,16 +255,12 @@ class _ChatListPageState extends State<ChatListPage> {
           _ChatBottomNavItem(
             icon: Icons.person_outline,
             label: 'Profile',
-            onTap: () {
-              context.go('/profile');
-            },
+            onTap: () => context.go('/profile'),
           ),
           _ChatBottomNavItem(
             icon: Icons.explore_outlined,
             label: 'Discover',
-            onTap: () {
-              context.go('/matching');
-            },
+            onTap: () => context.go('/matching'),
           ),
           _ChatBottomNavItem(
             icon: Icons.chat_bubble_outline,
@@ -278,6 +271,17 @@ class _ChatListPageState extends State<ChatListPage> {
         ],
       ),
     );
+  }
+
+  String _mapFirestoreError(Object? error) {
+    final message = error.toString();
+    if (message.contains('permission-denied')) {
+      return 'Chat izinleri eksik. Firestore kurallarini yayinladigindan emin ol.';
+    }
+    if (message.contains('failed-precondition')) {
+      return 'Chat sorgusu icin Firestore index gerekiyor olabilir.';
+    }
+    return 'Sohbetler yuklenemedi. Lutfen tekrar dene.';
   }
 }
 
@@ -421,6 +425,44 @@ class _ChatListCard extends StatelessWidget {
   }
 }
 
+class _ChatLoadingCard extends StatelessWidget {
+  const _ChatLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 36),
+        child: CircularProgressIndicator(color: Color(0xFF818CF8)),
+      ),
+    );
+  }
+}
+
+class _ChatErrorCard extends StatelessWidget {
+  final String message;
+
+  const _ChatErrorCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF2A2A3E)),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
+      ),
+    );
+  }
+}
+
 class _ChatBottomNavItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -438,7 +480,7 @@ class _ChatBottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.45);
+    final color = isActive ? _active : Colors.white.withValues(alpha: 0.45);
 
     return InkWell(
       onTap: onTap,
@@ -481,7 +523,7 @@ class _TipIcon extends StatelessWidget {
         gradient: LinearGradient(colors: [_indigo, _violet]),
       ),
       alignment: Alignment.center,
-      child: const Text('💡', style: TextStyle(fontSize: 22)),
+      child: const Icon(Icons.lightbulb_outline, color: Colors.white, size: 24),
     );
   }
 }
@@ -502,4 +544,38 @@ class _ChatItemData {
     required this.unread,
     required this.skills,
   });
+
+  factory _ChatItemData.fromThread(ChatThread thread, String currentUserId) {
+    final skills = <String>[
+      if (thread.skillName.trim().isNotEmpty) thread.skillName.trim(),
+      ...thread.otherUserSkills(currentUserId),
+    ].where((skill) => skill.trim().isNotEmpty).toSet().toList();
+
+    return _ChatItemData(
+      id: thread.id,
+      name: thread.otherUserName(currentUserId),
+      lastMessage: thread.lastMessage.isEmpty
+          ? 'Sohbet baslatildi.'
+          : thread.lastMessage,
+      timestamp: _formatTimestamp(thread.updatedAt),
+      unread: thread.unreadCount,
+      skills: skills,
+    );
+  }
+}
+
+String _formatTimestamp(DateTime? timestamp) {
+  if (timestamp == null) return '';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(timestamp.year, timestamp.month, timestamp.day);
+  final difference = today.difference(date).inDays;
+
+  if (difference == 0) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+  if (difference == 1) return 'Yesterday';
+  return '$difference days ago';
 }
