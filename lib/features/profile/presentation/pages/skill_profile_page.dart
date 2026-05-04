@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../auth/domain/models/app_user.dart';
+import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../auth/data/repositories/auth_repository_factory.dart';
 import '../../data/repositories/profile_repository_factory.dart';
 import '../../domain/models/profile_data.dart';
 import '../../domain/models/skill_model.dart';
@@ -17,6 +19,7 @@ class SkillProfilePage extends StatefulWidget {
 class _SkillProfilePageState extends State<SkillProfilePage> {
   final ProfileRepository _profileRepository =
       ProfileRepositoryFactory.create();
+  final AuthRepository _authRepository = AuthRepositoryFactory.create();
 
   AppUser _user = const AppUser(
     id: 'u1',
@@ -39,6 +42,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   ];
 
   bool _isLoadingProfile = true;
+  bool _isSigningOut = false;
 
   static const Color _bg = Color(0xFF0A0A0F);
   static const Color _card = Color(0xFF1A1A2E);
@@ -291,6 +295,53 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     await _profileRepository.saveLearnSkill(updatedGoal);
   }
 
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: _card,
+        title: const Text('Çıkış Yap', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Hesabından çıkış yapmak istediğine emin misin?',
+          style: TextStyle(color: Colors.white.withOpacity(0.80)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'İptal',
+              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text(
+              'Çıkış Yap',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isSigningOut = true);
+
+    try {
+      await _authRepository.signOut();
+      if (!mounted) return;
+      context.go('/login');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSigningOut = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Çıkış yapılamadı: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingProfile) {
@@ -314,6 +365,8 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     _buildHeader(),
                     const SizedBox(height: 24),
                     _buildProfileCard(),
+                    const SizedBox(height: 16),
+                    _buildLogoutButton(),
                     const SizedBox(height: 28),
                     _buildSkillsSection(),
                     const SizedBox(height: 28),
@@ -458,6 +511,32 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isSigningOut ? null : _handleLogout,
+        icon: Icon(
+          _isSigningOut ? Icons.hourglass_empty : Icons.logout,
+          size: 18,
+        ),
+        label: Text(
+          _isSigningOut ? 'Çıkılıyor...' : 'Çıkış Yap',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.redAccent.withOpacity(0.85),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          disabledBackgroundColor: Colors.redAccent.withOpacity(0.50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
       ),
     );
   }
