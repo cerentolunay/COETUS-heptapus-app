@@ -81,6 +81,7 @@ class AppRouter {
     '/profile-advanced',
     '/matching',
     '/chat',
+    '/chat/',
     '/chat-detail',
     '/chat-escrow',
     '/exchange',

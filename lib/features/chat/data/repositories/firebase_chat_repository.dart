@@ -36,17 +36,12 @@ class FirebaseChatRepository implements ChatRepository {
         .orderBy('createdAt')
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs.map(ChatMessage.fromFirestore).toList(),
+          (snapshot) => snapshot.docs.map(ChatMessage.fromFirestore).toList(),
         );
   }
 
   @override
-  Future<void> sendMessage(
-    String chatId,
-    String senderId,
-    String text,
-  ) async {
+  Future<void> sendMessage(String chatId, String senderId, String text) async {
     final trimmedText = text.trim();
     if (trimmedText.isEmpty) return;
 
@@ -78,6 +73,7 @@ class FirebaseChatRepository implements ChatRepository {
       transaction.set(chatRef, {
         'id': chatId,
         'lastMessage': trimmedText,
+        'lastSenderId': senderId,
         'lastMessageAt': now,
         'updatedAt': now,
       }, SetOptions(merge: true));

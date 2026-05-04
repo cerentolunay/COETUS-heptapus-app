@@ -81,7 +81,8 @@ class _ChatListPageState extends State<ChatListPage> {
                   query.isEmpty ||
                   chat.lastMessage.toLowerCase().contains(query) ||
                   chat.id.toLowerCase().contains(query) ||
-                  chat.matchId.toLowerCase().contains(query),
+                  chat.matchId.toLowerCase().contains(query) ||
+                  chat.skillName.toLowerCase().contains(query),
             )
             .toList();
 
@@ -129,10 +130,13 @@ class _ChatListPageState extends State<ChatListPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [_indigo.withOpacity(0.20), _violet.withOpacity(0.20)],
+              colors: [
+                _indigo.withValues(alpha: 0.20),
+                _violet.withValues(alpha: 0.20),
+              ],
             ),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _indigo.withOpacity(0.30)),
+            border: Border.all(color: _indigo.withValues(alpha: 0.30)),
           ),
           child: Text(
             '$activeCount Active',
@@ -291,7 +295,11 @@ class _ChatListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = chat.matchId.isEmpty ? 'Exchange chat' : 'Match ${chat.matchId}';
+    final title = chat.skillName.isNotEmpty
+        ? chat.skillName
+        : chat.matchId.isEmpty
+        ? 'Exchange chat'
+        : 'Match ${chat.matchId}';
     final subtitle = chat.lastMessage.isEmpty
         ? 'No messages yet'
         : chat.lastMessage;
@@ -365,7 +373,9 @@ class _ChatListCard extends StatelessWidget {
   String _formatDate(DateTime? date) {
     if (date == null) return '';
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}';
@@ -389,7 +399,7 @@ class _ChatBottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withOpacity(0.45);
+    final color = isActive ? _active : Colors.white.withValues(alpha: 0.45);
 
     return InkWell(
       onTap: onTap,

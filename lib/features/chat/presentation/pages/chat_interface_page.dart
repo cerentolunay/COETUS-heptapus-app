@@ -45,7 +45,9 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -92,9 +94,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: _indigo),
-          );
+          return const Center(child: CircularProgressIndicator(color: _indigo));
         }
 
         final messages = snapshot.data ?? const <ChatMessage>[];
@@ -286,8 +286,9 @@ class _MessageBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 7),
         decoration: BoxDecoration(
-          gradient:
-              isMe ? const LinearGradient(colors: [_indigo, _violet]) : null,
+          gradient: isMe
+              ? const LinearGradient(colors: [_indigo, _violet])
+              : null,
           color: isMe ? null : _card,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
@@ -298,8 +299,9 @@ class _MessageBubble extends StatelessWidget {
           border: isMe ? null : Border.all(color: _border),
         ),
         child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(
               message.text,
@@ -313,7 +315,7 @@ class _MessageBubble extends StatelessWidget {
             Text(
               _formatTime(message.createdAt),
               style: TextStyle(
-                color: Colors.white.withOpacity(0.62),
+                color: Colors.white.withValues(alpha: 0.62),
                 fontSize: 10,
               ),
             ),
