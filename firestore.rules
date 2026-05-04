@@ -23,7 +23,7 @@ service cloud.firestore {
 
     // User profile root document.
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if signedIn();
 
       allow create: if isOwner(userId) &&
         request.resource.data.id == userId &&
@@ -35,11 +35,13 @@ service cloud.firestore {
 
       // User-owned skill cards.
       match /teachSkills/{skillId} {
-        allow read, write: if isOwner(userId);
+        allow read: if signedIn();
+        allow write: if isOwner(userId);
       }
 
       match /learnSkills/{skillId} {
-        allow read, write: if isOwner(userId);
+        allow read: if signedIn();
+        allow write: if isOwner(userId);
       }
     }
 

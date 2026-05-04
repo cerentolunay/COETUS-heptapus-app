@@ -49,7 +49,41 @@ class FirebaseProfileRepository implements ProfileRepository {
       user: user,
       teachSkills: teachSkills,
       learnSkills: learnSkills,
+      availabilitySlots: _readAvailabilitySlots(data),
     );
+  }
+
+  @override
+  Future<List<ProfileData>> loadDiscoverableProfiles({int limit = 50}) async {
+    final currentUserId = _firebaseAuth.currentUser?.uid;
+    if (currentUserId == null) {
+      return [];
+    }
+
+    final snapshot = await _firestore.collection('users').limit(limit).get();
+    final profiles = <ProfileData>[];
+
+    for (final doc in snapshot.docs) {
+      if (doc.id == currentUserId) continue;
+
+      final userDoc = _firestore.collection('users').doc(doc.id);
+      final teachSkills = await _readSkills(userDoc.collection('teachSkills'));
+      final learnSkills = await _readSkills(userDoc.collection('learnSkills'));
+
+      profiles.add(
+        ProfileData(
+          user: AppUser.fromMap({
+            'id': doc.id,
+            ...doc.data(),
+          }),
+          teachSkills: teachSkills,
+          learnSkills: learnSkills,
+          availabilitySlots: _readAvailabilitySlots(doc.data()),
+        ),
+      );
+    }
+
+    return profiles;
   }
 
   @override
@@ -128,5 +162,12 @@ class FirebaseProfileRepository implements ProfileRepository {
         ...doc.data(),
       });
     }).toList();
+  }
+
+  List<String> _readAvailabilitySlots(Map<String, dynamic> data) {
+    final rawSlots = data['availabilitySlots'];
+    if (rawSlots is! List) return [];
+
+    return rawSlots.whereType<String>().toList();
   }
 }
