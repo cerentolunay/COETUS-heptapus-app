@@ -3,6 +3,8 @@ import 'package:coetus/features/matching/models/match_candidate.dart';
 import 'package:coetus/features/matching/presentation/pages/match_success_page.dart';
 import 'package:coetus/features/matching/services/matching_service.dart';
 import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
+import 'package:coetus/features/profile/domain/models/profile_data.dart';
+import 'package:coetus/features/profile/domain/models/skill_model.dart';
 import 'package:coetus/features/profile/domain/repositories/profile_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -95,7 +97,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
         candidateProfiles: candidates,
       );
 
-      final userMatches = matches.map(_mapCandidateToUserMatch).toList();
+      final userMatches = matches.isEmpty
+          ? candidates.map(_mapProfileToUserMatch).toList()
+          : matches.map(_mapCandidateToUserMatch).toList();
 
       final filters = userMatches
           .expand(
@@ -162,6 +166,43 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       matchPercentage: (candidate.matchScore * 100).round(),
       creditsRequired: candidate.creditsRequired,
       totalSwaps: 0,
+    );
+  }
+
+  _UserMatch _mapProfileToUserMatch(ProfileData profile) {
+    final teachSkills = profile.teachSkills.map(_mapTeachSkill).toList();
+    final learnGoals = profile.learnSkills
+        .map((skill) => _LearnGoal(name: skill.name, category: skill.category))
+        .toList();
+    final traits = <String>[
+      if (profile.user.verified) 'Verified',
+      if (teachSkills.isNotEmpty) '${teachSkills.length} teach skill',
+      if (learnGoals.isNotEmpty) '${learnGoals.length} learn goal',
+    ];
+
+    return _UserMatch(
+      id: profile.user.id,
+      name: profile.user.name.isEmpty
+          ? 'Isimsiz Kullanici'
+          : profile.user.name,
+      location: 'Konum belirtilmedi',
+      trustScore: profile.user.trustScore,
+      bio: profile.user.bio,
+      verified: profile.user.verified,
+      canTeach: teachSkills,
+      wantToLearn: learnGoals,
+      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
+      matchPercentage: 0,
+      creditsRequired: 50,
+      totalSwaps: 0,
+    );
+  }
+
+  _TeachSkill _mapTeachSkill(SkillModel skill) {
+    return _TeachSkill(
+      name: skill.name,
+      level: skill.level,
+      category: skill.category,
     );
   }
 
