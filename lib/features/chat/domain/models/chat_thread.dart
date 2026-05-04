@@ -5,6 +5,7 @@ class ChatThread {
   final String sessionId;
   final String matchId;
   final List<String> participants;
+  final Map<String, String> participantNames;
   final String skillName;
   final String lastMessage;
   final String lastSenderId;
@@ -19,6 +20,7 @@ class ChatThread {
     required this.sessionId,
     required this.matchId,
     required this.participants,
+    this.participantNames = const {},
     this.skillName = '',
     this.lastMessage = '',
     this.lastSenderId = '',
@@ -39,6 +41,7 @@ class ChatThread {
       sessionId: map['sessionId'] as String? ?? '',
       matchId: map['matchId'] as String? ?? '',
       participants: _readStringList(map['participants']),
+      participantNames: _readStringMap(map['participantNames']),
       skillName: map['skillName'] as String? ?? '',
       lastMessage: map['lastMessage'] as String? ?? '',
       lastSenderId: map['lastSenderId'] as String? ?? '',
@@ -55,6 +58,7 @@ class ChatThread {
     String? sessionId,
     String? matchId,
     List<String>? participants,
+    Map<String, String>? participantNames,
     String? skillName,
     String? lastMessage,
     String? lastSenderId,
@@ -69,6 +73,7 @@ class ChatThread {
       sessionId: sessionId ?? this.sessionId,
       matchId: matchId ?? this.matchId,
       participants: participants ?? this.participants,
+      participantNames: participantNames ?? this.participantNames,
       skillName: skillName ?? this.skillName,
       lastMessage: lastMessage ?? this.lastMessage,
       lastSenderId: lastSenderId ?? this.lastSenderId,
@@ -86,6 +91,7 @@ class ChatThread {
       'sessionId': sessionId,
       'matchId': matchId,
       'participants': participants,
+      'participantNames': participantNames,
       'skillName': skillName,
       'lastMessage': lastMessage,
       'lastSenderId': lastSenderId,
@@ -97,11 +103,32 @@ class ChatThread {
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
   }
+
+  String otherParticipantId(String currentUserId) {
+    return participants.firstWhere(
+      (participantId) => participantId != currentUserId,
+      orElse: () => '',
+    );
+  }
+
+  String otherParticipantName(String currentUserId) {
+    final otherId = otherParticipantId(currentUserId);
+    final name = participantNames[otherId]?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Exchange chat';
+  }
 }
 
 List<String> _readStringList(Object? value) {
   if (value is! List) return [];
   return value.whereType<String>().toList();
+}
+
+Map<String, String> _readStringMap(Object? value) {
+  if (value is! Map) return {};
+  return value.map(
+    (key, item) => MapEntry(key.toString(), item?.toString() ?? ''),
+  );
 }
 
 int _readInt(Object? value) {

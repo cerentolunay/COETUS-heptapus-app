@@ -1,5 +1,6 @@
 import 'package:coetus/features/chat/data/repositories/chat_repository_factory.dart';
 import 'package:coetus/features/chat/domain/models/chat_message.dart';
+import 'package:coetus/features/chat/domain/models/chat_thread.dart';
 import 'package:coetus/features/chat/domain/repositories/chat_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -72,7 +73,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
               )
             : Column(
                 children: [
-                  _buildChatHeader(context, chatId),
+                  _buildChatHeader(context, chatId, userId),
                   Expanded(child: _buildMessages(chatId, userId)),
                   _buildInputBar(),
                 ],
@@ -121,56 +122,75 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
     );
   }
 
-  Widget _buildChatHeader(BuildContext context, String chatId) {
+  Widget _buildChatHeader(
+    BuildContext context,
+    String chatId,
+    String currentUserId,
+  ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: const BoxDecoration(
         color: _panel,
         border: Border(bottom: BorderSide(color: _border)),
       ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => context.go('/chat'),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [_violet, _indigo]),
-            ),
-            child: const Icon(Icons.person, color: Colors.white, size: 26),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Exchange Chat',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+      child: StreamBuilder<List<ChatThread>>(
+        stream: _repository.streamUserChats(currentUserId),
+        builder: (context, snapshot) {
+          final chat = (snapshot.data ?? const <ChatThread>[]).where(
+            (thread) => thread.id == chatId,
+          );
+          final thread = chat.isEmpty ? null : chat.first;
+          final title =
+              thread?.otherParticipantName(currentUserId) ?? 'Exchange Chat';
+          final subtitle = thread?.skillName.trim().isNotEmpty == true
+              ? thread!.skillName
+              : chatId;
+
+          return Row(
+            children: [
+              IconButton(
+                onPressed: () => context.go('/chat'),
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+              ),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [_violet, _indigo]),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  chatId,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _gray, fontSize: 12),
+                child: const Icon(Icons.person, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _gray, fontSize: 12),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => context.go('/chat-escrow'),
-            icon: const Icon(Icons.lock_outline, color: Colors.white),
-          ),
-        ],
+              ),
+              IconButton(
+                onPressed: () => context.go('/chat-escrow'),
+                icon: const Icon(Icons.lock_outline, color: Colors.white),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
