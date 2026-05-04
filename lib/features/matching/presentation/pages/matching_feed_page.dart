@@ -253,6 +253,12 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'participants': participants,
           'requesterId': currentUser.uid,
           'receiverId': user.id,
+          'requesterName': currentUserName,
+          'receiverName': user.name,
+          'participantNames': {
+            currentUser.uid: currentUserName,
+            user.id: user.name,
+          },
           'skillName': skill.name,
           'status': 'pending',
           'credits': user.creditsRequired,

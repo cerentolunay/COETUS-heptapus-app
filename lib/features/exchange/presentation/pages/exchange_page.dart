@@ -16,7 +16,8 @@ class ExchangePage extends StatefulWidget {
 }
 
 class _ExchangePageState extends State<ExchangePage> {
-  late final ExchangeRepository _repository = ExchangeRepositoryFactory.create();
+  late final ExchangeRepository _repository =
+      ExchangeRepositoryFactory.create();
 
   static const Color _bg = Color(0xFF0A0F1C);
   static const Color _bg2 = Color(0xFF0F172A);
@@ -51,7 +52,9 @@ class _ExchangePageState extends State<ExchangePage> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -216,7 +219,7 @@ class _ExchangePageState extends State<ExchangePage> {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: _violet.withOpacity(0.28),
+            color: _violet.withValues(alpha: 0.28),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -297,8 +300,10 @@ class _ExchangePageState extends State<ExchangePage> {
   Widget _buildBottomNavigation(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _bg2.withOpacity(0.86),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.10))),
+        color: _bg2.withValues(alpha: 0.86),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
@@ -342,7 +347,7 @@ class _OfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Panel(
-      borderColor: _ExchangeColors.amber.withOpacity(0.32),
+      borderColor: _ExchangeColors.amber.withValues(alpha: 0.32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -356,7 +361,9 @@ class _OfferCard extends StatelessWidget {
           _InfoRow(label: 'Kredi', value: '${offer.credits} HC'),
           _InfoRow(
             label: isReceiver ? 'Gonderen' : 'Alici',
-            value: isReceiver ? offer.requesterId : offer.receiverId,
+            value: isReceiver
+                ? _displayNameOrFallback(offer.requesterName, offer.requesterId)
+                : _displayNameOrFallback(offer.receiverName, offer.receiverId),
           ),
           if (isReceiver) ...[
             const SizedBox(height: 14),
@@ -385,6 +392,12 @@ class _OfferCard extends StatelessWidget {
       ),
     );
   }
+
+  String _displayNameOrFallback(String name, String userId) {
+    if (name.trim().isNotEmpty) return name.trim();
+    if (userId.length <= 8) return userId;
+    return '${userId.substring(0, 8)}...';
+  }
 }
 
 class _SessionCard extends StatelessWidget {
@@ -396,7 +409,7 @@ class _SessionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final visual = _SessionVisual.fromStatus(session.status);
     return _Panel(
-      borderColor: visual.color.withOpacity(0.28),
+      borderColor: visual.color.withValues(alpha: 0.28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -487,7 +500,7 @@ class _TitleRow extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.14),
+            color: color.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
