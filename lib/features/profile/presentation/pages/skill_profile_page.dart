@@ -682,7 +682,9 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
           _NavItem(
             icon: Icons.chat_bubble_outline,
             label: 'Chats',
-            onTap: () {},
+            onTap: () {
+              context.go('/chat');
+            },
           ),
         ],
       ),
