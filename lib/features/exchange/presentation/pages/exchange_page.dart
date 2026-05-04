@@ -116,10 +116,7 @@ class ExchangePage extends StatelessWidget {
               SizedBox(height: 4),
               Text(
                 'Manage your sessions, credits, and swap history',
-                style: TextStyle(
-                  color: _textMuted,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: _textMuted, fontSize: 13),
               ),
             ],
           ),
@@ -159,9 +156,7 @@ class ExchangePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_violet, _cyan],
-        ),
+        gradient: const LinearGradient(colors: [_violet, _cyan]),
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
@@ -195,10 +190,7 @@ class ExchangePage extends StatelessWidget {
                   children: [
                     Text(
                       'Available Credits',
-                      style: TextStyle(
-                        color: Color(0xD9FFFFFF),
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: Color(0xD9FFFFFF), fontSize: 13),
                     ),
                     SizedBox(height: 2),
                     Text(
@@ -213,8 +205,10 @@ class ExchangePage extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.18),
                   borderRadius: BorderRadius.circular(14),
@@ -267,9 +261,7 @@ class ExchangePage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: _bg2.withOpacity(0.86),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.10)),
-        ),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.10))),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
@@ -278,7 +270,7 @@ class ExchangePage extends StatelessWidget {
           _BottomNavItem(
             icon: Icons.person_outline,
             label: 'Profile',
-            onTap: () => context.go('/profile-advanced'),
+            onTap: () => context.go('/profile'),
           ),
           _BottomNavItem(
             icon: Icons.chat_bubble_outline,
@@ -340,11 +332,7 @@ class _ExchangeCard extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  visual.icon,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                child: Icon(visual.icon, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -362,10 +350,7 @@ class _ExchangeCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.partnerName,
-                      style: const TextStyle(
-                        color: _textMuted,
-                        fontSize: 13,
-                      ),
+                      style: const TextStyle(color: _textMuted, fontSize: 13),
                     ),
                   ],
                 ),
@@ -472,10 +457,7 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MiniStat({
-    required this.label,
-    required this.value,
-  });
+  const _MiniStat({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -492,10 +474,7 @@ class _MiniStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xD9FFFFFF),
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Color(0xD9FFFFFF), fontSize: 12),
         ),
       ],
     );
@@ -523,10 +502,7 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF94A3B8),
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
         ),
         const Spacer(),
         Text(
@@ -612,11 +588,7 @@ class _BottomNavItem extends StatelessWidget {
   }
 }
 
-enum ExchangeStatus {
-  locked,
-  scheduled,
-  completed,
-}
+enum ExchangeStatus { locked, scheduled, completed }
 
 class _ExchangeItem {
   final String id;

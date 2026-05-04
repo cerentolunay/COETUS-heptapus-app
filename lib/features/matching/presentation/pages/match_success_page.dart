@@ -128,7 +128,7 @@ class MatchSuccessPage extends StatelessWidget {
                 .toList(),
             startColor: _indigo,
             endColor: _violet,
-            borderColor: _indigo.withOpacity(0.30),
+            borderColor: _indigo.withValues(alpha: 0.30),
           ),
           const SizedBox(height: 14),
           _buildExchangeCard(
@@ -142,7 +142,7 @@ class MatchSuccessPage extends StatelessWidget {
                 .toList(),
             startColor: _violet,
             endColor: _indigo,
-            borderColor: _violet.withOpacity(0.30),
+            borderColor: _violet.withValues(alpha: 0.30),
           ),
         ],
       ),
@@ -180,7 +180,7 @@ class MatchSuccessPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _bg.withOpacity(0.50),
+        color: _bg.withValues(alpha: 0.50),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _border),
       ),
@@ -210,8 +210,8 @@ class MatchSuccessPage extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          startColor.withOpacity(0.20),
-                          endColor.withOpacity(0.20),
+                          startColor.withValues(alpha: 0.20),
+                          endColor.withValues(alpha: 0.20),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(999),
@@ -251,7 +251,7 @@ class MatchSuccessPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: _indigo.withOpacity(0.28),
+                color: _indigo.withValues(alpha: 0.28),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),

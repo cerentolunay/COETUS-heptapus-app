@@ -54,8 +54,9 @@ class _ChatListPageState extends State<ChatListPage> {
     return _allChats.where((chat) {
       final matchesName = chat.name.toLowerCase().contains(query);
       final matchesMessage = chat.lastMessage.toLowerCase().contains(query);
-      final matchesSkill =
-          chat.skills.any((skill) => skill.toLowerCase().contains(query));
+      final matchesSkill = chat.skills.any(
+        (skill) => skill.toLowerCase().contains(query),
+      );
       return matchesName || matchesMessage || matchesSkill;
     }).toList();
   }
@@ -117,10 +118,7 @@ class _ChatListPageState extends State<ChatListPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                _indigo.withOpacity(0.20),
-                _violet.withOpacity(0.20),
-              ],
+              colors: [_indigo.withOpacity(0.20), _violet.withOpacity(0.20)],
             ),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: _indigo.withOpacity(0.30)),
@@ -152,10 +150,7 @@ class _ChatListPageState extends State<ChatListPage> {
         decoration: const InputDecoration(
           prefixIcon: Icon(Icons.search, color: _gray),
           hintText: 'Search conversations...',
-          hintStyle: TextStyle(
-            color: _gray,
-            fontSize: 14,
-          ),
+          hintStyle: TextStyle(color: _gray, fontSize: 14),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 16),
         ),
@@ -189,10 +184,7 @@ class _ChatListPageState extends State<ChatListPage> {
             Text(
               'Try a different name, skill, or keyword.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _gray,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: _gray, fontSize: 14),
             ),
           ],
         ),
@@ -201,15 +193,17 @@ class _ChatListPageState extends State<ChatListPage> {
 
     return Column(
       children: chats
-          .map((chat) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _ChatListCard(
-                  chat: chat,
-                  onTap: () {
-                    context.go('/chat-detail');
-                  },
-                ),
-              ))
+          .map(
+            (chat) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ChatListCard(
+                chat: chat,
+                onTap: () {
+                  context.go('/chat-detail');
+                },
+              ),
+            ),
+          )
           .toList(),
     );
   }
@@ -244,11 +238,7 @@ class _ChatListPageState extends State<ChatListPage> {
           Text(
             'Use the calendar tool to set up recurring skill swaps with your matches',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _gray,
-              fontSize: 14,
-              height: 1.5,
-            ),
+            style: TextStyle(color: _gray, fontSize: 14, height: 1.5),
           ),
         ],
       ),
@@ -259,9 +249,7 @@ class _ChatListPageState extends State<ChatListPage> {
     return Container(
       decoration: const BoxDecoration(
         color: _card2,
-        border: Border(
-          top: BorderSide(color: _border),
-        ),
+        border: Border(top: BorderSide(color: _border)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
       child: Row(
@@ -271,7 +259,7 @@ class _ChatListPageState extends State<ChatListPage> {
             icon: Icons.person_outline,
             label: 'Profile',
             onTap: () {
-              context.go('/profile-advanced');
+              context.go('/profile');
             },
           ),
           _ChatBottomNavItem(
@@ -297,10 +285,7 @@ class _ChatListCard extends StatelessWidget {
   final _ChatItemData chat;
   final VoidCallback onTap;
 
-  const _ChatListCard({
-    required this.chat,
-    required this.onTap,
-  });
+  const _ChatListCard({required this.chat, required this.onTap});
 
   static const Color _card = Color(0xFF1A1A2E);
   static const Color _border = Color(0xFF2A2A3E);
@@ -334,9 +319,7 @@ class _ChatListCard extends StatelessWidget {
                     height: 56,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [_violet, _indigo],
-                      ),
+                      gradient: LinearGradient(colors: [_violet, _indigo]),
                     ),
                     child: const Icon(
                       Icons.person,
@@ -353,9 +336,7 @@ class _ChatListCard extends StatelessWidget {
                         height: 22,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [_indigo, _violet],
-                          ),
+                          gradient: LinearGradient(colors: [_indigo, _violet]),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -391,10 +372,7 @@ class _ChatListCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           chat.timestamp,
-                          style: const TextStyle(
-                            color: _gray,
-                            fontSize: 12,
-                          ),
+                          style: const TextStyle(color: _gray, fontSize: 12),
                         ),
                       ],
                     ),
@@ -403,10 +381,7 @@ class _ChatListCard extends StatelessWidget {
                       chat.lastMessage,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _gray,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: _gray, fontSize: 14),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -503,15 +478,10 @@ class _TipIcon extends StatelessWidget {
       height: 48,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [_indigo, _violet],
-        ),
+        gradient: LinearGradient(colors: [_indigo, _violet]),
       ),
       alignment: Alignment.center,
-      child: const Text(
-        '💡',
-        style: TextStyle(fontSize: 22),
-      ),
+      child: const Text('💡', style: TextStyle(fontSize: 22)),
     );
   }
 }

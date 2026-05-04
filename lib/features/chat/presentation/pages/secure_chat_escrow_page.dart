@@ -101,7 +101,7 @@ class _SecureChatEscrowPageState extends State<SecureChatEscrowPage> {
   Widget _escrowBanner() {
     return Container(
       padding: const EdgeInsets.all(12),
-      color: Colors.deepPurple.withOpacity(0.2),
+      color: Colors.deepPurple.withValues(alpha: 0.2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
