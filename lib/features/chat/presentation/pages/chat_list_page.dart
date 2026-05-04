@@ -82,7 +82,11 @@ class _ChatListPageState extends State<ChatListPage> {
                   chat.lastMessage.toLowerCase().contains(query) ||
                   chat.id.toLowerCase().contains(query) ||
                   chat.matchId.toLowerCase().contains(query) ||
-                  chat.skillName.toLowerCase().contains(query),
+                  chat.skillName.toLowerCase().contains(query) ||
+                  chat
+                      .otherParticipantName(userId)
+                      .toLowerCase()
+                      .contains(query),
             )
             .toList();
 
@@ -103,6 +107,7 @@ class _ChatListPageState extends State<ChatListPage> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _ChatListCard(
                       chat: chat,
+                      currentUserId: userId,
                       onTap: () => context.go('/chat-detail/${chat.id}'),
                     ),
                   ),
@@ -282,9 +287,14 @@ class _ChatListPageState extends State<ChatListPage> {
 }
 
 class _ChatListCard extends StatelessWidget {
-  const _ChatListCard({required this.chat, required this.onTap});
+  const _ChatListCard({
+    required this.chat,
+    required this.currentUserId,
+    required this.onTap,
+  });
 
   final ChatThread chat;
+  final String currentUserId;
   final VoidCallback onTap;
 
   static const Color _card = Color(0xFF1A1A2E);
@@ -295,13 +305,9 @@ class _ChatListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = chat.skillName.isNotEmpty
-        ? chat.skillName
-        : chat.matchId.isEmpty
-        ? 'Exchange chat'
-        : 'Match ${chat.matchId}';
+    final title = chat.otherParticipantName(currentUserId);
     final subtitle = chat.lastMessage.isEmpty
-        ? 'No messages yet'
+        ? (chat.skillName.isEmpty ? 'No messages yet' : chat.skillName)
         : chat.lastMessage;
 
     return Material(

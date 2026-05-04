@@ -16,14 +16,15 @@ class FirebaseChatRepository implements ChatRepository {
         .collection('chats')
         .where('participants', arrayContains: userId)
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((snapshot) async {
           final chats = snapshot.docs.map(ChatThread.fromFirestore).toList();
-          chats.sort((a, b) {
+          final enrichedChats = await _enrichMissingParticipantNames(chats);
+          enrichedChats.sort((a, b) {
             final aDate = a.updatedAt ?? a.lastMessageAt ?? DateTime(0);
             final bDate = b.updatedAt ?? b.lastMessageAt ?? DateTime(0);
             return bDate.compareTo(aDate);
           });
-          return chats;
+          return enrichedChats;
         });
   }
 
@@ -119,5 +120,51 @@ class FirebaseChatRepository implements ChatRepository {
     }
 
     await batch.commit();
+  }
+
+  Future<List<ChatThread>> _enrichMissingParticipantNames(
+    List<ChatThread> chats,
+  ) async {
+    final missingUserIds = chats
+        .expand((chat) => chat.participants)
+        .where(
+          (userId) =>
+              userId.trim().isNotEmpty &&
+              chats.any(
+                (chat) =>
+                    chat.participants.contains(userId) &&
+                    (chat.participantNames[userId]?.trim().isEmpty ?? true),
+              ),
+        )
+        .toSet();
+
+    if (missingUserIds.isEmpty) return chats;
+
+    final fetchedNames = <String, String>{};
+    for (final userId in missingUserIds) {
+      final snapshot = await _firestore.collection('users').doc(userId).get();
+      final data = snapshot.data();
+      final name =
+          data?['displayName'] as String? ??
+          data?['name'] as String? ??
+          data?['email'] as String? ??
+          '';
+      if (name.trim().isNotEmpty) {
+        fetchedNames[userId] = name.trim();
+      }
+    }
+
+    if (fetchedNames.isEmpty) return chats;
+
+    return chats.map((chat) {
+      final names = <String, String>{
+        ...chat.participantNames,
+        for (final userId in chat.participants)
+          if (fetchedNames[userId] != null &&
+              (chat.participantNames[userId]?.trim().isEmpty ?? true))
+            userId: fetchedNames[userId]!,
+      };
+      return chat.copyWith(participantNames: names);
+    }).toList();
   }
 }

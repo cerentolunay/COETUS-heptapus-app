@@ -69,6 +69,16 @@ class FirebaseExchangeRepository implements ExchangeRepository {
             ? [offer.requesterId, offer.receiverId]
             : offer.participants,
       );
+      final requesterSnapshot = await transaction.get(
+        _firestore.collection('users').doc(offer.requesterId),
+      );
+      final receiverSnapshot = await transaction.get(
+        _firestore.collection('users').doc(offer.receiverId),
+      );
+      final participantNames = {
+        offer.requesterId: _readUserName(requesterSnapshot),
+        offer.receiverId: _readUserName(receiverSnapshot),
+      };
       final now = FieldValue.serverTimestamp();
 
       transaction.set(matchRef, {
@@ -95,6 +105,10 @@ class FirebaseExchangeRepository implements ExchangeRepository {
         'sessionId': sessionRef.id,
         'matchId': matchId,
         'participants': participants,
+        'participantNames': participantNames,
+        'skillName': offer.skill,
+        'credits': offer.credits,
+        'status': ExchangeSessionStatus.active.name,
         'lastMessage': '',
         'createdAt': now,
         'updatedAt': now,
@@ -195,4 +209,14 @@ class FirebaseExchangeRepository implements ExchangeRepository {
     return participants.where((id) => id.trim().isNotEmpty).toSet().toList()
       ..sort();
   }
+}
+
+String _readUserName(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+  final data = snapshot.data();
+  final name =
+      data?['displayName'] as String? ??
+      data?['name'] as String? ??
+      data?['email'] as String? ??
+      '';
+  return name.trim().isEmpty ? 'Kullanici' : name.trim();
 }
