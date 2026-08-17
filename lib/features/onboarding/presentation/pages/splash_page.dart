@@ -38,13 +38,17 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0F), // koyu arka plan
       body: Center(
-        child: Text(
-          'COETUS',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        child: Image.asset(
+          'assets/images/logo.png',
+          width: 160,
+          height: 160,
+          fit: BoxFit.contain,
         ),
       ),
     );
+    
   }
 }

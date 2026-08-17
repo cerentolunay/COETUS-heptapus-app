@@ -110,11 +110,12 @@ class _WelcomePageState extends State<WelcomePage>
                                     ),
                                   ],
                                 ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.auto_awesome,
-                                    color: Colors.white,
-                                    size: 42,
+                                child: Center(
+                                  child: Image.asset(
+                                    'assets/images/logo.png',
+                                    width: 58,
+                                    height: 58,
+                                    fit: BoxFit.contain,
                                   ),
                                 ),
                               ),
