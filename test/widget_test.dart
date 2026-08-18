@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: LoginPage()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome Back'), findsOneWidget);
-    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Tekrar hoş geldin'), findsOneWidget);
+    expect(find.text('Giriş yap'), findsOneWidget);
   });
 }

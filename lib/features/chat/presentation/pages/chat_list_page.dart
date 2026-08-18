@@ -1,6 +1,9 @@
+import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/chat/data/repositories/chat_repository_factory.dart';
 import 'package:coetus/features/chat/domain/models/chat_thread.dart';
 import 'package:coetus/features/chat/domain/repositories/chat_repository.dart';
+import 'package:coetus/widgets/coetus_bottom_nav.dart';
+import 'package:coetus/widgets/coetus_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -16,15 +19,28 @@ class _ChatListPageState extends State<ChatListPage> {
   final TextEditingController _searchController = TextEditingController();
   late final ChatRepository _repository = ChatRepositoryFactory.create();
   String _lastSearchQuery = '';
+  int _selectedTab = 0;
 
-  static const Color _bg = Color(0xFF0A0A0F);
-  static const Color _card = Color(0xFF1A1A2E);
-  static const Color _card2 = Color(0xFF16162A);
-  static const Color _border = Color(0xFF2A2A3E);
-  static const Color _indigo = Color(0xFF6366F1);
-  static const Color _violet = Color(0xFF8B5CF6);
-  static const Color _indigoText = Color(0xFF818CF8);
-  static const Color _gray = Color(0xFF9CA3AF);
+  static const List<String> _tabs = [
+    'Tümü',
+    'Aktif takas',
+    'Talepler',
+    'Arşiv',
+  ];
+
+  /// Sekmeleri gerçek `ChatThread.status` değerlerine eşler. Kod tabanında
+  /// bugüne kadar yazılan tek değerler `'active'` (teklif kabul edilince) ve
+  /// `'pending'` (teklif gönderilince) — bu yüzden "Aktif takas" ve
+  /// "Talepler" gerçek verilerle çalışır. "Arşiv" için kalıcı bir durum
+  /// değeri bulunmadığından, eşleşmeyen ve zarifçe boş duruma düşen bir
+  /// alt metin filtresi olarak bırakılmıştır (yeni bir durum değeri icat
+  /// edilmez).
+  static const List<String> _tabStatusKeywords = [
+    '',
+    'active',
+    'pending',
+    'arşiv',
+  ];
 
   String? get _userId => FirebaseAuth.instance.currentUser?.uid;
 
@@ -39,24 +55,100 @@ class _ChatListPageState extends State<ChatListPage> {
     final userId = _userId;
 
     return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: userId == null
-            ? _buildState(
+      backgroundColor: CoetusColors.oat,
+      body: userId == null
+          ? SafeArea(
+              child: _buildState(
                 icon: Icons.lock_outline,
-                title: 'Giris gerekli',
-                subtitle: 'Mesajlarini gormek icin giris yapmalisin.',
-              )
-            : Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-                    child: _buildSearchBar(),
-                  ),
-                  Expanded(child: _buildContent(userId)),
-                  _buildBottomNavigation(context),
-                ],
+                title: 'Giriş gerekli',
+                subtitle: 'Mesajlarını görmek için giriş yapmalısın.',
               ),
+            )
+          : Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 14),
+                CategoryTabs(
+                  items: _tabs,
+                  selected: _selectedTab,
+                  onChanged: (i) => setState(() => _selectedTab = i),
+                ),
+                const SizedBox(height: 10),
+                Expanded(child: _buildContent(userId)),
+                const CoetusBottomNav(currentIndex: 1),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: CoetusColors.navy,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            18,
+            CoetusSpace.screenH,
+            20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sohbetler',
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(color: CoetusColors.oat),
+              ),
+              const SizedBox(height: 14),
+              _buildSearchBar(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: CoetusColors.oat.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(CoetusRadius.input),
+        border: Border.all(color: CoetusColors.oat.withValues(alpha: .18)),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          if (_lastSearchQuery != value.trim()) {
+            setState(() {
+              _lastSearchQuery = value.trim();
+            });
+          }
+        },
+        style: const TextStyle(color: CoetusColors.oat, fontSize: 14),
+        cursorColor: CoetusColors.oat,
+        decoration: InputDecoration(
+          filled: false,
+          prefixIcon: Icon(
+            Icons.search,
+            color: CoetusColors.oat.withValues(alpha: .7),
+          ),
+          hintText: 'İsim veya yetenek ara',
+          hintStyle: TextStyle(
+            color: CoetusColors.oat.withValues(alpha: .55),
+            fontSize: 14,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        ),
       ),
     );
   }
@@ -68,14 +160,14 @@ class _ChatListPageState extends State<ChatListPage> {
         if (snapshot.hasError) {
           return _buildState(
             icon: Icons.cloud_off_outlined,
-            title: 'Chatler yuklenemedi',
+            title: 'Sohbetler yüklenemedi',
             subtitle: _friendlyErrorMessage(snapshot.error),
           );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: _indigoText),
+            child: CircularProgressIndicator(color: CoetusColors.navy),
           );
         }
 
@@ -84,7 +176,7 @@ class _ChatListPageState extends State<ChatListPage> {
           userId,
         );
         final query = _lastSearchQuery.toLowerCase();
-        final chats = uniqueChats
+        var chats = uniqueChats
             .where(
               (chat) =>
                   query.isEmpty ||
@@ -99,67 +191,50 @@ class _ChatListPageState extends State<ChatListPage> {
             )
             .toList();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(uniqueChats.length),
-              const SizedBox(height: 20),
-              if (chats.isEmpty)
-                _buildEmptyChats()
-              else
-                ...chats.map(
-                  (chat) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _ChatListCard(
-                      chat: chat,
-                      currentUserId: userId,
-                      onTap: () => context.go('/chat-detail/${chat.id}'),
-                    ),
-                  ),
-                ),
-            ],
+        final tabKeyword = _tabStatusKeywords[_selectedTab];
+        if (tabKeyword.isNotEmpty) {
+          chats = chats
+              .where((chat) => chat.status.toLowerCase().contains(tabKeyword))
+              .toList();
+        }
+
+        if (chats.isEmpty) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              CoetusSpace.screenH,
+              4,
+              CoetusSpace.screenH,
+              24,
+            ),
+            child: CoetusEmptyState(
+              icon: Icons.forum_outlined,
+              title: uniqueChats.isEmpty ? 'Henüz sohbet yok' : 'Sonuç yok',
+              message: uniqueChats.isEmpty
+                  ? 'Kabul edilen takaslar burada sohbet olarak görünecek.'
+                  : 'Bu filtrede eşleşen bir sohbet bulunamadı.',
+            ),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            4,
+            CoetusSpace.screenH,
+            24,
           ),
+          itemCount: chats.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final chat = chats[index];
+            return _ChatListCard(
+              chat: chat,
+              currentUserId: userId,
+              onTap: () => context.go('/chat-detail/${chat.id}'),
+            );
+          },
         );
       },
-    );
-  }
-
-  Widget _buildHeader(int activeCount) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'Messages',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                _indigo.withValues(alpha: 0.20),
-                _violet.withValues(alpha: 0.20),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _indigo.withValues(alpha: 0.30)),
-          ),
-          child: Text(
-            '$activeCount Active',
-            style: const TextStyle(
-              color: _indigoText,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -195,93 +270,26 @@ class _ChatListPageState extends State<ChatListPage> {
         DateTime(0);
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _border),
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          if (_lastSearchQuery != value.trim()) {
-            setState(() {
-              _lastSearchQuery = value.trim();
-            });
-          }
-        },
-        style: const TextStyle(color: Colors.white),
-        decoration: const InputDecoration(
-          prefixIcon: Icon(Icons.search, color: _gray),
-          hintText: 'Search conversations...',
-          hintStyle: TextStyle(color: _gray, fontSize: 14),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyChats() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.chat_bubble_outline, color: _gray, size: 34),
-          SizedBox(height: 12),
-          Text(
-            'No conversations found',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            'Accepted exchanges will create chats here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _gray, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildState({
     required IconData icon,
     required String title,
     required String subtitle,
   }) {
+    final textTheme = Theme.of(context).textTheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: _indigoText, size: 42),
+            Icon(icon, color: CoetusColors.navy, size: 42),
             const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text(title, textAlign: TextAlign.center, style: textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _gray, height: 1.5),
+              style: textTheme.bodyMedium?.copyWith(color: CoetusColors.muted),
             ),
           ],
         ),
@@ -293,41 +301,10 @@ class _ChatListPageState extends State<ChatListPage> {
     final message = error.toString().toLowerCase();
     if (message.contains('failed-precondition') ||
         message.contains('requires an index')) {
-      return 'Chat listesi icin Firestore index ayari gerekiyor. Lutfen birazdan tekrar dene.';
+      return 'Sohbet listesi için Firestore index ayarı gerekiyor. Lütfen birazdan tekrar dene.';
     }
 
-    return 'Mesajlar su an yuklenemiyor. Lutfen tekrar dene.';
-  }
-
-  Widget _buildBottomNavigation(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: _card2,
-        border: Border(top: BorderSide(color: _border)),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _ChatBottomNavItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            onTap: () => context.go('/profile'),
-          ),
-          _ChatBottomNavItem(
-            icon: Icons.explore_outlined,
-            label: 'Discover',
-            onTap: () => context.go('/matching'),
-          ),
-          _ChatBottomNavItem(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            isActive: true,
-            onTap: () {},
-          ),
-        ],
-      ),
-    );
+    return 'Mesajlar şu an yüklenemiyor. Lütfen tekrar dene.';
   }
 }
 
@@ -342,42 +319,56 @@ class _ChatListCard extends StatelessWidget {
   final String currentUserId;
   final VoidCallback onTap;
 
-  static const Color _card = Color(0xFF1A1A2E);
-  static const Color _border = Color(0xFF2A2A3E);
-  static const Color _indigo = Color(0xFF6366F1);
-  static const Color _violet = Color(0xFF8B5CF6);
-  static const Color _gray = Color(0xFF9CA3AF);
-
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final title = chat.otherParticipantName(currentUserId);
     final subtitle = chat.lastMessage.isEmpty
-        ? (chat.skillName.isEmpty ? 'No messages yet' : chat.skillName)
+        ? (chat.skillName.isEmpty ? 'Henüz mesaj yok' : chat.skillName)
         : chat.lastMessage;
 
+    final hasEscrow = chat.credits > 0 && chat.skillName.isNotEmpty;
+    final isPending = chat.status.toLowerCase() == 'pending';
+    final String? statusLine = hasEscrow
+        ? "${chat.skillName} · ${chat.credits} kredi escrow'da"
+        : (isPending ? 'Teklif onayı bekleniyor' : null);
+    final statusColor = hasEscrow
+        ? CoetusColors.successDeep
+        : CoetusColors.coralDeep;
+
     return Material(
-      color: _card,
-      borderRadius: BorderRadius.circular(20),
+      color: CoetusColors.card,
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _border),
+            color: CoetusColors.card,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: CoetusShadow.card,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 52,
+                height: 52,
                 decoration: const BoxDecoration(
+                  color: CoetusColors.plateWarm,
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [_violet, _indigo]),
                 ),
-                child: const Icon(Icons.person, color: Colors.white, size: 28),
+                alignment: Alignment.center,
+                child: Text(
+                  _initials(title),
+                  style: const TextStyle(
+                    color: CoetusColors.navy,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -390,27 +381,38 @@ class _ChatListCard extends StatelessWidget {
                           child: Text(
                             title,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: textTheme.titleMedium,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           _formatDate(chat.lastMessageAt ?? chat.updatedAt),
-                          style: const TextStyle(color: _gray, fontSize: 12),
+                          style: textTheme.labelMedium,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: _gray, fontSize: 14),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: CoetusColors.muted,
+                      ),
                     ),
+                    if (statusLine != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        statusLine,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -419,6 +421,17 @@ class _ChatListCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _initials(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    final parts = trimmed.split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      final word = parts.first;
+      return word.substring(0, word.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
   }
 
   String _formatDate(DateTime? date) {
@@ -430,49 +443,5 @@ class _ChatListCard extends StatelessWidget {
       return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}';
-  }
-}
-
-class _ChatBottomNavItem extends StatelessWidget {
-  const _ChatBottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isActive = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  static const Color _active = Color(0xFF818CF8);
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withValues(alpha: 0.45);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

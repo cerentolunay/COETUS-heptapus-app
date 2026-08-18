@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:coetus/app/theme/coetus_tokens.dart';
+
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -11,18 +13,6 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final TextEditingController _emailController = TextEditingController();
   bool _sent = false;
-
-  static const Color _bgTop = Color(0xFF0B1120);
-  static const Color _bgMid = Color(0xFF0F172A);
-  static const Color _bgBottom = Color(0xFF1E1B4B);
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _blue = Color(0xFF0EA5E9);
-  static const Color _purple = Color(0xFF7C3AED);
-
-  static const Color _surface = Color(0x14FFFFFF);
-  static const Color _surfaceBorder = Color(0x1AFFFFFF);
-  static const Color _textMuted = Color(0xFF94A3B8);
 
   void _handleSubmit() {
     if (_emailController.text.trim().isEmpty) return;
@@ -45,33 +35,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgTop, _bgMid, _bgBottom],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                  child: Column(
-                    children: [
-                      _buildHeader(context),
-                      const SizedBox(height: 12),
-                      _buildIntro(),
-                      const SizedBox(height: 28),
-                      _sent ? _buildSuccessState(context) : _buildForm(),
-                    ],
-                  ),
+      backgroundColor: CoetusColors.oat,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    const SizedBox(height: 16),
+                    _buildIntro(context),
+                    const SizedBox(height: 28),
+                    _sent ? _buildSuccessState(context) : _buildForm(context),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -84,13 +66,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         onPressed: () {
           context.go('/login');
         },
-        icon: const Icon(Icons.arrow_back, color: _textMuted, size: 20),
+        icon: const Icon(
+          Icons.arrow_back,
+          color: CoetusColors.muted,
+          size: 20,
+        ),
         label: const Text(
-          'Back to Login',
-          style: TextStyle(
-            color: _textMuted,
-            fontSize: 14,
-          ),
+          'Girişe dön',
+          style: TextStyle(color: CoetusColors.muted, fontSize: 14),
         ),
         style: TextButton.styleFrom(
           padding: EdgeInsets.zero,
@@ -101,113 +84,62 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 
-  Widget _buildIntro() {
+  Widget _buildIntro(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
         Container(
           width: 64,
           height: 64,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [_purple, _cyan]),
-            borderRadius: BorderRadius.all(Radius.circular(18)),
+          decoration: BoxDecoration(
+            color: CoetusColors.navy,
+            borderRadius: BorderRadius.circular(18),
           ),
           child: const Icon(
             Icons.mail_outline,
-            color: Colors.white,
+            color: CoetusColors.oat,
             size: 30,
           ),
         ),
         const SizedBox(height: 18),
-        const Text(
-          'Forgot Password?',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 30,
-            fontWeight: FontWeight.w700,
+        Text(
+          'Şifreni mi unuttun?',
+          style: textTheme.headlineMedium?.copyWith(
+            color: CoetusColors.navyInk,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 10),
-        const Text(
-          "Enter your email address and we'll send you a link to reset your password",
+        Text(
+          'E-posta adresini gir, sana şifreni sıfırlamak için bir bağlantı '
+          'gönderelim.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: _textMuted,
-            fontSize: 14,
-            height: 1.5,
-          ),
+          style: textTheme.bodyMedium?.copyWith(color: CoetusColors.muted),
         ),
       ],
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Email Address',
-          style: TextStyle(
-            color: _textMuted,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        Text('E-posta', style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            hintText: 'ornek@eposta.com',
+            prefixIcon: Icon(Icons.mail_outline),
           ),
         ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: _surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _surfaceBorder),
-          ),
-          child: TextField(
-            controller: _emailController,
-            style: const TextStyle(color: Colors.white),
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.mail_outline, color: _textMuted),
-              hintText: 'your.email@example.com',
-              hintStyle: TextStyle(
-                color: _textMuted,
-                fontSize: 14,
-              ),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 18),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Container(
+        const SizedBox(height: 20),
+        SizedBox(
           width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_purple, _cyan]),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: _purple.withValues(alpha: 0.30),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ElevatedButton.icon(
+          child: ElevatedButton(
             onPressed: _handleSubmit,
-            icon: const Icon(Icons.arrow_forward, color: Colors.white),
-            label: const Text(
-              'Send Reset Link',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
+            child: const Text('Sıfırlama bağlantısı gönder'),
           ),
         ),
       ],
@@ -216,29 +148,24 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   Widget _buildSuccessState(BuildContext context) {
     final email = _emailController.text.trim();
+    final textTheme = Theme.of(context).textTheme;
 
     return Column(
       children: [
         Container(
           width: 80,
           height: 80,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [_cyan, _blue]),
-            borderRadius: BorderRadius.all(Radius.circular(22)),
+          decoration: BoxDecoration(
+            color: CoetusColors.navy,
+            borderRadius: BorderRadius.circular(22),
           ),
-          child: const Icon(
-            Icons.check,
-            color: Colors.white,
-            size: 42,
-          ),
+          child: const Icon(Icons.check, color: CoetusColors.oat, size: 42),
         ),
         const SizedBox(height: 22),
-        const Text(
-          'Check Your Email',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 26,
-            fontWeight: FontWeight.w700,
+        Text(
+          'E-postanı kontrol et',
+          style: textTheme.headlineMedium?.copyWith(
+            color: CoetusColors.navyInk,
           ),
           textAlign: TextAlign.center,
         ),
@@ -246,20 +173,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: const TextStyle(
-              color: _textMuted,
-              fontSize: 14,
-              height: 1.5,
-            ),
+            style: textTheme.bodyMedium?.copyWith(color: CoetusColors.muted),
             children: [
-              const TextSpan(text: "We've sent a password reset link to "),
+              const TextSpan(text: 'Şifre sıfırlama bağlantısını '),
               TextSpan(
                 text: email,
                 style: const TextStyle(
-                  color: _cyan,
-                  fontWeight: FontWeight.w600,
+                  color: CoetusColors.navy,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
+              const TextSpan(text: ' adresine gönderdik.'),
             ],
           ),
         ),
@@ -268,21 +192,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _surfaceBorder),
+            color: CoetusColors.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: CoetusColors.border),
           ),
           child: Wrap(
             alignment: WrapAlignment.center,
             children: [
-              const Text(
-                "Didn't receive the email? Check your spam folder or ",
+              Text(
+                'E-postayı görmüyorsan spam klasörünü kontrol et veya ',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _textMuted,
-                  fontSize: 13,
-                  height: 1.5,
-                ),
+                style: TextStyle(color: CoetusColors.muted, fontSize: 13),
               ),
               GestureDetector(
                 onTap: () {
@@ -291,9 +211,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   });
                 },
                 child: const Text(
-                  'try again',
+                  'tekrar dene',
                   style: TextStyle(
-                    color: _cyan,
+                    color: CoetusColors.navy,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -309,19 +229,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             onPressed: () {
               context.go('/login');
             },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: _surfaceBorder),
-              backgroundColor: _surface,
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: const Text(
-              'Back to Login',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            child: const Text('Girişe dön'),
           ),
         ),
       ],

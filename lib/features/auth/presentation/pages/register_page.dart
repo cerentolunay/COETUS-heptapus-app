@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../data/repositories/auth_repository_factory.dart';
 import '../../domain/repositories/auth_repository.dart';
 
+import 'package:coetus/app/theme/coetus_tokens.dart';
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -32,12 +34,6 @@ class _RegisterPageState extends State<RegisterPage>
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
-
-  static const Color _bgStart = Color(0xFF0B1120);
-  static const Color _bgMiddle = Color(0xFF0F172A);
-  static const Color _bgEnd = Color(0xFF1E1B4B);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _purple = Color(0xFF7C3AED);
 
   @override
   void initState() {
@@ -153,7 +149,7 @@ class _RegisterPageState extends State<RegisterPage>
         context,
       ).showSnackBar(const SnackBar(content: Text('Kayıt başarılı')));
 
-      context.go('/home');
+      context.go('/discovery');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
 
@@ -211,7 +207,7 @@ class _RegisterPageState extends State<RegisterPage>
         const SnackBar(content: Text('Google ile kayıt başarılı')),
       );
 
-      context.go('/home');
+      context.go('/discovery');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
 
@@ -290,161 +286,147 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgStart, _bgMiddle, _bgEnd],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 12),
-                      const _RegisterHeaderSection(),
-                      const SizedBox(height: 28),
-                      _RegisterFormSection(
-                        fullNameController: _fullNameController,
-                        emailController: _emailController,
-                        passwordController: _passwordController,
-                        confirmPasswordController: _confirmPasswordController,
-                        showPassword: _showPassword,
-                        showConfirmPassword: _showConfirmPassword,
-                        onTogglePassword: () {
-                          setState(() {
-                            _showPassword = !_showPassword;
-                          });
-                        },
-                        onToggleConfirmPassword: () {
-                          setState(() {
-                            _showConfirmPassword = !_showConfirmPassword;
-                          });
-                        },
-                        fullNameValidator: _validateFullName,
-                        emailValidator: _validateEmail,
-                        passwordValidator: _validatePassword,
-                        confirmPasswordValidator: _validateConfirmPassword,
+      backgroundColor: CoetusColors.oat,
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _AuthHeaderSection(
+                      headline: "Coetus'a katıl",
+                      subtitle: 'Yeteneklerini paylaşmaya başla.',
+                    ),
+                    const SizedBox(height: 24),
+                    _AuthModeTabs(
+                      loginActive: false,
+                      onTapLogin: _isLoading
+                          ? null
+                          : () => context.go('/login'),
+                    ),
+                    const SizedBox(height: 24),
+                    _LabeledField(
+                      label: 'Ad soyad',
+                      child: TextFormField(
+                        controller: _fullNameController,
+                        validator: _validateFullName,
+                        decoration: const InputDecoration(
+                          hintText: 'Adın ve soyadın',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
                       ),
-                      const SizedBox(height: 18),
-                      _GradientButton(
-                        text: _isLoading
-                            ? 'Creating account...'
-                            : 'Create Account',
-                        icon: _isLoading ? null : Icons.arrow_forward,
-                        isLoading: _isLoading,
-                        onTap: _isLoading ? null : _handleRegister,
+                    ),
+                    const SizedBox(height: 16),
+                    _LabeledField(
+                      label: 'E-posta',
+                      child: TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: _validateEmail,
+                        decoration: const InputDecoration(
+                          hintText: 'ornek@eposta.com',
+                          prefixIcon: Icon(Icons.mail_outline),
+                        ),
                       ),
-                      const SizedBox(height: 14),
-                      Center(
-                        child: RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.42),
-                              fontSize: 12,
-                              height: 1.5,
+                    ),
+                    const SizedBox(height: 16),
+                    _LabeledField(
+                      label: 'Şifre',
+                      child: TextFormField(
+                        controller: _passwordController,
+                        obscureText: !_showPassword,
+                        validator: _validatePassword,
+                        decoration: InputDecoration(
+                          hintText: 'En az 8 karakter',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showPassword = !_showPassword;
+                              });
+                            },
+                            icon: Icon(
+                              _showPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
-                            children: const [
-                              TextSpan(
-                                text:
-                                    'By creating an account, you agree to our ',
-                              ),
-                              TextSpan(
-                                text: 'Terms of Service',
-                                style: TextStyle(
-                                  color: _cyan,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              TextSpan(text: ' and '),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: TextStyle(
-                                  color: _cyan,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              color: Colors.white.withOpacity(0.10),
+                    ),
+                    const SizedBox(height: 16),
+                    _LabeledField(
+                      label: 'Şifre tekrarı',
+                      child: TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: !_showConfirmPassword,
+                        validator: _validateConfirmPassword,
+                        decoration: InputDecoration(
+                          hintText: 'Şifreni tekrar gir',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showConfirmPassword = !_showConfirmPassword;
+                              });
+                            },
+                            icon: Icon(
+                              _showConfirmPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'OR',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.35),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _handleRegister,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: CoetusColors.oat,
                               ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              color: Colors.white.withOpacity(0.10),
-                            ),
-                          ),
+                            )
+                          : const Text('Kayıt ol'),
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Text(
+                        'Kayıt olarak Kullanım Şartları ve Gizlilik '
+                        "Politikası'nı kabul ediyorsun.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: CoetusColors.hint,
+                          fontSize: 12,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const _OrDivider(),
+                    const SizedBox(height: 24),
+                    OutlinedButton(
+                      onPressed: _isLoading ? null : _handleGoogleSignIn,
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _GoogleIcon(),
+                          SizedBox(width: 10),
+                          Text('Google ile devam et'),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      _SecondaryButton(
-                        text: 'Sign up with Google',
-                        leading: const _GoogleIcon(),
-                        onTap: _isLoading ? null : _handleGoogleSignIn,
-                      ),
-                      const SizedBox(height: 28),
-                      Center(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'Already have an account? ',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.55),
-                                fontSize: 14,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _isLoading
-                                  ? null
-                                  : () {
-                                      context.go('/login');
-                                    },
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
-                                  color: _cyan,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -455,335 +437,167 @@ class _RegisterPageState extends State<RegisterPage>
   }
 }
 
-class _RegisterHeaderSection extends StatelessWidget {
-  const _RegisterHeaderSection();
+/// 52x52 lacivert kare logo rozeti + başlık + alt metin.
+class _AuthHeaderSection extends StatelessWidget {
+  const _AuthHeaderSection({required this.headline, required this.subtitle});
 
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _purple = Color(0xFF7C3AED);
+  final String headline;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
         Container(
-          width: 64,
-          height: 64,
+          width: 52,
+          height: 52,
+          margin: const EdgeInsets.only(bottom: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [_purple, _cyan],
+            color: CoetusColors.navy,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Text(
+              'C',
+              style: TextStyle(
+                color: CoetusColors.oat,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'Create Account',
+        Text(
+          headline,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
+          style: textTheme.headlineMedium?.copyWith(
+            color: CoetusColors.navyInk,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Join the professional skill-swapping ecosystem',
+          subtitle,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white.withOpacity(0.50), fontSize: 14),
+          style: textTheme.bodyMedium?.copyWith(color: CoetusColors.muted),
         ),
       ],
     );
   }
 }
 
-class _RegisterFormSection extends StatelessWidget {
-  final TextEditingController fullNameController;
-  final TextEditingController emailController;
-  final TextEditingController passwordController;
-  final TextEditingController confirmPasswordController;
-  final bool showPassword;
-  final bool showConfirmPassword;
-  final VoidCallback onTogglePassword;
-  final VoidCallback onToggleConfirmPassword;
-  final String? Function(String?) fullNameValidator;
-  final String? Function(String?) emailValidator;
-  final String? Function(String?) passwordValidator;
-  final String? Function(String?) confirmPasswordValidator;
-
-  const _RegisterFormSection({
-    required this.fullNameController,
-    required this.emailController,
-    required this.passwordController,
-    required this.confirmPasswordController,
-    required this.showPassword,
-    required this.showConfirmPassword,
-    required this.onTogglePassword,
-    required this.onToggleConfirmPassword,
-    required this.fullNameValidator,
-    required this.emailValidator,
-    required this.passwordValidator,
-    required this.confirmPasswordValidator,
+/// Giriş / Kayıt pill sekme geçişi.
+class _AuthModeTabs extends StatelessWidget {
+  const _AuthModeTabs({
+    required this.loginActive,
+    this.onTapLogin,
   });
+
+  final bool loginActive;
+  final VoidCallback? onTapLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: CoetusColors.navy.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _AuthModeTab(
+              label: 'Giriş',
+              active: loginActive,
+              onTap: onTapLogin,
+            ),
+          ),
+          Expanded(
+            child: _AuthModeTab(
+              label: 'Kayıt',
+              active: !loginActive,
+              onTap: null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthModeTab extends StatelessWidget {
+  const _AuthModeTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: active ? null : onTap,
+      borderRadius: BorderRadius.circular(11),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? CoetusColors.card : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? CoetusColors.navy : CoetusColors.muted,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _FieldLabel(text: 'Full Name'),
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
         const SizedBox(height: 8),
-        _GlassInput(
-          controller: fullNameController,
-          hintText: 'Your full name',
-          prefixIcon: Icons.person_outline,
-          validator: fullNameValidator,
-        ),
-        const SizedBox(height: 18),
-        const _FieldLabel(text: 'Email Address'),
-        const SizedBox(height: 8),
-        _GlassInput(
-          controller: emailController,
-          hintText: 'your.email@example.com',
-          prefixIcon: Icons.mail_outline,
-          keyboardType: TextInputType.emailAddress,
-          validator: emailValidator,
-        ),
-        const SizedBox(height: 18),
-        const _FieldLabel(text: 'Password'),
-        const SizedBox(height: 8),
-        _GlassInput(
-          controller: passwordController,
-          hintText: 'Create a strong password',
-          prefixIcon: Icons.lock_outline,
-          obscureText: !showPassword,
-          validator: passwordValidator,
-          suffix: IconButton(
-            onPressed: onTogglePassword,
-            icon: Icon(
-              showPassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withOpacity(0.55),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Must be at least 8 characters',
-          style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 12),
-        ),
-        const SizedBox(height: 18),
-        const _FieldLabel(text: 'Confirm Password'),
-        const SizedBox(height: 8),
-        _GlassInput(
-          controller: confirmPasswordController,
-          hintText: 'Confirm your password',
-          prefixIcon: Icons.lock_outline,
-          obscureText: !showConfirmPassword,
-          validator: confirmPasswordValidator,
-          suffix: IconButton(
-            onPressed: onToggleConfirmPassword,
-            icon: Icon(
-              showConfirmPassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withOpacity(0.55),
-            ),
-          ),
-        ),
+        child,
       ],
     );
   }
 }
 
-class _FieldLabel extends StatelessWidget {
-  final String text;
-
-  const _FieldLabel({required this.text});
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: Colors.white.withOpacity(0.50),
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _GlassInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final IconData prefixIcon;
-  final Widget? suffix;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validator;
-
-  const _GlassInput({
-    required this.controller,
-    required this.hintText,
-    required this.prefixIcon,
-    this.suffix,
-    this.obscureText = false,
-    this.keyboardType,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: TextStyle(
-          color: Colors.white.withOpacity(0.35),
-          fontSize: 14,
-        ),
-        errorStyle: const TextStyle(color: Color(0xFFFFB4B4), fontSize: 12),
-        prefixIcon: Icon(prefixIcon, color: Colors.white.withOpacity(0.50)),
-        suffixIcon: suffix,
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0x8006B6D4)),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.2),
-        ),
-      ),
-    );
-  }
-}
-
-class _GradientButton extends StatelessWidget {
-  final String text;
-  final IconData? icon;
-  final bool isLoading;
-  final VoidCallback? onTap;
-
-  const _GradientButton({
-    required this.text,
-    required this.icon,
-    required this.isLoading,
-    required this.onTap,
-  });
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _purple = Color(0xFF7C3AED);
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_purple, _cyan]),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(124, 58, 237, 0.30),
-            blurRadius: 20,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: CoetusColors.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'veya',
+            style: TextStyle(color: CoetusColors.hint, fontSize: 12),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isLoading)
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-            if (isLoading) const SizedBox(width: 10),
-            Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (!isLoading && icon != null) const SizedBox(width: 8),
-            if (!isLoading && icon != null)
-              Icon(icon, color: Colors.white, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SecondaryButton extends StatelessWidget {
-  final String text;
-  final Widget leading;
-  final VoidCallback? onTap;
-
-  const _SecondaryButton({
-    required this.text,
-    required this.leading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white.withOpacity(0.05),
-        shadowColor: Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
-        side: BorderSide(color: Colors.white.withOpacity(0.10)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          leading,
-          const SizedBox(width: 10),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+        Expanded(child: Container(height: 1, color: CoetusColors.border)),
+      ],
     );
   }
 }
@@ -796,8 +610,8 @@ class _GoogleIcon extends StatelessWidget {
     return const Text(
       'G',
       style: TextStyle(
-        color: Colors.white,
-        fontSize: 18,
+        color: CoetusColors.navy,
+        fontSize: 16,
         fontWeight: FontWeight.bold,
       ),
     );

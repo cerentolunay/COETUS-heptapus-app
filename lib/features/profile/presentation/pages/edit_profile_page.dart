@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/coetus_tokens.dart';
 import '../../data/repositories/profile_repository_factory.dart';
 import '../../domain/models/profile_data.dart';
 import '../../domain/repositories/profile_repository.dart';
@@ -26,12 +27,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _isLoading = true;
   bool _isSaving = false;
   String? _errorMessage;
-
-  static const Color _bgStart = Color(0xFF0B1120);
-  static const Color _bgMiddle = Color(0xFF0F172A);
-  static const Color _bgEnd = Color(0xFF1E1B4B);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _purple = Color(0xFF7C3AED);
 
   @override
   void initState() {
@@ -142,156 +137,140 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: _bgMiddle,
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [_bgStart, _bgMiddle, _bgEnd],
-            ),
-          ),
-          child: const Center(child: CircularProgressIndicator()),
-        ),
+      return const Scaffold(
+        backgroundColor: CoetusColors.oat,
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_errorMessage != null && _profileData == null) {
       return Scaffold(
-        backgroundColor: _bgMiddle,
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [_bgStart, _bgMiddle, _bgEnd],
-            ),
-          ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadProfile,
-                    child: const Text('Tekrar Dene'),
-                  ),
-                ],
-              ),
+        backgroundColor: CoetusColors.oat,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadProfile,
+                  child: const Text('Tekrar Dene'),
+                ),
+              ],
             ),
           ),
         ),
       );
     }
 
+    final t = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: _bgMiddle,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgStart, _bgMiddle, _bgEnd],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: _isSaving ? null : () => context.pop(),
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Edit Profile',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B6B).withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(
-                            0xFFFF6B6B,
-                          ).withValues(alpha: 0.30),
-                        ),
-                      ),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: Color(0xFFFF6B6B),
-                          fontSize: 12,
-                        ),
+      backgroundColor: CoetusColors.oat,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(CoetusSpace.xl),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: _isSaving ? null : () => context.pop(),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: CoetusColors.navyInk,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(width: 4),
+                    Text('Edit Profile', style: t.headlineSmall),
                   ],
-                  _buildFieldLabel('Display Name *'),
-                  const SizedBox(height: 8),
-                  _buildInput(
-                    controller: _displayNameController,
-                    hintText: 'Display name',
-                    icon: Icons.person_outline,
-                    validator: _validateDisplayName,
+                ),
+                const SizedBox(height: CoetusSpace.xxl),
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(CoetusSpace.md),
+                    decoration: BoxDecoration(
+                      color: CoetusColors.danger.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: CoetusColors.danger.withValues(alpha: .30),
+                      ),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: t.bodySmall?.copyWith(color: CoetusColors.danger),
+                    ),
                   ),
-                  const SizedBox(height: 18),
-                  _buildFieldLabel('Bio'),
-                  const SizedBox(height: 8),
-                  _buildInput(
-                    controller: _bioController,
-                    hintText: 'Bio',
-                    icon: Icons.description_outlined,
-                    minLines: 3,
-                    maxLines: 3,
-                    validator: _validateBio,
-                  ),
-                  const SizedBox(height: 18),
-                  _buildFieldLabel('Lokasyon'),
-                  const SizedBox(height: 8),
-                  _buildInput(
-                    controller: _locationController,
-                    hintText: 'Lokasyon',
-                    icon: Icons.location_on_outlined,
-                    validator: _validateLocation,
-                  ),
-                  const SizedBox(height: 18),
-                  _buildFieldLabel('Profil Fotoğrafı URL'),
-                  const SizedBox(height: 8),
-                  _buildInput(
-                    controller: _photoUrlController,
-                    hintText: 'https://...',
-                    icon: Icons.image_outlined,
-                  ),
-                  const SizedBox(height: 28),
-                  _buildSaveButton(),
+                  const SizedBox(height: CoetusSpace.xl),
                 ],
-              ),
+                _buildFieldLabel(t, 'Display Name *'),
+                const SizedBox(height: CoetusSpace.sm),
+                TextFormField(
+                  controller: _displayNameController,
+                  validator: _validateDisplayName,
+                  decoration: const InputDecoration(
+                    hintText: 'Display name',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _buildFieldLabel(t, 'Bio'),
+                const SizedBox(height: CoetusSpace.sm),
+                TextFormField(
+                  controller: _bioController,
+                  validator: _validateBio,
+                  minLines: 3,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Bio',
+                    prefixIcon: Icon(Icons.description_outlined),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _buildFieldLabel(t, 'Lokasyon'),
+                const SizedBox(height: CoetusSpace.sm),
+                TextFormField(
+                  controller: _locationController,
+                  validator: _validateLocation,
+                  decoration: const InputDecoration(
+                    hintText: 'Lokasyon',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _buildFieldLabel(t, 'Profil Fotoğrafı URL'),
+                const SizedBox(height: CoetusSpace.sm),
+                TextFormField(
+                  controller: _photoUrlController,
+                  decoration: const InputDecoration(
+                    hintText: 'https://...',
+                    prefixIcon: Icon(Icons.image_outlined),
+                  ),
+                ),
+                const SizedBox(height: CoetusSpace.xxl),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _saveProfile,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: CoetusColors.oat,
+                          ),
+                        )
+                      : const Text('Profili Güncelle'),
+                ),
+              ],
             ),
           ),
         ),
@@ -299,91 +278,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildFieldLabel(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.60),
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
-  Widget _buildInput({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    String? Function(String?)? validator,
-    int minLines = 1,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      minLines: minLines,
-      maxLines: maxLines,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
-        prefixIcon: Icon(icon, color: Colors.white.withValues(alpha: 0.50)),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: _cyan),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFFF6B6B)),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_purple, _cyan]),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: ElevatedButton(
-        onPressed: _isSaving ? null : _saveProfile,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-        child: _isSaving
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Text(
-                'Profili Güncelle',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-      ),
-    );
+  Widget _buildFieldLabel(TextTheme t, String text) {
+    return Text(text, style: t.labelMedium);
   }
 }

@@ -1,355 +1,185 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class WelcomePage extends StatefulWidget {
+import 'package:coetus/app/theme/coetus_tokens.dart';
+
+class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
 
   @override
-  State<WelcomePage> createState() => _WelcomePageState();
-}
-
-class _WelcomePageState extends State<WelcomePage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _backgroundController;
-
-  @override
-  void initState() {
-    super.initState();
-    _backgroundController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 6),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _backgroundController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    const bgStart = Color(0xFF0B1120);
-    const bgMiddle = Color(0xFF0F172A);
-    const bgEnd = Color(0xFF1E1B4B);
-    const cyan = Color(0xFF06B6D4);
-    const blue = Color(0xFF0EA5E9);
-    const purple = Color(0xFF7C3AED);
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [bgStart, bgMiddle, bgEnd],
-          ),
-        ),
-        child: Stack(
-          children: [
-            AnimatedBuilder(
-              animation: _backgroundController,
-              builder: (context, _) {
-                return Opacity(
-                  opacity: 0.05,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(6, (i) {
-                      final angle = math.sin(
-                            (_backgroundController.value * 2 * math.pi) + i,
-                          ) *
-                          0.16;
-                      return Transform.rotate(
-                        angle: angle,
-                        child: Container(
-                          width: 3,
-                          height: double.infinity,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [cyan, purple],
-                            ),
+      backgroundColor: CoetusColors.navy,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Coetus',
+                          style: textTheme.headlineSmall?.copyWith(
+                            color: CoetusColors.oat,
                           ),
                         ),
-                      );
-                    }),
-                  ),
-                );
-              },
-            ),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            children: [
-                              Container(
-                                width: 96,
-                                height: 96,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(28),
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [purple, cyan],
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color.fromRGBO(124, 58, 237, 0.30),
-                                      blurRadius: 24,
-                                      spreadRadius: 1,
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Image.asset(
-                                    'assets/images/logo.png',
-                                    width: 58,
-                                    height: 58,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 28),
-                              const Text(
-                                'Welcome to',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.15,
-                                ),
-                              ),
-                              ShaderMask(
-                                shaderCallback: (bounds) {
-                                  return const LinearGradient(
-                                    colors: [cyan, blue, purple],
-                                  ).createShader(bounds);
-                                },
-                                child: const Text(
-                                  'COETUS',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 38,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.15,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: Text(
-                                  'Trade what you know, learn what you need, and grow through a modern skill-sharing community.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Color(0xFFD1D5DB),
-                                    fontSize: 18,
-                                    height: 1.55,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 32),
+                        Text(
+                          'Yeteneğin\nsenin paran.',
+                          style: textTheme.displaySmall?.copyWith(
+                            color: CoetusColors.oat,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.9,
+                            fontSize: 38,
+                            height: 1.15,
                           ),
-                          const SizedBox(height: 36),
-                          const Column(
-                            children: [
-                              _FeatureCard(
-                                badge: '01',
-                                text: 'Create a profile around the skills you can teach',
-                              ),
-                              SizedBox(height: 14),
-                              _FeatureCard(
-                                badge: '02',
-                                text: 'Match with learners and exchange real value',
-                              ),
-                              SizedBox(height: 14),
-                              _FeatureCard(
-                                badge: '03',
-                                text: 'Earn credits and use them to keep learning',
-                              ),
-                            ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Coetus'ta bir konuyu öğretip kredi kazanırsın, "
+                          'o krediyle sana lazım olan başka bir yeteneği '
+                          'öğrenirsin.',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: CoetusColors.oat.withValues(alpha: .70),
+                            fontSize: 15.5,
                           ),
-                          const SizedBox(height: 28),
-                          Column(
-                            children: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [purple, cyan],
-                                    ),
-                                    borderRadius: BorderRadius.circular(18),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color.fromRGBO(124, 58, 237, 0.30),
-                                        blurRadius: 20,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      context.go('/onboarding');
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      padding:
-                                          const EdgeInsets.symmetric(vertical: 18),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(18),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'Start Onboarding',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Icon(
-                                          Icons.arrow_forward,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    context.go('/login');
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white.withValues(alpha: 0.05),
-                                    shadowColor: Colors.transparent,
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 18),
-                                    side: BorderSide(
-                                      color: Colors.white.withValues(alpha: 0.10),
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.login,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Login',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'By continuing, you agree to our Terms and Privacy Policy',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.38),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 32),
+                        const _WelcomeFeatureRow(
+                          iconBackground: CoetusColors.plateWarm,
+                          icon: Icons.school_outlined,
+                          iconColor: CoetusColors.navy,
+                          title: 'Öğret',
+                          subtitle: 'Bildiğin konuyu bir oturumda anlat',
+                        ),
+                        const SizedBox(height: 14),
+                        const _WelcomeFeatureRow(
+                          iconBackground: CoetusColors.coral,
+                          icon: Icons.add_circle_outline,
+                          iconColor: Colors.white,
+                          title: 'Kredi kazan',
+                          subtitle:
+                              'Oturum onaylanınca kredi hesabına geçer',
+                        ),
+                        const SizedBox(height: 14),
+                        const _WelcomeFeatureRow(
+                          iconBackground: CoetusColors.plateWarm,
+                          icon: Icons.menu_book_outlined,
+                          iconColor: CoetusColors.navy,
+                          title: 'Öğren',
+                          subtitle: 'Krediyi istediğin yetenekte harca',
+                        ),
+                      ],
                     ),
-                  );
-                },
+                    const SizedBox(height: 32),
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => context.go('/onboarding'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: CoetusColors.oat,
+                              foregroundColor: CoetusColors.navy,
+                            ),
+                            child: const Text('Ücretsiz hesap aç'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () => context.go('/login'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: CoetusColors.oat,
+                              side: BorderSide(
+                                color: CoetusColors.oat.withValues(alpha: .45),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Text('Giriş yap'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _FeatureCard extends StatelessWidget {
-  final String badge;
-  final String text;
-
-  const _FeatureCard({
-    required this.badge,
-    required this.text,
+class _WelcomeFeatureRow extends StatelessWidget {
+  const _WelcomeFeatureRow({
+    required this.iconBackground,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
   });
+
+  final Color iconBackground;
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.10),
-        ),
+        color: CoetusColors.oat.withValues(alpha: .09),
+        borderRadius: BorderRadius.circular(CoetusRadius.card),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white.withValues(alpha: 0.08),
+              color: iconBackground,
+              shape: BoxShape.circle,
             ),
-            child: Center(
-              child: Text(
-                badge,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Color(0xFFD1D5DB),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: CoetusColors.oat,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: CoetusColors.oat.withValues(alpha: .65),
+                    fontSize: 12.5,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

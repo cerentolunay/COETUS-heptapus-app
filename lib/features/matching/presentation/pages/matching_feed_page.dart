@@ -1,17 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/matching/models/match_candidate.dart';
-import 'package:coetus/features/matching/services/matching_service.dart';
 import 'package:coetus/features/matching/models/match_explanation.dart';
-import 'package:coetus/features/matching/presentation/pages/skill_discovery_page.dart';
+import 'package:coetus/features/matching/presentation/pages/skill_detail_page.dart';
+import 'package:coetus/features/matching/services/matching_service.dart';
 import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
 import 'package:coetus/features/profile/domain/models/profile_data.dart';
 import 'package:coetus/features/profile/domain/models/skill_model.dart';
 import 'package:coetus/features/profile/domain/repositories/profile_repository.dart';
 import 'package:coetus/features/profile/presentation/pages/other_user_profile_page.dart';
+import 'package:coetus/widgets/coetus_bottom_nav.dart';
+import 'package:coetus/widgets/coetus_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+/// Keşfet / eşleşme akışı — gerçek eşleşme algoritmasının sonuçlarını
+/// 2 sütunlu bir kart gridinde tarar. Kart açıldığında [SkillDetailPage]
+/// üzerinden takas teklifi gönderilir.
 class MatchingFeedPage extends StatefulWidget {
   const MatchingFeedPage({super.key});
 
@@ -26,32 +32,18 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   final ProfileRepository _profileRepository =
       ProfileRepositoryFactory.create();
 
-  List<_UserMatch> _users = [];
+  List<MatchCandidate> _candidates = [];
   List<String> _skillFilters = [];
-  int _currentIndex = 0;
-  int _swipeDirection = 0;
+  ProfileData? _currentProfile;
   bool _isLoading = true;
-  bool _isSendingOffer = false;
   String? _selectedSkill;
   String? _errorMessage;
   _MatchSortOption _sortOption = _MatchSortOption.bestMatch;
 
-  static const Color _bgTop = Color(0xFF0B1120);
-  static const Color _bgMid = Color(0xFF0F172A);
-  static const Color _bgBottom = Color(0xFF1E1B4B);
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _violetSoft = Color(0xFFA78BFA);
-
-  static const Color _textMuted = Color(0xFF94A3B8);
-  static const Color _textSoft = Color(0xFFCBD5E1);
-  static const Color _textDarkMuted = Color(0xFF64748B);
-
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_resetIndexForFilters);
+    _searchController.addListener(() => setState(() {}));
     _loadMatches();
   }
 
@@ -61,26 +53,23 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     super.dispose();
   }
 
-  List<_UserMatch> get _visibleUsers {
+  List<MatchCandidate> get _visibleCandidates {
     final query = _searchController.text.trim().toLowerCase();
 
-    final filtered = _users.where((user) {
+    final filtered = _candidates.where((candidate) {
+      final location = candidate.user.location ?? '';
       final matchesSearch =
           query.isEmpty ||
-          user.name.toLowerCase().contains(query) ||
-          user.location.toLowerCase().contains(query) ||
-          user.bio.toLowerCase().contains(query) ||
-          user.canTeach.any(
-            (skill) => skill.name.toLowerCase().contains(query),
-          ) ||
-          user.wantToLearn.any(
-            (goal) => goal.name.toLowerCase().contains(query),
-          );
+          candidate.user.name.toLowerCase().contains(query) ||
+          location.toLowerCase().contains(query) ||
+          candidate.user.bio.toLowerCase().contains(query) ||
+          candidate.teacherSkill.name.toLowerCase().contains(query) ||
+          candidate.studentSkill.name.toLowerCase().contains(query);
 
       final matchesSkill =
           _selectedSkill == null ||
-          user.canTeach.any((skill) => skill.name == _selectedSkill) ||
-          user.wantToLearn.any((goal) => goal.name == _selectedSkill);
+          candidate.teacherSkill.name == _selectedSkill ||
+          candidate.studentSkill.name == _selectedSkill;
 
       return matchesSearch && matchesSkill;
     }).toList();
@@ -88,7 +77,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     filtered.sort((first, second) {
       switch (_sortOption) {
         case _MatchSortOption.bestMatch:
-          return second.matchPercentage.compareTo(first.matchPercentage);
+          return second.matchScore.compareTo(first.matchScore);
         case _MatchSortOption.trust:
           return second.trustScore.compareTo(first.trustScore);
         case _MatchSortOption.lowCredit:
@@ -107,23 +96,24 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
     try {
       final currentProfile = await _profileRepository.loadProfile();
-      final candidates = await _profileRepository.loadDiscoverableProfiles();
+      final candidateProfiles = await _profileRepository
+          .loadDiscoverableProfiles();
 
       final matches = const MatchingService().getRecommendedMatches(
         currentProfile: currentProfile,
-        candidateProfiles: candidates,
+        candidateProfiles: candidateProfiles,
       );
 
-      final userMatches = matches.isEmpty
-          ? candidates.map(_mapProfileToUserMatch).toList()
-          : matches.map(_mapCandidateToUserMatch).toList();
+      final candidates = matches.isEmpty
+          ? candidateProfiles.expand(_mapProfileToCandidates).toList()
+          : matches;
 
       final filters =
-          userMatches
+          candidates
               .expand(
-                (user) => [
-                  ...user.canTeach.map((skill) => skill.name),
-                  ...user.wantToLearn.map((goal) => goal.name),
+                (candidate) => [
+                  candidate.teacherSkill.name,
+                  candidate.studentSkill.name,
                 ],
               )
               .where((name) => name.trim().isNotEmpty)
@@ -133,9 +123,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
       if (!mounted) return;
       setState(() {
-        _users = userMatches;
+        _currentProfile = currentProfile;
+        _candidates = candidates;
         _skillFilters = filters;
-        _currentIndex = 0;
         _isLoading = false;
       });
     } on FirebaseException catch (error) {
@@ -153,74 +143,48 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     }
   }
 
-  _UserMatch _mapCandidateToUserMatch(MatchCandidate candidate) {
-    final traits = <String>[
-      if (candidate.user.verified) 'Verified',
-      'Match ${(candidate.matchScore * 100).round()}%',
-      'Profile ${(candidate.profileCompleteness * 100).round()}%',
-    ];
+  /// Algoritmik eşleşme boşsa, ham discovery profillerinden gösterilecek
+  /// bir liste türetir (her öğretilebilir skill için bir kart).
+  Iterable<MatchCandidate> _mapProfileToCandidates(ProfileData profile) {
+    if (profile.teachSkills.isEmpty) return const [];
 
-    return _UserMatch(
-      id: candidate.user.id,
-      name: candidate.user.name.isEmpty
-          ? 'Isimsiz Kullanici'
-          : candidate.user.name,
-      location: candidate.user.location?.trim().isNotEmpty == true
-          ? candidate.user.location!
-          : 'Konum belirtilmedi',
-      trustScore: candidate.user.trustScore,
-      bio: candidate.user.bio,
-      verified: candidate.user.verified,
-      canTeach: [
-        _TeachSkill(
-          name: candidate.teacherSkill.name,
-          level: candidate.teacherSkill.level,
-          category: candidate.teacherSkill.category,
+    final studentSkill = profile.learnSkills.isNotEmpty
+        ? profile.learnSkills.first
+        : const SkillModel(id: '', name: 'Genel', level: 1);
+    final trust = profile.user.trustScore.clamp(0, 100) / 100.0;
+
+    return profile.teachSkills.map(
+      (teacherSkill) => MatchCandidate(
+        user: profile.user,
+        teacherSkill: teacherSkill,
+        studentSkill: studentSkill,
+        partnerLearnSkills: profile.learnSkills,
+        matchScore: 0,
+        skillLevelScore: 0,
+        trustScore: trust,
+        availabilityScore: 0,
+        profileCompleteness: _calculateProfileCompleteness(profile),
+        fairnessScore: 0,
+        creditsRequired: 50,
+        explanation: MatchExplanation(
+          skillMatchType: SkillMatchType.related,
+          skillCompatibilityScore: 0,
+          hasAvailabilityOverlap: false,
+          averageTrustScore: trust,
+          profileCompleteness: _calculateProfileCompleteness(profile),
         ),
-      ],
-      wantToLearn: [
-        _LearnGoal(
-          name: candidate.studentSkill.name,
-          category: candidate.studentSkill.category,
-        ),
-      ],
-      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
-      matchPercentage: (candidate.matchScore * 100).round(),
-      matchReason: _buildMatchReason(candidate.explanation),
-      creditsRequired: candidate.creditsRequired,
-      totalSwaps: 0,
+      ),
     );
   }
 
-  _UserMatch _mapProfileToUserMatch(ProfileData profile) {
-    final teachSkills = profile.teachSkills.map(_mapTeachSkill).toList();
-    final learnGoals = profile.learnSkills
-        .map((skill) => _LearnGoal(name: skill.name, category: skill.category))
-        .toList();
-    final traits = <String>[
-      if (profile.user.verified) 'Verified',
-      if (teachSkills.isNotEmpty) '${teachSkills.length} teach skill',
-      if (learnGoals.isNotEmpty) '${learnGoals.length} learn goal',
-    ];
-
-    return _UserMatch(
-      id: profile.user.id,
-      name: profile.user.name.isEmpty ? 'Isimsiz Kullanici' : profile.user.name,
-      location: profile.user.location?.trim().isNotEmpty == true
-          ? profile.user.location!
-          : 'Konum belirtilmedi',
-      trustScore: profile.user.trustScore,
-      bio: profile.user.bio,
-      verified: profile.user.verified,
-      canTeach: teachSkills,
-      wantToLearn: learnGoals,
-      personalityTraits: traits.isEmpty ? const ['New member'] : traits,
-      matchPercentage: 0,
-      matchReason:
-          'Discovery profilinde skill ve profil bilgileri gorunuyor; net match skoru icin kendi ogrenme hedeflerinle ortak skill gerekir.',
-      creditsRequired: 50,
-      totalSwaps: 0,
-    );
+  double _calculateProfileCompleteness(ProfileData profile) {
+    var score = 0.0;
+    const step = 0.25;
+    if (profile.user.name.trim().isNotEmpty) score += step;
+    if (profile.user.bio.trim().isNotEmpty) score += step;
+    if (profile.teachSkills.isNotEmpty) score += step;
+    if (profile.learnSkills.isNotEmpty) score += step;
+    return score;
   }
 
   String _buildMatchReason(MatchExplanation explanation) {
@@ -238,46 +202,22 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     return '$skillPart; $trustPart, $profilePart ve $availabilityPart.';
   }
 
-  _TeachSkill _mapTeachSkill(SkillModel skill) {
-    return _TeachSkill(
-      name: skill.name,
-      level: skill.level,
-      category: skill.category,
-    );
-  }
-
-  void _resetIndexForFilters() {
-    setState(() => _currentIndex = 0);
-  }
-
-  void _handleSwipe(String direction) {
-    if (_currentIndex >= _visibleUsers.length) return;
-
-    setState(() {
-      _swipeDirection = direction == 'right' ? 1 : -1;
-    });
-
-    Future.delayed(const Duration(milliseconds: 260), () {
-      if (!mounted) return;
-      setState(() {
-        _currentIndex += 1;
-        _swipeDirection = 0;
-      });
-    });
-  }
-
-  Future<void> _sendOffer(_UserMatch user, _TeachSkill skill) async {
+  Future<void> _sendOffer(MatchCandidate candidate) async {
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
       _showSnack('Teklif gondermek icin once giris yapmalisin.');
       return;
     }
 
-    setState(() => _isSendingOffer = true);
+    final partnerName = candidate.user.name.isEmpty
+        ? 'Kullanici'
+        : candidate.user.name;
+    final skillName = candidate.teacherSkill.name;
+
     try {
       final matchRef = _firestore.collection('matches').doc();
       final sessionRef = _firestore.collection('sessions').doc();
-      final participants = [currentUser.uid, user.id]..sort();
+      final participants = [currentUser.uid, candidate.user.id]..sort();
       final chatRef = _firestore
           .collection('chats')
           .doc(participants.join('_'));
@@ -291,16 +231,16 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'id': matchRef.id,
           'participants': participants,
           'requesterId': currentUser.uid,
-          'receiverId': user.id,
+          'receiverId': candidate.user.id,
           'requesterName': currentUserName,
-          'receiverName': user.name,
+          'receiverName': partnerName,
           'participantNames': {
             currentUser.uid: currentUserName,
-            user.id: user.name,
+            candidate.user.id: partnerName,
           },
-          'skillName': skill.name,
+          'skillName': skillName,
           'status': 'pending',
-          'credits': user.creditsRequired,
+          'credits': candidate.creditsRequired,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -308,11 +248,11 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
         transaction.set(sessionRef, {
           'id': sessionRef.id,
           'matchId': matchRef.id,
-          'teacherId': user.id,
+          'teacherId': candidate.user.id,
           'studentId': currentUser.uid,
-          'skillName': skill.name,
+          'skillName': skillName,
           'status': 'requested',
-          'credits': user.creditsRequired,
+          'credits': candidate.creditsRequired,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -322,31 +262,31 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'participants': participants,
           'participantNames': {
             currentUser.uid: currentUserName,
-            user.id: user.name,
+            candidate.user.id: partnerName,
           },
           'participantSkills': {
-            user.id: [skill.name],
+            candidate.user.id: [skillName],
           },
           'matchId': matchRef.id,
           'sessionId': sessionRef.id,
-          'skillName': skill.name,
-          'lastMessage': '${skill.name} icin teklif gonderildi.',
+          'skillName': skillName,
+          'lastMessage': '$skillName icin teklif gonderildi.',
           'lastSenderId': currentUser.uid,
           'lastMessageAt': FieldValue.serverTimestamp(),
           'unreadCount': 0,
-          'credits': user.creditsRequired,
+          'credits': candidate.creditsRequired,
           'status': 'pending',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
         transaction.set(_firestore.collection('notifications').doc(), {
-          'userId': user.id,
+          'userId': candidate.user.id,
           'senderId': currentUser.uid,
           'type': 'match_offer',
           'title': 'Yeni skill teklifi',
           'message':
-              '${currentUser.displayName ?? 'Bir kullanici'} ${skill.name} icin teklif gonderdi.',
+              '${currentUser.displayName ?? 'Bir kullanici'} $skillName icin teklif gonderdi.',
           'matchId': matchRef.id,
           'sessionId': sessionRef.id,
           'read': false,
@@ -355,17 +295,13 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       });
 
       if (!mounted) return;
-      Navigator.of(context).pop();
-      _showSnack('${user.name} icin teklif gonderildi.');
-      _handleSwipe('right');
+      _showSnack('$partnerName icin teklif gonderildi.');
     } on FirebaseException catch (error) {
       if (!mounted) return;
       _showSnack(_mapFirestoreError(error));
     } catch (_) {
       if (!mounted) return;
       _showSnack('Teklif gonderilemedi. Lutfen tekrar dene.');
-    } finally {
-      if (mounted) setState(() => _isSendingOffer = false);
     }
   }
 
@@ -388,68 +324,127 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     return 'Firestore hatasi: ${error.message ?? error.code}';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final visibleUsers = _visibleUsers;
-    final bool isFinished = _currentIndex >= visibleUsers.length;
-    final _UserMatch? currentUser = isFinished
-        ? null
-        : visibleUsers[_currentIndex];
-
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgTop, _bgMid, _bgBottom],
-          ),
+  void _showProfileDetails(MatchCandidate candidate) {
+    final profileData = OtherUserProfileData(
+      id: candidate.user.id,
+      name: candidate.user.name.isEmpty
+          ? 'Isimsiz Kullanici'
+          : candidate.user.name,
+      location: candidate.user.location?.trim().isNotEmpty == true
+          ? candidate.user.location!
+          : 'Konum belirtilmedi',
+      bio: candidate.user.bio,
+      trustScore: candidate.user.trustScore,
+      verified: candidate.user.verified,
+      matchScore: (candidate.matchScore * 100).round(),
+      creditsRequired: candidate.creditsRequired,
+      matchReason: _buildMatchReason(candidate.explanation),
+      teachSkills: [
+        OtherUserSkillData(
+          name: candidate.teacherSkill.name,
+          category: candidate.teacherSkill.category,
+          level: candidate.teacherSkill.level,
         ),
-        child: SafeArea(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: _cyan))
-              : _errorMessage != null
-              ? _buildErrorState()
-              : Column(
-                  children: [
-                    _buildHeader(visibleUsers.length),
-                    _buildFilters(),
-                    Expanded(
-                      child: isFinished
-                          ? _buildFinishedState(context)
-                          : Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: AnimatedSlide(
-                                duration: const Duration(milliseconds: 260),
-                                offset: Offset(
-                                  _swipeDirection == 0
-                                      ? 0
-                                      : (_swipeDirection == 1 ? 1.2 : -1.2),
-                                  0,
-                                ),
-                                child: AnimatedRotation(
-                                  duration: const Duration(milliseconds: 260),
-                                  turns: _swipeDirection == 0
-                                      ? 0
-                                      : (_swipeDirection == 1 ? 0.04 : -0.04),
-                                  child: _MatchCard(
-                                    user: currentUser!,
-                                    onOpenDetails: () =>
-                                        _showProfileDetails(currentUser),
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-                    if (currentUser != null)
-                      _buildActionButtons(context, currentUser),
-                    _buildBottomNav(context),
-                  ],
-                ),
+      ],
+      learnSkills: candidate.partnerLearnSkills
+          .map(
+            (skill) =>
+                OtherUserSkillData(name: skill.name, category: skill.category),
+          )
+          .toList(),
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OtherUserProfilePage(profile: profileData),
+      ),
+    );
+  }
+
+  void _openSkillDetail(MatchCandidate candidate) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SkillDetailPage(
+          candidate: candidate,
+          onSendOffer: () => _sendOffer(candidate),
+          onViewProfile: () => _showProfileDetails(candidate),
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CoetusColors.oat,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Expanded(child: _buildBody(context)),
+          ],
+        ),
+      ),
+      bottomNavigationBar: const CoetusBottomNav(currentIndex: 0),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_errorMessage != null) {
+      return _buildErrorState();
+    }
+
+    final visible = _visibleCandidates;
+    if (visible.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(CoetusSpace.xl),
+          child: CoetusEmptyState(
+            title: 'Henuz eslesme yok',
+            message:
+                'Ogretebilecegin bir yetenek ekle, sana uygun kisileri getirelim.',
+            icon: Icons.search_off,
+            actionLabel: 'Yetenek ekle',
+            onAction: () => context.go('/profile'),
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(20),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: .78,
+      ),
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final candidate = visible[index];
+        return SkillCard(
+          title: candidate.teacherSkill.name,
+          subtitle:
+              '${candidate.teacherSkill.category.isNotEmpty ? candidate.teacherSkill.category : "Genel"} '
+              '· ${candidate.user.name}',
+          icon: categoryIcon(
+            candidate.teacherSkill.category,
+            candidate.teacherSkill.name,
+          ),
+          credits: candidate.creditsRequired,
+          statusLabel: candidate.explanation.hasAvailabilityOverlap
+              ? 'Musait'
+              : null,
+          plate: index.isEven
+              ? CoetusColors.plateWarm
+              : CoetusColors.plateWarmAlt,
+          onTap: () => _openSkillDetail(candidate),
+        );
+      },
     );
   }
 
@@ -460,16 +455,16 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, color: _cyan, size: 46),
+            const Icon(
+              Icons.cloud_off_outlined,
+              color: CoetusColors.navy,
+              size: 46,
+            ),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _textSoft,
-                fontSize: 15,
-                height: 1.5,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
             ElevatedButton(
@@ -482,173 +477,104 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     );
   }
 
-  Widget _buildFinishedState(BuildContext context) {
-    final hasFilters =
-        _searchController.text.trim().isNotEmpty || _selectedSkill != null;
+  Widget _buildHeader(BuildContext context) {
+    final credits = _currentProfile?.user.credits ?? 0;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [_violet, _cyan]),
-                borderRadius: BorderRadius.all(Radius.circular(28)),
-              ),
-              child: Icon(
-                hasFilters ? Icons.filter_alt_off_outlined : Icons.auto_awesome,
-                color: Colors.white,
-                size: 46,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              hasFilters ? 'Sonuc bulunamadi' : 'Herkese baktin',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              hasFilters
-                  ? 'Filtreyi temizleyip tekrar deneyebilirsin.'
-                  : 'Yeni profiller geldiginde burada gorunecek.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _textMuted,
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: hasFilters
-                  ? () {
-                      _searchController.clear();
-                      setState(() {
-                        _selectedSkill = null;
-                        _currentIndex = 0;
-                      });
-                    }
-                  : _loadMatches,
-              child: Text(hasFilters ? 'Filtreleri temizle' : 'Yenile'),
-            ),
-          ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: CoetusColors.navy,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(int remaining) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Discover Matches',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Coetus',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: CoetusColors.oat,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$remaining profil bulundu',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _textMuted, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => context.go('/notifications'),
-                icon: const Icon(Icons.notifications_outlined, color: _cyan),
               ),
-              IconButton(
-                onPressed: _loadMatches,
-                icon: const Icon(Icons.refresh, color: _cyan),
+              CreditBadge(
+                amount: credits,
+                background: Colors.white.withValues(alpha: .16),
+                foreground: CoetusColors.oat,
+              ),
+              const SizedBox(width: 10),
+              _CircleIconButton(
+                icon: Icons.notifications_outlined,
+                onTap: () => context.go('/notifications'),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilters() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-      child: Column(
-        children: [
+          const SizedBox(height: 16),
           TextField(
             controller: _searchController,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: CoetusColors.oat),
             decoration: InputDecoration(
               hintText: 'Skill, isim veya sehir ara...',
-              hintStyle: const TextStyle(color: _textMuted),
-              prefixIcon: const Icon(Icons.search, color: _textMuted),
+              hintStyle: TextStyle(color: CoetusColors.oat.withValues(alpha: .6)),
+              prefixIcon: Icon(
+                Icons.search,
+                color: CoetusColors.oat.withValues(alpha: .7),
+              ),
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
+              fillColor: Colors.white.withValues(alpha: .12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.10),
-                ),
+                borderRadius: BorderRadius.circular(CoetusRadius.input),
+                borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.10),
-                ),
+                borderRadius: BorderRadius.circular(CoetusRadius.input),
+                borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: const BorderSide(color: _cyan),
+                borderRadius: BorderRadius.circular(CoetusRadius.input),
+                borderSide: BorderSide(
+                  color: CoetusColors.oat.withValues(alpha: .5),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.sort, color: _textMuted, size: 18),
-              const SizedBox(width: 8),
-              const Text(
+              Icon(
+                Icons.sort,
+                color: CoetusColors.oat.withValues(alpha: .7),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
                 'Sirala',
                 style: TextStyle(
-                  color: _textMuted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  color: CoetusColors.oat.withValues(alpha: .7),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               DropdownButtonHideUnderline(
                 child: DropdownButton<_MatchSortOption>(
                   value: _sortOption,
-                  dropdownColor: _bgMid,
+                  dropdownColor: CoetusColors.navyInk,
                   borderRadius: BorderRadius.circular(14),
-                  iconEnabledColor: _cyan,
+                  iconEnabledColor: CoetusColors.oat,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    color: CoetusColors.oat,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                   items: _MatchSortOption.values
                       .map(
@@ -660,49 +586,31 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
                       .toList(),
                   onChanged: (option) {
                     if (option == null) return;
-                    setState(() {
-                      _sortOption = option;
-                      _currentIndex = 0;
-                    });
+                    setState(() => _sortOption = option);
                   },
                 ),
               ),
             ],
           ),
           if (_skillFilters.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _skillFilters.length + 1,
-                separatorBuilder: (context, index) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final String? filter = index == 0
-                      ? null
-                      : _skillFilters[index - 1];
-                  final selected = filter == _selectedSkill;
-                  return ChoiceChip(
-                    label: Text(filter ?? 'All'),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedSkill = filter;
-                        _currentIndex = 0;
-                      });
-                    },
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : _textSoft,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    selectedColor: _violet,
-                    backgroundColor: Colors.white.withValues(alpha: 0.05),
-                    side: BorderSide(
-                      color: selected
-                          ? _violetSoft
-                          : Colors.white.withValues(alpha: 0.10),
-                    ),
-                  );
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: CoetusColors.oat,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: CategoryTabs(
+                items: ['Tumu', ..._skillFilters],
+                selected: _selectedSkill == null
+                    ? 0
+                    : _skillFilters.indexOf(_selectedSkill!) + 1,
+                onChanged: (index) {
+                  setState(() {
+                    _selectedSkill = index == 0
+                        ? null
+                        : _skillFilters[index - 1];
+                  });
                 },
               ),
             ),
@@ -711,987 +619,64 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       ),
     );
   }
-
-  Widget _buildActionButtons(BuildContext context, _UserMatch user) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 10),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _ActionButton(
-                size: 64,
-                borderColor: Colors.white.withValues(alpha: 0.10),
-                icon: Icons.close,
-                iconColor: Colors.redAccent,
-                onTap: () => _handleSwipe('left'),
-              ),
-              const SizedBox(width: 24),
-              _GradientActionButton(
-                size: 80,
-                icon: Icons.favorite,
-                isBusy: _isSendingOffer,
-                onTap: () => _showOfferSheet(user),
-              ),
-              const SizedBox(width: 24),
-              _ActionButton(
-                size: 64,
-                borderColor: _cyan.withValues(alpha: 0.35),
-                icon: Icons.info_outline,
-                iconColor: _cyan,
-                onTap: () => _showProfileDetails(user),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Teklif ${user.creditsRequired} HC ile olusturulur',
-            style: const TextStyle(color: _textDarkMuted, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showProfileDetails(_UserMatch user) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => OtherUserProfilePage(profile: user.toProfileData()),
-      ),
-    );
-  }
-
-  void _showOfferSheet(_UserMatch user) {
-    if (user.canTeach.isEmpty) {
-      _showSnack('Bu kullanicinin henuz ogretecegi skill yok.');
-      return;
-    }
-
-    _TeachSkill selectedSkill = user.canTeach.first;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: _bgMid,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Teklif Gonder',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${user.name} sana hangi skill icin yardim etsin?',
-                      style: const TextStyle(color: _textMuted, height: 1.4),
-                    ),
-                    const SizedBox(height: 18),
-                    ...user.canTeach.map(
-                      (skill) => _OfferSkillOption(
-                        skill: skill,
-                        selected: skill == selectedSkill,
-                        onTap: () => setSheetState(() => selectedSkill = skill),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSendingOffer
-                            ? null
-                            : () => _sendOffer(user, selectedSkill),
-                        icon: _isSendingOffer
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.send),
-                        label: Text(
-                          '${user.creditsRequired} HC ile teklif gonder',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _bgMid.withValues(alpha: 0.86),
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _BottomNavItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            onTap: () => context.go('/profile'),
-          ),
-          _BottomNavItem(
-            icon: Icons.trending_up,
-            label: 'Discover',
-            isActive: true,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const SkillDiscoveryPage(),
-              ),
-            ),
-          ),
-          _BottomNavItem(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            showDot: true,
-            onTap: () => context.go('/chat'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class _MatchCard extends StatelessWidget {
-  final _UserMatch user;
-  final VoidCallback onOpenDetails;
+/// Kategori/skill adına göre bir Material ikonu döndürür. [SkillDetailPage]
+/// aynı kartın ikonunu göstermek için bu eşlemeyi kendi kopyasıyla tekrar
+/// eder (bkz. skill_detail_page.dart).
+IconData categoryIcon(String category, String name) {
+  final key = '$category $name'.toLowerCase();
+  if (key.contains('muzik') || key.contains('müzik') || key.contains('music')) {
+    return Icons.music_note_outlined;
+  }
+  if (key.contains('yazilim') ||
+      key.contains('yazılım') ||
+      key.contains('software') ||
+      key.contains('code') ||
+      key.contains('kod') ||
+      key.contains('programlama')) {
+    return Icons.code;
+  }
+  if (key.contains('dil') || key.contains('language')) {
+    return Icons.public;
+  }
+  if (key.contains('tasarim') ||
+      key.contains('tasarım') ||
+      key.contains('design')) {
+    return Icons.brush_outlined;
+  }
+  if (key.contains('el sanat') || key.contains('craft')) {
+    return Icons.content_cut;
+  }
+  if (key.contains('fotograf') ||
+      key.contains('fotoğraf') ||
+      key.contains('photo')) {
+    return Icons.photo_camera_outlined;
+  }
+  return Icons.star_outline;
+}
 
-  const _MatchCard({required this.user, required this.onOpenDetails});
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({required this.icon, required this.onTap});
 
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _violetSoft = Color(0xFFA78BFA);
-  static const Color _green = Color(0xFF4ADE80);
-
-  static const Color _surface = Color(0x14FFFFFF);
-  static const Color _surfaceBorder = Color(0x1AFFFFFF);
-  static const Color _textMuted = Color(0xFF94A3B8);
-  static const Color _textSoft = Color(0xFFCBD5E1);
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onOpenDetails,
-        borderRadius: BorderRadius.circular(30),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: _surface,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: _surfaceBorder),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildTopSection(),
-                        const SizedBox(height: 22),
-                        _buildTeachSection(),
-                        const SizedBox(height: 22),
-                        _buildLearnSection(),
-                        const SizedBox(height: 22),
-                        _buildTraitsSection(),
-                      ],
-                    ),
-                  ),
-                ),
-                _buildSessionCost(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          user.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      if (user.verified) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: _cyan,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.shield_outlined,
-                            color: Colors.white,
-                            size: 15,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user.location,
-                    style: const TextStyle(color: _textMuted, fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _MetricChip(
-                        label: '${user.matchPercentage}% Match',
-                        color: _violetSoft,
-                        borderColor: _violet,
-                        icon: Icons.favorite_outline,
-                      ),
-                      _MetricChip(
-                        label: '${user.trustScore}% Trust',
-                        color: _green,
-                        borderColor: _green,
-                        icon: Icons.shield_outlined,
-                      ),
-                      _MetricChip(
-                        label: '${user.totalSwaps} Swaps',
-                        color: _cyan,
-                        borderColor: _cyan,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildReasonCard(),
-        const SizedBox(height: 16),
-        Text(
-          user.bio.isEmpty ? 'Bu kullanici henuz bio eklememis.' : user.bio,
-          style: const TextStyle(color: _textSoft, fontSize: 14, height: 1.6),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReasonCard() {
-    if (user.matchReason.trim().isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _cyan.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _cyan.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.auto_awesome_outlined, color: _cyan, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              user.matchReason,
-              style: const TextStyle(
-                color: _textSoft,
-                fontSize: 13,
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTeachSection() {
-    return _SkillSection(
-      icon: Icons.trending_up,
-      iconColor: _cyan,
-      title: 'CAN TEACH YOU',
-      emptyText: 'Henuz ogretecegi skill eklememis.',
-      children: user.canTeach
-          .map(
-            (skill) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _TeachSkillCard(skill: skill),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _buildLearnSection() {
-    return _SkillSection(
-      icon: Icons.gps_fixed,
-      iconColor: _violet,
-      title: 'WANTS TO LEARN',
-      emptyText: 'Henuz ogrenmek istedigi skill yok.',
-      children: [
-        GridView.builder(
-          itemCount: user.wantToLearn.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.65,
-          ),
-          itemBuilder: (context, index) {
-            final goal = user.wantToLearn[index];
-            return Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-              ),
-              child: Text(
-                goal.name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTraitsSection() {
-    return _SkillSection(
-      icon: Icons.auto_awesome,
-      iconColor: _cyan,
-      title: 'PROFILE TAGS',
-      emptyText: '',
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: user.personalityTraits
-              .map((trait) => _SkillChip(label: trait))
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSessionCost() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              _violet.withValues(alpha: 0.20),
-              _cyan.withValues(alpha: 0.20),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _violet.withValues(alpha: 0.30)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.bolt, color: _cyan, size: 20),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Session Cost',
-                style: TextStyle(
-                  color: _textSoft,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            Text(
-              '${user.creditsRequired} HC',
-              style: const TextStyle(
-                color: _cyan,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SkillSection extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String emptyText;
-  final List<Widget> children;
-
-  const _SkillSection({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.emptyText,
-    required this.children,
-  });
-
-  static const Color _textMuted = Color(0xFF94A3B8);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: iconColor, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: _textMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (children.isEmpty && emptyText.isNotEmpty)
-          Text(emptyText, style: const TextStyle(color: _textMuted))
-        else
-          ...children,
-      ],
-    );
-  }
-}
-
-class _MetricChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final Color borderColor;
-  final IconData? icon;
-
-  const _MetricChip({
-    required this.label,
-    required this.color,
-    required this.borderColor,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor.withValues(alpha: 0.30)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkillChip extends StatelessWidget {
-  final String label;
-
-  const _SkillChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _OfferSkillOption extends StatelessWidget {
-  final _TeachSkill skill;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _OfferSkillOption({
-    required this.skill,
-    required this.selected,
-    required this.onTap,
-  });
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _textMuted = Color(0xFF94A3B8);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: selected
-            ? _cyan.withValues(alpha: 0.14)
-            : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: selected ? _cyan : Colors.white.withValues(alpha: 0.10),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                  color: selected ? _cyan : _textMuted,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        skill.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Level ${skill.level}/7',
-                        style: const TextStyle(color: _textMuted),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TeachSkillCard extends StatelessWidget {
-  final _TeachSkill skill;
-
-  const _TeachSkillCard({required this.skill});
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _textMuted = Color(0xFF94A3B8);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_violet, _cyan]),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.school_outlined, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      skill.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      skill.category.isEmpty ? 'Skill' : skill.category,
-                      style: const TextStyle(color: _textMuted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_violet, _cyan]),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${skill.level}/7',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: List.generate(7, (index) {
-              final active = index < skill.level;
-              return Expanded(
-                child: Container(
-                  height: 6,
-                  margin: EdgeInsets.only(right: index == 6 ? 0 : 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: active
-                        ? const LinearGradient(colors: [_violet, _cyan])
-                        : null,
-                    color: active ? null : Colors.white.withValues(alpha: 0.10),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final double size;
-  final Color borderColor;
-  final IconData icon;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.size,
-    required this.borderColor,
-    required this.icon,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(22),
+      color: Colors.white.withValues(alpha: .16),
+      shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: borderColor, width: 2),
-          ),
-          child: Icon(icon, color: iconColor, size: 28),
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, color: CoetusColors.oat, size: 18),
         ),
       ),
     );
   }
-}
-
-class _GradientActionButton extends StatelessWidget {
-  final double size;
-  final IconData icon;
-  final bool isBusy;
-  final VoidCallback onTap;
-
-  const _GradientActionButton({
-    required this.size,
-    required this.icon,
-    required this.onTap,
-    this.isBusy = false,
-  });
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isBusy ? null : onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Ink(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_violet, _cyan]),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: _violet.withValues(alpha: 0.35),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: isBusy
-              ? const Padding(
-                  padding: EdgeInsets.all(26),
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Icon(icon, color: Colors.white, size: 34),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final bool showDot;
-  final VoidCallback onTap;
-
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isActive = false,
-    this.showDot = false,
-  });
-
-  static const Color _active = Color(0xFF06B6D4);
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? _active : Colors.white.withValues(alpha: 0.55);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon, color: color, size: 24),
-                if (showDot)
-                  Positioned(
-                    right: -1,
-                    top: -1,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: _active,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UserMatch {
-  final String id;
-  final String name;
-  final String location;
-  final int trustScore;
-  final String bio;
-  final bool verified;
-  final List<_TeachSkill> canTeach;
-  final List<_LearnGoal> wantToLearn;
-  final List<String> personalityTraits;
-  final int matchPercentage;
-  final String matchReason;
-  final int creditsRequired;
-  final int totalSwaps;
-
-  const _UserMatch({
-    required this.id,
-    required this.name,
-    required this.location,
-    required this.trustScore,
-    required this.bio,
-    required this.verified,
-    required this.canTeach,
-    required this.wantToLearn,
-    required this.personalityTraits,
-    required this.matchPercentage,
-    required this.matchReason,
-    required this.creditsRequired,
-    required this.totalSwaps,
-  });
-
-  OtherUserProfileData toProfileData() {
-    return OtherUserProfileData(
-      id: id,
-      name: name,
-      location: location,
-      bio: bio,
-      trustScore: trustScore,
-      verified: verified,
-      matchScore: matchPercentage,
-      creditsRequired: creditsRequired,
-      matchReason: matchReason,
-      teachSkills: canTeach
-          .map(
-            (skill) => OtherUserSkillData(
-              name: skill.name,
-              category: skill.category,
-              level: skill.level,
-            ),
-          )
-          .toList(),
-      learnSkills: wantToLearn
-          .map(
-            (goal) =>
-                OtherUserSkillData(name: goal.name, category: goal.category),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _TeachSkill {
-  final String name;
-  final int level;
-  final String category;
-
-  const _TeachSkill({
-    required this.name,
-    required this.level,
-    required this.category,
-  });
-}
-
-class _LearnGoal {
-  final String name;
-  final String category;
-
-  const _LearnGoal({required this.name, required this.category});
 }
 
 enum _MatchSortOption {

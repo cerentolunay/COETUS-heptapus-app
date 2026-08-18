@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:coetus/app/router/app_router.dart';
-import 'package:coetus/app/theme/app_theme.dart';
+import 'package:coetus/app/theme/coetus_theme.dart';
 
 class CoetusApp extends StatelessWidget {
   const CoetusApp({super.key});
@@ -10,7 +10,7 @@ class CoetusApp extends StatelessWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'COETUS',
-      theme: AppTheme.lightTheme,
+      theme: coetusTheme(),
       routerConfig: AppRouter.router,
     );
   }

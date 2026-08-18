@@ -1,30 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/coetus_tokens.dart';
+
 class OtherUserProfilePage extends StatelessWidget {
   final OtherUserProfileData profile;
 
   const OtherUserProfilePage({super.key, required this.profile});
 
-  static const Color _bgTop = Color(0xFF0B1120);
-  static const Color _bgMid = Color(0xFF0F172A);
-  static const Color _bgBottom = Color(0xFF1E1B4B);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _green = Color(0xFF4ADE80);
-  static const Color _textMuted = Color(0xFF94A3B8);
-  static const Color _textSoft = Color(0xFFCBD5E1);
+  static const Color _cyan = CoetusColors.navy;
+  static const Color _violet = CoetusColors.coral;
+  static const Color _green = CoetusColors.success;
+  static const Color _textMuted = CoetusColors.muted;
+  static const Color _textSoft = CoetusColors.body;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: CoetusColors.oat,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgTop, _bgMid, _bgBottom],
-          ),
-        ),
+        color: CoetusColors.oat,
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
@@ -101,14 +95,14 @@ class OtherUserProfilePage extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: CoetusColors.navyInk),
           ),
           const SizedBox(width: 4),
           const Expanded(
             child: Text(
               'Profil Detayi',
               style: TextStyle(
-                color: Colors.white,
+                color: CoetusColors.navyInk,
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -123,9 +117,9 @@ class OtherUserProfilePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: CoetusColors.card,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        boxShadow: CoetusShadow.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +138,7 @@ class OtherUserProfilePage extends StatelessWidget {
                 child: Text(
                   profile.initials,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: CoetusColors.oat,
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
                   ),
@@ -161,7 +155,7 @@ class OtherUserProfilePage extends StatelessWidget {
                           child: Text(
                             profile.name,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: CoetusColors.navyInk,
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
                               height: 1.15,
@@ -295,9 +289,9 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: CoetusColors.card,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        boxShadow: CoetusShadow.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +303,7 @@ class _SectionCard extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: CoetusColors.navyInk,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -367,7 +361,7 @@ class _SkillWrap extends StatelessWidget {
               Text(
                 skill.name,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: CoetusColors.navyInk,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),

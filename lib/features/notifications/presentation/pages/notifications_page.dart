@@ -1,6 +1,9 @@
+import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/notifications/data/repositories/notification_repository_factory.dart';
 import 'package:coetus/features/notifications/domain/models/app_notification.dart';
 import 'package:coetus/features/notifications/domain/repositories/notification_repository.dart';
+import 'package:coetus/widgets/coetus_bottom_nav.dart';
+import 'package:coetus/widgets/coetus_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -17,21 +20,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
       NotificationRepositoryFactory.create();
 
   int _selectedFilterIndex = 0;
+  bool _markingAllRead = false;
 
   final List<String> _filters = const [
-    'All',
-    'Offers',
-    'Sessions',
-    'Messages',
+    'Tümü',
+    'Teklifler',
+    'Oturumlar',
+    'Mesajlar',
   ];
-
-  static const Color _bg = Color(0xFF0A0F1C);
-  static const Color _bg2 = Color(0xFF0F172A);
-  static const Color _bg3 = Color(0xFF1E1B4B);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _violetSoft = Color(0xFFA78BFA);
-  static const Color _textMuted = Color(0xFF94A3B8);
 
   String? get _userId => FirebaseAuth.instance.currentUser?.uid;
 
@@ -79,34 +75,55 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _markAllAsRead(List<AppNotification> allItems) async {
+    if (_markingAllRead) return;
+    final unread = allItems.where((item) => !item.read).toList();
+    if (unread.isEmpty) return;
+
+    setState(() => _markingAllRead = true);
+    try {
+      for (final item in unread) {
+        await _repository.markAsRead(item.id);
+      }
+    } catch (_) {
+      // Best-effort: individual failures are swallowed, matching the
+      // existing per-item markAsRead error handling in _openNotification.
+    } finally {
+      if (mounted) setState(() => _markingAllRead = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userId = _userId;
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bg, _bg2, _bg3],
+      backgroundColor: CoetusColors.oat,
+      body: SafeArea(
+        bottom: false,
+        child: userId == null ? _buildSignedOut() : _buildContent(userId),
+      ),
+      bottomNavigationBar: const CoetusBottomNav(currentIndex: -1),
+    );
+  }
+
+  Widget _buildSignedOut() {
+    return Column(
+      children: [
+        _buildHeader(unread: 0, onMarkAllRead: null),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(CoetusSpace.xl),
+              child: const CoetusEmptyState(
+                icon: Icons.lock_outline,
+                title: 'Giriş gerekli',
+                message: 'Bildirimlerini görmek için giriş yapmalısın.',
+              ),
+            ),
           ),
         ),
-        child: SafeArea(
-          child: userId == null
-              ? _buildState(
-                  icon: Icons.lock_outline,
-                  title: 'Giris gerekli',
-                  subtitle: 'Bildirimlerini gormek icin giris yapmalisin.',
-                )
-              : Column(
-                  children: [
-                    Expanded(child: _buildContent(userId)),
-                    _buildBottomNavigation(context),
-                  ],
-                ),
-        ),
-      ),
+      ],
     );
   }
 
@@ -115,172 +132,294 @@ class _NotificationsPageState extends State<NotificationsPage> {
       stream: _repository.streamUserNotifications(userId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _buildState(
-            icon: Icons.cloud_off_outlined,
-            title: 'Bildirimler yuklenemedi',
-            subtitle: '${snapshot.error}',
+          return Column(
+            children: [
+              _buildHeader(unread: 0, onMarkAllRead: null),
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(CoetusSpace.xl),
+                    child: CoetusEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Bildirimler yüklenemedi',
+                      message: '${snapshot.error}',
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: _cyan));
+          return Column(
+            children: [
+              _buildHeader(unread: 0, onMarkAllRead: null),
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(color: CoetusColors.navy),
+                ),
+              ),
+            ],
+          );
         }
 
         final allItems = snapshot.data ?? const <AppNotification>[];
         final items = _filterItems(allItems);
         final unreadCount = allItems.where((item) => !item.read).length;
+        final groups = groupNotificationsByDay(items);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(unreadCount),
-              const SizedBox(height: 24),
-              _buildFilterBar(),
-              const SizedBox(height: 24),
-              if (items.isEmpty)
-                _buildEmptyState()
-              else
-                ...items.map(
-                  (item) => _NotificationCard(
-                    item: item,
-                    onTap: () => _openNotification(item),
-                  ),
-                ),
-            ],
-          ),
+        return Column(
+          children: [
+            _buildHeader(
+              unread: unreadCount,
+              onMarkAllRead:
+                  unreadCount == 0 ? null : () => _markAllAsRead(allItems),
+            ),
+            const SizedBox(height: CoetusSpace.md),
+            CategoryTabs(
+              items: _filters,
+              selected: _selectedFilterIndex,
+              onChanged: (index) =>
+                  setState(() => _selectedFilterIndex = index),
+            ),
+            const SizedBox(height: CoetusSpace.sm),
+            Expanded(
+              child: items.isEmpty
+                  ? _buildEmptyState(hasAnyNotifications: allItems.isNotEmpty)
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        CoetusSpace.screenH,
+                        CoetusSpace.sm,
+                        CoetusSpace.screenH,
+                        CoetusSpace.xxl,
+                      ),
+                      itemCount: groups.length,
+                      itemBuilder: (context, index) {
+                        final group = groups[index];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+                              child: Text(
+                                group.label,
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ),
+                            for (final item in group.items)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    bottom: CoetusSpace.md),
+                                child: _NotificationCard(
+                                  item: item,
+                                  onTap: () => _openNotification(item),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildHeader(int unread) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'Notifications',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: _violet.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            '$unread New',
-            style: const TextStyle(
-              color: _violetSoft,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterBar() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(_filters.length, (index) {
-          final isActive = _selectedFilterIndex == index;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilterIndex = index),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: isActive
-                    ? const LinearGradient(colors: [_violet, _cyan])
-                    : null,
-                color: isActive ? null : Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                _filters[index],
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return _buildState(
-      icon: Icons.notifications_none,
-      title: 'Bildirim yok',
-      subtitle: 'Teklifler, mesajlar ve session guncellemeleri burada gorunecek.',
-    );
-  }
-
-  Widget _buildState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: _cyan, size: 42),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: _textMuted, height: 1.5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigation(BuildContext context) {
+  Widget _buildHeader({required int unread, VoidCallback? onMarkAllRead}) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: _bg2,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        CoetusSpace.screenH,
+        CoetusSpace.lg,
+        CoetusSpace.screenH,
+        CoetusSpace.xl,
+      ),
+      decoration: const BoxDecoration(
+        color: CoetusColors.navy,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(CoetusRadius.sheet),
+          bottomRight: Radius.circular(CoetusRadius.sheet),
+        ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.white54),
-            onPressed: () => context.go('/profile'),
+          Expanded(
+            child: Row(
+              children: [
+                Text(
+                  'Bildirimler',
+                  style: textTheme.headlineSmall
+                      ?.copyWith(color: CoetusColors.oat),
+                ),
+                if (unread > 0) ...[
+                  const SizedBox(width: CoetusSpace.sm),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: CoetusColors.oat.withValues(alpha: .16),
+                      borderRadius: BorderRadius.circular(CoetusRadius.chip),
+                    ),
+                    child: Text(
+                      '$unread yeni',
+                      style: textTheme.labelMedium?.copyWith(
+                        color: CoetusColors.oat,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.trending_up, color: Colors.white54),
-            onPressed: () => context.go('/matching'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications, color: _cyan),
-            onPressed: () {},
+          GestureDetector(
+            onTap: onMarkAllRead,
+            behavior: HitTestBehavior.opaque,
+            child: Opacity(
+              opacity: _markingAllRead ? .5 : 1,
+              child: Text(
+                'Tümünü okundu yap',
+                style: textTheme.labelMedium?.copyWith(
+                  color: CoetusColors.oat.withValues(
+                    alpha: onMarkAllRead == null ? .35 : .75,
+                  ),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildEmptyState({required bool hasAnyNotifications}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(CoetusSpace.xl),
+        child: hasAnyNotifications
+            ? const CoetusEmptyState(
+                icon: Icons.notifications_none,
+                title: 'Bu kategoride bildirim yok',
+                message:
+                    'Farklı bir filtre seçerek diğer bildirimlerine bakabilirsin.',
+              )
+            : const CoetusEmptyState(
+                icon: Icons.notifications_none,
+                title: 'Henüz bildirim yok',
+                message:
+                    'Teklifler, oturum güncellemeleri ve mesajların burada görünecek.',
+              ),
+      ),
+    );
+  }
+}
+
+/// Bildirimleri `createdAt` gününe göre gruplar (Bugün / Dün / eski
+/// tarihler). Saf bir yardımcı fonksiyondur — yalnızca bellekteki listeyi
+/// işler, ek bir stream/repository çağrısı yapmaz.
+List<NotificationDayGroup> groupNotificationsByDay(
+  List<AppNotification> items, {
+  DateTime? now,
+}) {
+  final today = now ?? DateTime.now();
+  final todayKey = DateTime(today.year, today.month, today.day);
+  final yesterdayKey = todayKey.subtract(const Duration(days: 1));
+
+  final buckets = <DateTime, List<AppNotification>>{};
+  final undated = <AppNotification>[];
+
+  for (final item in items) {
+    final createdAt = item.createdAt;
+    if (createdAt == null) {
+      undated.add(item);
+      continue;
+    }
+    final key = DateTime(createdAt.year, createdAt.month, createdAt.day);
+    buckets.putIfAbsent(key, () => <AppNotification>[]).add(item);
+  }
+
+  final sortedKeys = buckets.keys.toList()..sort((a, b) => b.compareTo(a));
+
+  final groups = <NotificationDayGroup>[
+    for (final key in sortedKeys)
+      NotificationDayGroup(
+        key == todayKey
+            ? 'BUGÜN'
+            : key == yesterdayKey
+                ? 'DÜN'
+                : _formatDayLabel(key),
+        buckets[key]!,
+      ),
+  ];
+
+  if (undated.isNotEmpty) {
+    groups.add(NotificationDayGroup('DİĞER', undated));
+  }
+
+  return groups;
+}
+
+String _formatDayLabel(DateTime date) {
+  const months = [
+    'OCA',
+    'ŞUB',
+    'MAR',
+    'NİS',
+    'MAY',
+    'HAZ',
+    'TEM',
+    'AĞU',
+    'EYL',
+    'EKİ',
+    'KAS',
+    'ARA',
+  ];
+  return '${date.day} ${months[date.month - 1]}';
+}
+
+/// Aynı güne ait bildirimleri tutan grup.
+class NotificationDayGroup {
+  const NotificationDayGroup(this.label, this.items);
+
+  final String label;
+  final List<AppNotification> items;
+}
+
+class _NotificationVisual {
+  const _NotificationVisual(this.icon, this.background, this.foreground);
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+}
+
+_NotificationVisual _visualFor(AppNotificationType type) {
+  switch (type) {
+    case AppNotificationType.offerReceived:
+    case AppNotificationType.offerAccepted:
+    case AppNotificationType.offerRejected:
+      return const _NotificationVisual(
+        Icons.swap_horiz,
+        CoetusColors.navyTint,
+        CoetusColors.navy,
+      );
+    case AppNotificationType.sessionStarted:
+      return const _NotificationVisual(
+        Icons.calendar_today_outlined,
+        CoetusColors.plateWarm,
+        CoetusColors.navy,
+      );
+    case AppNotificationType.newMessage:
+      return const _NotificationVisual(
+        Icons.chat_bubble_outline,
+        CoetusColors.navyTint,
+        CoetusColors.navy,
+      );
   }
 }
 
@@ -292,55 +431,84 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final visual = _visualFor(item.type);
+
     return Material(
       color: Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(CoetusSpace.lg),
           decoration: BoxDecoration(
             color: item.read
-                ? Colors.white.withOpacity(0.04)
-                : Colors.white.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ? CoetusColors.card.withValues(alpha: .7)
+                : CoetusColors.card,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: CoetusShadow.subtle,
           ),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.title.isEmpty ? _fallbackTitle(item.type) : item.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: visual.background,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(visual.icon, size: 19, color: visual.foreground),
+              ),
+              const SizedBox(width: CoetusSpace.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title.isEmpty
+                                ? _fallbackTitle(item.type)
+                                : item.title,
+                            style: textTheme.titleSmall,
+                          ),
+                        ),
+                        if (!item.read) ...[
+                          const SizedBox(width: CoetusSpace.sm),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.only(top: 4),
+                            decoration: const BoxDecoration(
+                              color: CoetusColors.coral,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.message,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _formatTime(item.createdAt),
+                      style: textTheme.labelSmall?.copyWith(
+                        color: CoetusColors.hint,
+                        letterSpacing: 0.2,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  if (!item.read)
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF06B6D4),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.message,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _formatDate(item.createdAt),
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ],
+                ),
               ),
             ],
           ),
@@ -358,14 +526,16 @@ class _NotificationCard extends StatelessWidget {
       case AppNotificationType.offerRejected:
         return 'Teklif reddedildi';
       case AppNotificationType.sessionStarted:
-        return 'Session basladi';
+        return 'Oturum başladı';
       case AppNotificationType.newMessage:
         return 'Yeni mesaj';
     }
   }
 
-  String _formatDate(DateTime? date) {
+  String _formatTime(DateTime? date) {
     if (date == null) return '';
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 }

@@ -1,20 +1,11 @@
+import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/credit/escrow_status.dart';
+import 'package:coetus/widgets/coetus_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class SecureChatEscrowPage extends StatelessWidget {
   const SecureChatEscrowPage({super.key});
-
-  static const Color _bg = Color(0xFF0F172A);
-  static const Color _panel = Color(0xFF111827);
-  static const Color _surface = Color(0xFF172033);
-  static const Color _border = Color(0xFF243044);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _green = Color(0xFF4ADE80);
-  static const Color _amber = Color(0xFFF59E0B);
-  static const Color _red = Color(0xFFF87171);
-  static const Color _purple = Color(0xFF7C3AED);
-  static const Color _muted = Color(0xFF94A3B8);
 
   static const List<_EscrowPreview> _mockEscrows = [
     _EscrowPreview(
@@ -49,62 +40,48 @@ class SecureChatEscrowPage extends StatelessWidget {
     final meta = _EscrowStatusMeta.fromStatus(activeEscrow.status);
 
     return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
+      backgroundColor: CoetusColors.oat,
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: SafeArea(
+              top: false,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+                padding: const EdgeInsets.fromLTRB(
+                  CoetusSpace.screenH,
+                  18,
+                  CoetusSpace.screenH,
+                  28,
+                ),
                 children: [
-                  _buildSummary(activeEscrow, meta),
+                  _buildSummary(context, activeEscrow, meta),
                   const SizedBox(height: 16),
-                  _buildTimeline(activeEscrow.status),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 18,
+                      horizontal: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: CoetusColors.card,
+                      borderRadius: BorderRadius.circular(CoetusRadius.card),
+                      boxShadow: CoetusShadow.card,
+                    ),
+                    child: EscrowSteps(
+                      labels: const ['Teklif', 'Kilit', 'Oturum', 'Çözüm'],
+                      currentIndex: _activeTimelineIndex(activeEscrow.status),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _buildActionPanel(activeEscrow.status),
                   const SizedBox(height: 22),
-                  const Text(
-                    'Escrow kayitlari',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Text(
+                    'Escrow kayıtları',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
-                  ..._mockEscrows.map(_buildEscrowTile),
+                  ..._mockEscrows.map((escrow) => _buildEscrowTile(context, escrow)),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: _panel,
-        border: Border(bottom: BorderSide(color: _border)),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => context.go('/chat'),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-          const Icon(Icons.lock_outline, color: _cyan),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Secure Escrow',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -113,13 +90,52 @@ class SecureChatEscrowPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSummary(_EscrowPreview escrow, _EscrowStatusMeta meta) {
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      color: CoetusColors.navy,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 16, 14),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => context.go('/chat'),
+                icon: const Icon(
+                  Icons.chevron_left,
+                  color: CoetusColors.oat,
+                  size: 26,
+                ),
+              ),
+              const Icon(Icons.lock_outline, color: CoetusColors.oat),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Güvenli Escrow',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: CoetusColors.oat),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummary(
+    BuildContext context,
+    _EscrowPreview escrow,
+    _EscrowStatusMeta meta,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _panel,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _border),
+        color: CoetusColors.card,
+        borderRadius: BorderRadius.circular(CoetusRadius.card),
+        boxShadow: CoetusShadow.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,23 +156,9 @@ class SecureChatEscrowPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      meta.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    Text(meta.title, style: textTheme.titleLarge),
                     const SizedBox(height: 4),
-                    Text(
-                      meta.description,
-                      style: const TextStyle(
-                        color: _muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
+                    Text(meta.description, style: textTheme.bodySmall),
                   ],
                 ),
               ),
@@ -166,7 +168,7 @@ class SecureChatEscrowPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _surface,
+              color: CoetusColors.plateWarm,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
@@ -175,117 +177,17 @@ class SecureChatEscrowPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        escrow.skillName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      Text(escrow.skillName, style: textTheme.titleMedium),
                       const SizedBox(height: 5),
-                      Text(
-                        escrow.partnerName,
-                        style: const TextStyle(color: _muted, fontSize: 13),
-                      ),
+                      Text(escrow.partnerName, style: textTheme.bodySmall),
                     ],
                   ),
                 ),
-                Text(
-                  '${escrow.credits} HC',
-                  style: const TextStyle(
-                    color: _cyan,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                CreditBadge(amount: escrow.credits),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTimeline(EscrowStatus status) {
-    final steps = [
-      _TimelineStep('Teklif', 'Taraflar skill ve kredi uzerinde anlasir.'),
-      _TimelineStep('Kilit', 'Kredi escrow bakiyesinde bekler.'),
-      _TimelineStep('Oturum', 'Session tamamlaninca onay beklenir.'),
-      _TimelineStep('Cozum', 'Kredi aktarilir veya iade edilir.'),
-    ];
-    final activeIndex = _activeTimelineIndex(status);
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _panel,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
-      ),
-      child: Column(
-        children: List.generate(steps.length, (index) {
-          final step = steps[index];
-          final isDone = index < activeIndex;
-          final isActive = index == activeIndex;
-          final color = isDone || isActive ? _cyan : _muted;
-
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: index == steps.length - 1 ? 0 : 16,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.16),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: color),
-                      ),
-                      child: Icon(
-                        isDone ? Icons.check : Icons.circle,
-                        color: color,
-                        size: isDone ? 15 : 8,
-                      ),
-                    ),
-                    if (index != steps.length - 1)
-                      Container(width: 1, height: 34, color: _border),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        step.title,
-                        style: TextStyle(
-                          color: isActive ? Colors.white : color,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        step.description,
-                        style: const TextStyle(
-                          color: _muted,
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
       ),
     );
   }
@@ -301,15 +203,16 @@ class SecureChatEscrowPage extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: canRelease ? () {} : null,
             icon: const Icon(Icons.verified_outlined),
-            label: const Text('Tamamlandi'),
+            label: const Text('Tamamlandı'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: const Color(0xFF052E16),
-              disabledBackgroundColor: _surface,
-              disabledForegroundColor: _muted,
+              backgroundColor: CoetusColors.success,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: CoetusColors.card,
+              disabledForegroundColor: CoetusColors.hint,
+              elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(CoetusRadius.button),
               ),
             ),
           ),
@@ -319,13 +222,17 @@ class SecureChatEscrowPage extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: canRefund ? () {} : null,
             icon: const Icon(Icons.undo_outlined),
-            label: const Text('Iade'),
+            label: const Text('İade'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: canRefund ? _amber : _muted,
-              side: BorderSide(color: canRefund ? _amber : _border),
+              foregroundColor: canRefund
+                  ? CoetusColors.amberDeep
+                  : CoetusColors.hint,
+              side: BorderSide(
+                color: canRefund ? CoetusColors.amberDeep : CoetusColors.border,
+              ),
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(CoetusRadius.button),
               ),
             ),
           ),
@@ -334,16 +241,17 @@ class SecureChatEscrowPage extends StatelessWidget {
     );
   }
 
-  Widget _buildEscrowTile(_EscrowPreview escrow) {
+  Widget _buildEscrowTile(BuildContext context, _EscrowPreview escrow) {
     final meta = _EscrowStatusMeta.fromStatus(escrow.status);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _panel,
+        color: CoetusColors.card,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border),
+        boxShadow: CoetusShadow.subtle,
       ),
       child: Row(
         children: [
@@ -361,18 +269,11 @@ class SecureChatEscrowPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  escrow.skillName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                Text(escrow.skillName, style: textTheme.titleSmall),
                 const SizedBox(height: 4),
                 Text(
-                  '${escrow.partnerName} - ${escrow.updatedLabel}',
-                  style: const TextStyle(color: _muted, fontSize: 12),
+                  '${escrow.partnerName} · ${escrow.updatedLabel}',
+                  style: textTheme.bodySmall,
                 ),
               ],
             ),
@@ -380,14 +281,8 @@ class SecureChatEscrowPage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '${escrow.credits} HC',
-                style: const TextStyle(
-                  color: _cyan,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
+              CreditBadge(amount: escrow.credits, dense: true),
+              const SizedBox(height: 6),
               Text(
                 meta.shortLabel,
                 style: TextStyle(
@@ -403,7 +298,7 @@ class SecureChatEscrowPage extends StatelessWidget {
     );
   }
 
-  int _activeTimelineIndex(EscrowStatus status) {
+  static int _activeTimelineIndex(EscrowStatus status) {
     switch (status) {
       case EscrowStatus.pending:
         return 0;
@@ -456,51 +351,44 @@ class _EscrowStatusMeta {
       case EscrowStatus.pending:
         return const _EscrowStatusMeta(
           title: 'Onay bekliyor',
-          shortLabel: 'Pending',
-          description: 'Teklif olustu, kredi henuz kilitli degil.',
+          shortLabel: 'Bekliyor',
+          description: 'Teklif oluştu, kredi henüz kilitli değil.',
           icon: Icons.hourglass_empty,
-          color: SecureChatEscrowPage._amber,
+          color: CoetusColors.amberDeep,
         );
       case EscrowStatus.locked:
         return const _EscrowStatusMeta(
-          title: 'Kredi guvende',
-          shortLabel: 'Locked',
+          title: 'Kredi güvende',
+          shortLabel: 'Kilitli',
           description:
-              'Kredi escrow bakiyesinde kilitli, oturum onayi bekliyor.',
+              'Kredi escrow bakiyesinde kilitli, oturum onayı bekliyor.',
           icon: Icons.lock_outline,
-          color: SecureChatEscrowPage._cyan,
+          color: CoetusColors.amberDeep,
         );
       case EscrowStatus.completed:
         return const _EscrowStatusMeta(
-          title: 'Tamamlandi',
-          shortLabel: 'Done',
-          description: 'Oturum onaylandi ve kredi aktarimi tamamlandi.',
+          title: 'Tamamlandı',
+          shortLabel: 'Tamamlandı',
+          description: 'Oturum onaylandı ve kredi aktarımı tamamlandı.',
           icon: Icons.verified_outlined,
-          color: SecureChatEscrowPage._green,
+          color: CoetusColors.successDeep,
         );
       case EscrowStatus.refunded:
         return const _EscrowStatusMeta(
-          title: 'Iade edildi',
-          shortLabel: 'Refunded',
-          description: 'Kredi ogrenci bakiyesine geri donduruldu.',
+          title: 'İade edildi',
+          shortLabel: 'İade edildi',
+          description: 'Kredi öğrenci bakiyesine geri döndürüldü.',
           icon: Icons.undo_outlined,
-          color: SecureChatEscrowPage._purple,
+          color: CoetusColors.danger,
         );
       case EscrowStatus.cancelled:
         return const _EscrowStatusMeta(
-          title: 'Iptal edildi',
-          shortLabel: 'Cancelled',
-          description: 'Escrow akisi iptal edildi.',
+          title: 'İptal edildi',
+          shortLabel: 'İptal edildi',
+          description: 'Escrow akışı iptal edildi.',
           icon: Icons.cancel_outlined,
-          color: SecureChatEscrowPage._red,
+          color: CoetusColors.danger,
         );
     }
   }
-}
-
-class _TimelineStep {
-  final String title;
-  final String description;
-
-  const _TimelineStep(this.title, this.description);
 }

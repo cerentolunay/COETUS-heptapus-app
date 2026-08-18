@@ -6,6 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/coetus_tokens.dart';
+import '../../../../widgets/coetus_bottom_nav.dart';
+import '../../../../widgets/coetus_widgets.dart';
+
 class ExchangePage extends StatefulWidget {
   const ExchangePage({super.key, this.sessionId});
 
@@ -19,12 +23,9 @@ class _ExchangePageState extends State<ExchangePage> {
   late final ExchangeRepository _repository =
       ExchangeRepositoryFactory.create();
 
-  static const Color _bg = Color(0xFF0A0F1C);
-  static const Color _bg2 = Color(0xFF0F172A);
-  static const Color _bg3 = Color(0xFF1E1B4B);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _violet = Color(0xFF7C3AED);
-  static const Color _textMuted = Color(0xFF94A3B8);
+  static const List<String> _tabs = ['Aktif', 'Bekleyen', 'Tamamlanan'];
+
+  int _selectedTab = 0;
 
   String? get _userId => FirebaseAuth.instance.currentUser?.uid;
 
@@ -50,6 +51,15 @@ class _ExchangePageState extends State<ExchangePage> {
     }
   }
 
+  /// `ExchangeRepository` şu an bir "oturumu tamamlandı işaretle" metodu
+  /// sunmuyor (sadece streamUserOffers/streamUserSessions/acceptOffer/
+  /// rejectOffer/cancelOffer var). Repository'ye yeni bir yazma metodu
+  /// eklemek bu görevin kapsamı dışında olduğundan bu buton şimdilik
+  /// bilgilendirici bir placeholder'dır.
+  void _markSessionCompleted(ExchangeSession session) {
+    _showSnack('Oturum tamamlama onayı yakında aktif olacak.');
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -62,25 +72,8 @@ class _ExchangePageState extends State<ExchangePage> {
     final userId = _userId;
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bg, _bg2, _bg3],
-          ),
-        ),
-        child: SafeArea(
-          child: userId == null
-              ? _buildSignedOutState(context)
-              : Column(
-                  children: [
-                    Expanded(child: _buildContent(userId)),
-                    _buildBottomNavigation(context),
-                  ],
-                ),
-        ),
-      ),
+      backgroundColor: CoetusColors.oat,
+      body: userId == null ? _buildSignedOutState() : _buildContent(userId),
     );
   }
 
@@ -91,77 +84,98 @@ class _ExchangePageState extends State<ExchangePage> {
         return StreamBuilder<List<ExchangeSession>>(
           stream: _repository.streamUserSessions(userId),
           builder: (context, sessionSnapshot) {
-            if (offerSnapshot.hasError || sessionSnapshot.hasError) {
-              return _buildState(
-                icon: Icons.cloud_off_outlined,
-                title: 'Exchange yuklenemedi',
-                subtitle: '${offerSnapshot.error ?? sessionSnapshot.error}',
-              );
-            }
-
-            if (offerSnapshot.connectionState == ConnectionState.waiting ||
-                sessionSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: _cyan),
-              );
-            }
+            final hasError =
+                offerSnapshot.hasError || sessionSnapshot.hasError;
+            final isLoading = !hasError &&
+                (offerSnapshot.connectionState == ConnectionState.waiting ||
+                    sessionSnapshot.connectionState ==
+                        ConnectionState.waiting);
 
             final offers = offerSnapshot.data ?? const <MatchOffer>[];
-            final sessions = sessionSnapshot.data ?? const <ExchangeSession>[];
+            final sessions =
+                sessionSnapshot.data ?? const <ExchangeSession>[];
             final pendingOffers = offers
                 .where((offer) => offer.status == MatchOfferStatus.pending)
                 .toList();
             final visibleSessions = widget.sessionId == null
                 ? sessions
                 : sessions
-                      .where((session) => session.id == widget.sessionId)
-                      .toList();
+                    .where((session) => session.id == widget.sessionId)
+                    .toList();
 
-            if (pendingOffers.isEmpty && visibleSessions.isEmpty) {
-              return _buildState(
-                icon: Icons.swap_horiz,
-                title: 'Henuz exchange yok',
-                subtitle: 'Teklifler ve aktif sessionlar burada gorunecek.',
+            // Kredi özeti — orijinal hesaplama mantığı korunuyor: aktif ya da
+            // planlı oturumların kredi toplamı ve tamamlanan oturum sayısı.
+            final lockedCredits = visibleSessions
+                .where(
+                  (session) =>
+                      session.status == ExchangeSessionStatus.active ||
+                      session.status == ExchangeSessionStatus.scheduled,
+                )
+                .fold<int>(0, (total, session) => total + session.credits);
+            final completedCount = visibleSessions
+                .where(
+                  (session) =>
+                      session.status == ExchangeSessionStatus.completed,
+                )
+                .length;
+
+            final activeSessions = visibleSessions
+                .where(
+                  (session) =>
+                      session.status == ExchangeSessionStatus.active ||
+                      session.status == ExchangeSessionStatus.scheduled,
+                )
+                .toList();
+            final completedSessions = visibleSessions
+                .where(
+                  (session) =>
+                      session.status == ExchangeSessionStatus.completed,
+                )
+                .toList();
+
+            Widget tabBody;
+            if (hasError) {
+              tabBody = _buildEmpty(
+                icon: Icons.cloud_off_outlined,
+                title: 'Takaslar yüklenemedi',
+                message: '${offerSnapshot.error ?? sessionSnapshot.error}',
+              );
+            } else if (isLoading) {
+              tabBody = const Center(
+                child: CircularProgressIndicator(color: CoetusColors.navy),
+              );
+            } else {
+              tabBody = _buildTabBody(
+                userId: userId,
+                pendingOffers: pendingOffers,
+                activeSessions: activeSessions,
+                completedSessions: completedSessions,
               );
             }
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(context),
-                  const SizedBox(height: 18),
-                  _buildCreditSummary(visibleSessions),
-                  if (pendingOffers.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    _buildSectionHeader('Bekleyen Teklifler', Icons.inbox),
-                    const SizedBox(height: 12),
-                    ...pendingOffers.map(
-                      (offer) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _OfferCard(
-                          offer: offer,
-                          isReceiver: offer.receiverId == userId,
-                          onAccept: () => _acceptOffer(offer),
-                          onReject: () => _rejectOffer(offer),
+            return Column(
+              children: [
+                _buildHeader(context, lockedCredits, completedCount),
+                Expanded(
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: CoetusSpace.lg),
+                        CategoryTabs(
+                          items: _tabs,
+                          selected: _selectedTab,
+                          onChanged: (index) =>
+                              setState(() => _selectedTab = index),
                         ),
-                      ),
+                        const SizedBox(height: CoetusSpace.md),
+                        Expanded(child: tabBody),
+                        const CoetusBottomNav(currentIndex: 2),
+                      ],
                     ),
-                  ],
-                  if (visibleSessions.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    _buildSectionHeader('Sessionlar', Icons.event_available),
-                    const SizedBox(height: 12),
-                    ...visibleSessions.map(
-                      (session) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _SessionCard(session: session),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+              ],
             );
           },
         );
@@ -169,164 +183,264 @@ class _ExchangePageState extends State<ExchangePage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(
+  Widget _buildHeader(
+    BuildContext context,
+    int lockedCredits,
+    int completedCount,
+  ) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: CoetusColors.navy,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(CoetusRadius.sheet),
+          bottomRight: Radius.circular(CoetusRadius.sheet),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            CoetusSpace.md,
+            CoetusSpace.screenH,
+            CoetusSpace.xl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Exchange Hub',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Takaslarım',
+                      style:
+                          t.headlineSmall?.copyWith(color: CoetusColors.oat),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedTab = 2),
+                    child: Text(
+                      'Geçmiş',
+                      style: t.labelLarge?.copyWith(
+                        color: CoetusColors.oat.withValues(alpha: .85),
+                        decoration: TextDecoration.underline,
+                        decorationColor:
+                            CoetusColors.oat.withValues(alpha: .5),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 4),
-              Text(
-                'Tekliflerini ve sessionlarini yonet',
-                style: TextStyle(color: _textMuted, fontSize: 13),
+              const SizedBox(height: CoetusSpace.lg),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CoetusSpace.lg,
+                  vertical: CoetusSpace.md,
+                ),
+                decoration: BoxDecoration(
+                  color: CoetusColors.oat.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(CoetusRadius.card),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _HeaderStat(
+                        label: 'Kilitli',
+                        value: '$lockedCredits HC',
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 34,
+                      color: CoetusColors.oat.withValues(alpha: .2),
+                    ),
+                    const SizedBox(width: CoetusSpace.lg),
+                    Expanded(
+                      child: _HeaderStat(
+                        label: 'Tamamlanan',
+                        value: '$completedCount',
+                        alignEnd: true,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        IconButton(
-          onPressed: () => context.go('/notifications'),
-          icon: const Icon(Icons.notifications_none, color: _cyan),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCreditSummary(List<ExchangeSession> sessions) {
-    final lockedCredits = sessions
-        .where(
-          (session) =>
-              session.status == ExchangeSessionStatus.active ||
-              session.status == ExchangeSessionStatus.scheduled,
-        )
-        .fold<int>(0, (total, session) => total + session.credits);
-    final completed = sessions
-        .where((session) => session.status == ExchangeSessionStatus.completed)
-        .length;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_violet, _cyan]),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: _violet.withValues(alpha: 0.28),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.savings_outlined, color: Colors.white, size: 32),
-          const SizedBox(width: 14),
-          Expanded(
-            child: _MiniStat(label: 'Kilitli', value: '$lockedCredits HC'),
-          ),
-          _MiniStat(label: 'Tamamlanan', value: '$completed'),
-        ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: _cyan, size: 20),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+  Widget _buildTabBody({
+    required String userId,
+    required List<MatchOffer> pendingOffers,
+    required List<ExchangeSession> activeSessions,
+    required List<ExchangeSession> completedSessions,
+  }) {
+    switch (_selectedTab) {
+      case 1:
+        if (pendingOffers.isEmpty) {
+          return _buildEmpty(
+            icon: Icons.inbox_outlined,
+            title: 'Bekleyen teklif yok',
+            message:
+                'Gönderdiğin veya aldığın teklifler burada listelenecek.',
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            0,
+            CoetusSpace.screenH,
+            CoetusSpace.xl,
           ),
-        ),
-      ],
-    );
+          itemCount: pendingOffers.length,
+          separatorBuilder: (_, _) => const SizedBox(height: CoetusSpace.md),
+          itemBuilder: (context, index) {
+            final offer = pendingOffers[index];
+            return _OfferCard(
+              offer: offer,
+              isReceiver: offer.receiverId == userId,
+              onAccept: () => _acceptOffer(offer),
+              onReject: () => _rejectOffer(offer),
+            );
+          },
+        );
+      case 2:
+        if (completedSessions.isEmpty) {
+          return _buildEmpty(
+            icon: Icons.task_alt_outlined,
+            title: 'Henüz tamamlanan takasın yok',
+            message: 'Tamamlanan oturumlar burada birikecek.',
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            0,
+            CoetusSpace.screenH,
+            CoetusSpace.xl,
+          ),
+          itemCount: completedSessions.length,
+          separatorBuilder: (_, _) => const SizedBox(height: CoetusSpace.md),
+          itemBuilder: (context, index) => _SessionCard(
+            session: completedSessions[index],
+            onMarkCompleted: _markSessionCompleted,
+          ),
+        );
+      default:
+        if (activeSessions.isEmpty) {
+          return _buildEmpty(
+            icon: Icons.swap_horiz,
+            title: 'Henüz aktif takasın yok',
+            message:
+                'Kabul edilen teklifler burada oturum halinde görünecek.',
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            0,
+            CoetusSpace.screenH,
+            CoetusSpace.xl,
+          ),
+          itemCount: activeSessions.length,
+          separatorBuilder: (_, _) => const SizedBox(height: CoetusSpace.md),
+          itemBuilder: (context, index) => _SessionCard(
+            session: activeSessions[index],
+            onMarkCompleted: _markSessionCompleted,
+          ),
+        );
+    }
   }
 
-  Widget _buildState({
+  Widget _buildEmpty({
     required IconData icon,
     required String title,
-    required String subtitle,
+    required String message,
   }) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: _cyan, size: 44),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: _textMuted, height: 1.5),
-            ),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: CoetusSpace.screenH),
+        child: CoetusEmptyState(icon: icon, title: title, message: message),
       ),
     );
   }
 
-  Widget _buildSignedOutState(BuildContext context) {
-    return _buildState(
-      icon: Icons.lock_outline,
-      title: 'Giris gerekli',
-      subtitle: 'Exchange bilgilerini gormek icin giris yapmalisin.',
-    );
-  }
-
-  Widget _buildBottomNavigation(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _bg2.withValues(alpha: 0.86),
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+  Widget _buildSignedOutState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(CoetusSpace.xl),
+        child: CoetusEmptyState(
+          icon: Icons.lock_outline,
+          title: 'Giriş gerekli',
+          message: 'Takaslarını görmek için giriş yapmalısın.',
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _BottomNavItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            onTap: () => context.go('/profile'),
+    );
+  }
+}
+
+/// Escrow zaman çizelgesindeki (Anlaşma → Kredi kilitli → Oturum → Aktarım)
+/// mevcut adımı hesaplar — `secure_chat_escrow_page.dart`'taki
+/// `EscrowStatus` → timeline index eşlemesiyle aynı yaklaşım.
+int _sessionTimelineIndex(ExchangeSessionStatus status) {
+  switch (status) {
+    case ExchangeSessionStatus.requested:
+      return 0;
+    case ExchangeSessionStatus.active:
+      return 1;
+    case ExchangeSessionStatus.scheduled:
+      return 2;
+    case ExchangeSessionStatus.completed:
+      return 3;
+    case ExchangeSessionStatus.cancelled:
+      // İptal edilen oturumlar hiçbir sekmede gösterilmiyor; yine de
+      // eşlemeyi tam tutmak için en erken adıma sabitleniyor.
+      return 0;
+  }
+}
+
+String _shortId(String id) => id.length <= 8 ? id : '${id.substring(0, 8)}…';
+
+String _displayNameOrFallback(String name, String userId) {
+  if (name.trim().isNotEmpty) return name.trim();
+  return _shortId(userId);
+}
+
+class _HeaderStat extends StatelessWidget {
+  const _HeaderStat({
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: t.labelSmall?.copyWith(
+            color: CoetusColors.oat.withValues(alpha: .75),
           ),
-          _BottomNavItem(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            onTap: () => context.go('/chat'),
-          ),
-          _BottomNavItem(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'Exchange',
-            isActive: true,
-            onTap: () {},
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: t.headlineMedium?.copyWith(color: CoetusColors.oat),
+        ),
+      ],
     );
   }
 }
@@ -346,39 +460,68 @@ class _OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Panel(
-      borderColor: _ExchangeColors.amber.withValues(alpha: 0.32),
+    final t = Theme.of(context).textTheme;
+    final otherName = isReceiver
+        ? _displayNameOrFallback(offer.requesterName, offer.requesterId)
+        : _displayNameOrFallback(offer.receiverName, offer.receiverId);
+
+    return Container(
+      padding: const EdgeInsets.all(CoetusSpace.lg),
+      decoration: BoxDecoration(
+        color: CoetusColors.card,
+        borderRadius: BorderRadius.circular(CoetusRadius.card),
+        boxShadow: CoetusShadow.card,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _TitleRow(
-            icon: Icons.handshake_outlined,
-            color: _ExchangeColors.amber,
-            title: offer.skill.isEmpty ? 'Skill teklifi' : offer.skill,
-            status: 'Bekliyor',
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: CoetusColors.amberSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.handshake_outlined,
+                  color: CoetusColors.amberDeep,
+                ),
+              ),
+              const SizedBox(width: CoetusSpace.md),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    offer.skill.isEmpty ? 'Skill teklifi' : offer.skill,
+                    style: t.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(width: CoetusSpace.sm),
+              CoetusChip('${offer.credits} HC', tone: CoetusChipTone.credit),
+            ],
           ),
-          const SizedBox(height: 12),
-          _InfoRow(label: 'Kredi', value: '${offer.credits} HC'),
-          _InfoRow(
-            label: isReceiver ? 'Gonderen' : 'Alici',
-            value: isReceiver
-                ? _displayNameOrFallback(offer.requesterName, offer.requesterId)
-                : _displayNameOrFallback(offer.receiverName, offer.receiverId),
+          const SizedBox(height: CoetusSpace.md),
+          Text(
+            '$otherName · teklif gönderildi, yanıt bekleniyor',
+            style: t.bodySmall,
           ),
           if (isReceiver) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: CoetusSpace.md),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: onReject,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _ExchangeColors.red,
-                    ),
                     child: const Text('Reddet'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: CoetusSpace.md),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: onAccept,
@@ -392,275 +535,103 @@ class _OfferCard extends StatelessWidget {
       ),
     );
   }
-
-  String _displayNameOrFallback(String name, String userId) {
-    if (name.trim().isNotEmpty) return name.trim();
-    if (userId.length <= 8) return userId;
-    return '${userId.substring(0, 8)}...';
-  }
 }
 
 class _SessionCard extends StatelessWidget {
-  const _SessionCard({required this.session});
+  const _SessionCard({required this.session, required this.onMarkCompleted});
 
   final ExchangeSession session;
+  final ValueChanged<ExchangeSession> onMarkCompleted;
 
   @override
   Widget build(BuildContext context) {
-    final visual = _SessionVisual.fromStatus(session.status);
-    return _Panel(
-      borderColor: visual.color.withValues(alpha: 0.28),
+    final t = Theme.of(context).textTheme;
+    final timelineIndex = _sessionTimelineIndex(session.status);
+    final showActions = session.status == ExchangeSessionStatus.active ||
+        session.status == ExchangeSessionStatus.scheduled;
+
+    return Container(
+      padding: const EdgeInsets.all(CoetusSpace.lg),
+      decoration: BoxDecoration(
+        color: CoetusColors.card,
+        borderRadius: BorderRadius.circular(CoetusRadius.card),
+        boxShadow: CoetusShadow.card,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _TitleRow(
-            icon: visual.icon,
-            color: visual.color,
-            title: session.skill.isEmpty ? 'Exchange session' : session.skill,
-            status: visual.label,
-          ),
-          const SizedBox(height: 12),
-          _InfoRow(label: 'Kredi', value: '${session.credits} HC'),
-          _InfoRow(label: 'Ogretici', value: session.teacherId),
-          _InfoRow(label: 'Ogrenci', value: session.studentId),
-          const SizedBox(height: 14),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.go('/exchange-detail/${session.id}'),
-                  child: const Text('Detay'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.skill.isEmpty
+                          ? 'Takas oturumu'
+                          : session.skill,
+                      style: t.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_shortId(session.teacherId)} ↔ '
+                      '${_shortId(session.studentId)} · '
+                      'Adım ${timelineIndex + 1}/4',
+                      style: t.bodySmall,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => context.go('/chat-detail/${session.id}'),
-                  child: const Text('Chat'),
-                ),
+              const SizedBox(width: CoetusSpace.sm),
+              CoetusChip(
+                '${session.credits} HC',
+                tone: CoetusChipTone.credit,
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Panel extends StatelessWidget {
-  const _Panel({required this.child, required this.borderColor});
-
-  final Widget child;
-  final Color borderColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _ExchangeColors.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: borderColor),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _TitleRow extends StatelessWidget {
-  const _TitleRow({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.status,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(height: CoetusSpace.sm),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () =>
+                    context.go('/exchange-detail/${session.id}'),
+                child: const Text('Detay'),
+              ),
+              TextButton(
+                onPressed: () => context.go('/chat-detail/${session.id}'),
+                child: const Text('Sohbet'),
+              ),
+            ],
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(999),
+          const SizedBox(height: CoetusSpace.sm),
+          EscrowSteps(
+            labels: const ['Anlaşma', 'Kredi kilitli', 'Oturum', 'Aktarım'],
+            currentIndex: timelineIndex,
           ),
-          child: Text(
-            status,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(color: _ExchangeColors.textMuted)),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value.isEmpty ? '-' : value,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+          if (showActions) ...[
+            const SizedBox(height: CoetusSpace.lg),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => onMarkCompleted(session),
+                child: const Text('Oturumu tamamlandı işaretle'),
               ),
             ),
-          ),
+            const SizedBox(height: CoetusSpace.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {},
+                child: const Text('Sorun bildir'),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Color(0xD9FFFFFF))),
-      ],
-    );
-  }
-}
-
-class _BottomNavItem extends StatelessWidget {
-  const _BottomNavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isActive = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? _ExchangeColors.cyan : Colors.white54;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: color, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SessionVisual {
-  const _SessionVisual({
-    required this.icon,
-    required this.color,
-    required this.label,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String label;
-
-  factory _SessionVisual.fromStatus(ExchangeSessionStatus status) {
-    switch (status) {
-      case ExchangeSessionStatus.requested:
-        return const _SessionVisual(
-          icon: Icons.hourglass_top,
-          color: _ExchangeColors.amber,
-          label: 'Bekliyor',
-        );
-      case ExchangeSessionStatus.active:
-        return const _SessionVisual(
-          icon: Icons.play_circle_outline,
-          color: _ExchangeColors.cyan,
-          label: 'Aktif',
-        );
-      case ExchangeSessionStatus.scheduled:
-        return const _SessionVisual(
-          icon: Icons.event_available_outlined,
-          color: _ExchangeColors.violet,
-          label: 'Planlandi',
-        );
-      case ExchangeSessionStatus.completed:
-        return const _SessionVisual(
-          icon: Icons.check_circle_outline,
-          color: _ExchangeColors.green,
-          label: 'Tamamlandi',
-        );
-      case ExchangeSessionStatus.cancelled:
-        return const _SessionVisual(
-          icon: Icons.cancel_outlined,
-          color: _ExchangeColors.red,
-          label: 'Iptal edildi',
-        );
-    }
-  }
-}
-
-class _ExchangeColors {
-  static const Color card = Color(0x14FFFFFF);
-  static const Color cyan = Color(0xFF06B6D4);
-  static const Color violet = Color(0xFF7C3AED);
-  static const Color green = Color(0xFF4ADE80);
-  static const Color amber = Color(0xFFF59E0B);
-  static const Color red = Color(0xFFF87171);
-  static const Color textMuted = Color(0xFF94A3B8);
 }

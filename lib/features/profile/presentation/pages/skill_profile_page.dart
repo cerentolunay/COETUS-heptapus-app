@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/coetus_tokens.dart';
+import '../../../../widgets/coetus_bottom_nav.dart';
+import '../../../../widgets/coetus_widgets.dart';
 import '../../../auth/domain/models/app_user.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/data/repositories/auth_repository_factory.dart';
@@ -41,17 +44,16 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     SkillModel(id: '3', name: 'Piano', level: 1),
   ];
 
+  List<String> _availabilitySlots = const [];
+
   bool _isLoadingProfile = true;
   bool _isSigningOut = false;
 
-  static const Color _bg = Color(0xFF0A0A0F);
+  // Bu renkler yalnızca aşağıdaki, dokunulmaması istenen dialog metodları
+  // tarafından kullanılıyor.
   static const Color _card = Color(0xFF1A1A2E);
-  static const Color _card2 = Color(0xFF16162A);
-  static const Color _border = Color(0xFF2A2A3E);
   static const Color _indigo = Color(0xFF6366F1);
   static const Color _violet = Color(0xFF8B5CF6);
-  static const Color _indigoText = Color(0xFF818CF8);
-  static const Color _violetText = Color(0xFFC4B5FD);
 
   @override
   void initState() {
@@ -74,6 +76,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     _user = profile.user;
     _skills = profile.teachSkills;
     _learningGoals = profile.learnSkills;
+    _availabilitySlots = profile.availabilitySlots;
   }
 
   String _skillAvatarText(String name) {
@@ -462,176 +465,258 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   Widget build(BuildContext context) {
     if (_isLoadingProfile) {
       return const Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: CoetusColors.oat,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    final t = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
-                    _buildProfileCard(),
-                    const SizedBox(height: 16),
-                    _buildLogoutButton(),
-                    const SizedBox(height: 28),
-                    _buildSkillsSection(),
-                    const SizedBox(height: 28),
-                    _buildLearningGoalsSection(),
-                  ],
-                ),
-              ),
-            ),
-            _buildBottomNavigation(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        const Expanded(
-          child: Text(
-            'Your Profile',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.06),
-                border: Border.all(color: _border),
-              ),
-              child: IconButton(
-                onPressed: () => context.go('/notifications'),
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: _indigoText,
-                  size: 20,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [_indigo, _violet]),
-              ),
-              child: IconButton(
-                onPressed: _showEditProfileDialog,
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_card, _card2],
-        ),
-        border: Border.all(color: _border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: CoetusColors.oat,
+      body: Column(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [_indigo, _violet]),
-            ),
-            child: const Icon(Icons.person, color: Colors.white, size: 40),
-          ),
-          const SizedBox(width: 16),
+          _buildHeader(t),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _user.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _user.email,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.55),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _user.bio,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.70),
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _InfoChip(
-                      text: '${_skills.length} skills',
-                      background: _indigo.withOpacity(0.20),
-                      textColor: _indigoText,
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        CoetusSpace.screenH,
+                        CoetusSpace.xl,
+                        CoetusSpace.screenH,
+                        CoetusSpace.lg,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSkillsSection(t),
+                          const SizedBox(height: CoetusSpace.xxl),
+                          _buildLearningGoalsSection(t),
+                          if (_availabilitySlots.isNotEmpty) ...[
+                            const SizedBox(height: CoetusSpace.xxl),
+                            WarmNotice(
+                              child: Text(
+                                'Uygunluk: ${_availabilitySlots.join(', ')}',
+                                style: t.bodySmall?.copyWith(
+                                  color: CoetusColors.body,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: CoetusSpace.xxl),
+                          _buildLogoutButton(),
+                        ],
+                      ),
                     ),
-                    _InfoChip(
-                      text: '${_learningGoals.length} goals',
-                      background: _violet.withOpacity(0.20),
-                      textColor: _violetText,
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const CoetusBottomNav(currentIndex: 3),
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(TextTheme t) {
+    final initials = _skillAvatarText(_user.name);
+    final location = _user.location?.trim();
+    final hasLocation = location != null && location.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: CoetusColors.navy,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(CoetusRadius.sheet),
+          bottomRight: Radius.circular(CoetusRadius.sheet),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            CoetusSpace.screenH,
+            CoetusSpace.md,
+            CoetusSpace.screenH,
+            CoetusSpace.xl,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _HeaderIconButton(
+                    icon: Icons.notifications_outlined,
+                    onTap: () => context.go('/notifications'),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Profil',
+                        style: t.titleMedium?.copyWith(
+                          color: CoetusColors.oat,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _HeaderIconButton(
+                    icon: Icons.edit_outlined,
+                    onTap: _showEditProfileDialog,
+                  ),
+                ],
+              ),
+              const SizedBox(height: CoetusSpace.lg),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: CoetusColors.plateWarm,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      initials,
+                      style: t.titleLarge?.copyWith(color: CoetusColors.navy),
+                    ),
+                  ),
+                  const SizedBox(width: CoetusSpace.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _user.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.headlineSmall?.copyWith(
+                            color: CoetusColors.oat,
+                          ),
+                        ),
+                        if (hasLocation) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.bodySmall?.copyWith(
+                              color: CoetusColors.oat.withValues(alpha: .7),
+                            ),
+                          ),
+                        ],
+                        if (_user.verified || _user.trustScore > 0) ...[
+                          const SizedBox(height: CoetusSpace.sm),
+                          Wrap(
+                            spacing: CoetusSpace.sm,
+                            runSpacing: CoetusSpace.sm,
+                            children: [
+                              if (_user.verified) _buildVerifiedPill(),
+                              if (_user.trustScore > 0) _buildTrustPill(),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: CoetusSpace.lg),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: CoetusSpace.md,
+                  horizontal: CoetusSpace.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ProfileStat(
+                        value: '${_user.credits}',
+                        label: 'KREDİ',
+                      ),
+                    ),
+                    _statDivider(),
+                    Expanded(
+                      child: _ProfileStat(
+                        value: '${_skills.length}',
+                        label: 'ÖĞRETTİM',
+                      ),
+                    ),
+                    _statDivider(),
+                    Expanded(
+                      child: _ProfileStat(
+                        value: '${_learningGoals.length}',
+                        label: 'ÖĞRENDİM',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statDivider() {
+    return Container(
+      width: 1,
+      height: 26,
+      color: Colors.white.withValues(alpha: .15),
+    );
+  }
+
+  Widget _buildVerifiedPill() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: CoetusColors.coral,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified, size: 13, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Doğrulanmış',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustPill() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Güven ${_user.trustScore}',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: CoetusColors.oat,
+        ),
       ),
     );
   }
@@ -639,275 +724,213 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton.icon(
+      child: OutlinedButton.icon(
         onPressed: _isSigningOut ? null : _handleLogout,
         icon: Icon(
           _isSigningOut ? Icons.hourglass_empty : Icons.logout,
           size: 18,
+          color: CoetusColors.danger,
         ),
-        label: Text(
-          _isSigningOut ? 'Çıkılıyor...' : 'Çıkış Yap',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.redAccent.withOpacity(0.85),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          disabledBackgroundColor: Colors.redAccent.withOpacity(0.50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+        label: Text(_isSigningOut ? 'Çıkılıyor...' : 'Çıkış Yap'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: CoetusColors.danger,
+          side: const BorderSide(color: CoetusColors.danger, width: 1.5),
         ),
       ),
     );
   }
 
-  Widget _buildSkillsSection() {
+  Widget _buildSkillsSection(TextTheme t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'My Skills',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text('ÖĞRETEBİLDİĞİ', style: t.labelSmall),
             TextButton.icon(
               onPressed: _showAddSkillDialog,
-              icon: const Icon(Icons.add, color: _indigoText, size: 18),
-              label: const Text(
-                'Add Skill',
-                style: TextStyle(color: _indigoText, fontSize: 14),
-              ),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Ekle'),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Column(
-          children: _skills.map((skill) {
-            return _SkillCard(
-              skill: skill,
-              onEdit: () => _showEditSkillDialog(skill),
-              onDelete: () => _showDeleteSkillDialog(skill),
-            );
-          }).toList(),
-        ),
+        const SizedBox(height: CoetusSpace.sm),
+        if (_skills.isEmpty)
+          CoetusEmptyState(
+            icon: Icons.school_outlined,
+            title: 'Henüz beceri eklenmedi',
+            message: 'Öğretebileceğin becerileri ekleyerek profilini tamamla.',
+            actionLabel: 'Beceri Ekle',
+            onAction: _showAddSkillDialog,
+          )
+        else
+          Column(
+            children: _skills
+                .map(
+                  (skill) => _SkillRow(
+                    skill: skill,
+                    onEdit: () => _showEditSkillDialog(skill),
+                    onDelete: () => _showDeleteSkillDialog(skill),
+                  ),
+                )
+                .toList(),
+          ),
       ],
     );
   }
 
-  Widget _buildLearningGoalsSection() {
+  Widget _buildLearningGoalsSection(TextTheme t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Text('ÖĞRENMEK İSTEDİĞİ', style: t.labelSmall),
+        const SizedBox(height: CoetusSpace.sm),
+        Wrap(
+          spacing: CoetusSpace.sm,
+          runSpacing: CoetusSpace.sm,
           children: [
-            const Text(
-              'Want to Learn',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+            for (final goal in _learningGoals)
+              _GoalChip(
+                goal: goal,
+                onEdit: () => _showEditGoalDialog(goal),
+                onDelete: () => _showDeleteGoalDialog(goal),
               ),
-            ),
-            TextButton.icon(
-              onPressed: _showAddGoalDialog,
-              icon: const Icon(Icons.add, color: _indigoText, size: 18),
-              label: const Text(
-                'Add Goal',
-                style: TextStyle(color: _indigoText, fontSize: 14),
-              ),
+            GestureDetector(
+              onTap: _showAddGoalDialog,
+              child: const CoetusChip('+ Ekle', dashed: true),
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          itemCount: _learningGoals.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.2,
-          ),
-          itemBuilder: (context, index) {
-            final goal = _learningGoals[index];
-            return _GoalCard(
-              goal: goal,
-              onEdit: () => _showEditGoalDialog(goal),
-              onDelete: () => _showDeleteGoalDialog(goal),
-            );
-          },
         ),
       ],
     );
   }
+}
 
-  Widget _buildBottomNavigation(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: _card2,
-        border: Border(top: BorderSide(color: _border)),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(
-            icon: Icons.person_outline,
-            label: 'Profile',
-            isActive: true,
-            onTap: () {},
-          ),
-          _NavItem(
-            icon: Icons.explore_outlined,
-            label: 'Discover',
-            onTap: () {
-              context.go('/matching');
-            },
-          ),
-          _NavItem(
-            icon: Icons.chat_bubble_outline,
-            label: 'Chats',
-            onTap: () {
-              context.go('/chat');
-            },
-          ),
-        ],
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: CoetusColors.oat.withValues(alpha: .14),
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(9),
+          child: Icon(icon, size: 18, color: CoetusColors.oat),
+        ),
       ),
     );
   }
 }
 
-class _SkillCard extends StatelessWidget {
-  final SkillModel skill;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+class _ProfileStat extends StatelessWidget {
+  const _ProfileStat({required this.value, required this.label});
 
-  const _SkillCard({
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        Text(value, style: t.titleLarge?.copyWith(color: CoetusColors.oat)),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: t.labelSmall?.copyWith(
+            color: CoetusColors.oat.withValues(alpha: .65),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SkillRow extends StatelessWidget {
+  const _SkillRow({
     required this.skill,
     required this.onEdit,
     required this.onDelete,
   });
 
-  static const Color _bg = Color(0xFF1A1A2E);
-  static const Color _border = Color(0xFF2A2A3E);
-  static const Color _track = Color(0xFF0A0A0F);
-  static const Color _indigo = Color(0xFF6366F1);
-  static const Color _violet = Color(0xFF8B5CF6);
-  static const Color _indigoText = Color(0xFF818CF8);
+  final SkillModel skill;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final int normalizedLevel = skill.level.clamp(0, 7);
-    final double widthFactor = normalizedLevel / 7;
-
+    final t = Theme.of(context).textTheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: CoetusSpace.md),
+      padding: const EdgeInsets.all(CoetusSpace.lg),
       decoration: BoxDecoration(
-        color: _bg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
+        color: CoetusColors.card,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: CoetusShadow.card,
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: _indigo.withOpacity(0.20),
-                child: Text(
-                  skill.name.isNotEmpty ? skill.name[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  skill.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Text(
-                '$normalizedLevel/7',
-                style: const TextStyle(
-                  color: _indigoText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onEdit,
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-              ),
-              IconButton(
-                onPressed: onDelete,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.redAccent,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: SizedBox(
-              height: 8,
-              child: Stack(
-                children: [
-                  Container(color: _track),
-                  FractionallySizedBox(
-                    widthFactor: widthFactor,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: [_indigo, _violet]),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: CoetusColors.navy,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.star_outline,
+              size: 20,
+              color: CoetusColors.oat,
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: List.generate(7, (index) {
-              final bool active = index < normalizedLevel;
-              return Expanded(
-                child: Container(
-                  height: 6,
-                  margin: EdgeInsets.only(right: index == 6 ? 0 : 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: active
-                        ? const LinearGradient(colors: [_indigo, _violet])
-                        : null,
-                    color: active ? null : _border,
-                  ),
+          const SizedBox(width: CoetusSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  skill.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.titleSmall,
                 ),
-              );
-            }),
+                const SizedBox(height: 2),
+                Text('Seviye ${skill.level}', style: t.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: CoetusSpace.sm),
+          CoetusChip('Sv. ${skill.level}'),
+          IconButton(
+            onPressed: onEdit,
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: CoetusColors.muted,
+            ),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          IconButton(
+            onPressed: onDelete,
+            icon: const Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: CoetusColors.danger,
+            ),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),
@@ -915,170 +938,62 @@ class _SkillCard extends StatelessWidget {
   }
 }
 
-class _GoalCard extends StatelessWidget {
-  final SkillModel goal;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const _GoalCard({
+class _GoalChip extends StatelessWidget {
+  const _GoalChip({
     required this.goal,
     required this.onEdit,
     required this.onDelete,
   });
 
-  static const Color _bg = Color(0xFF1A1A2E);
-  static const Color _border = Color(0xFF2A2A3E);
-  static const Color _violet = Color(0xFF8B5CF6);
+  final SkillModel goal;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
     return Container(
+      padding: const EdgeInsets.only(left: 13, right: 4, top: 4, bottom: 4),
       decoration: BoxDecoration(
-        color: _bg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
+        color: CoetusColors.coralSoft,
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: Stack(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: _violet.withOpacity(0.20),
-                  child: Text(
-                    goal.name.isNotEmpty ? goal.name[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    goal.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            goal.name,
+            style: t.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: CoetusColors.coralDeep,
             ),
           ),
-          Positioned(
-            top: 2,
-            right: 2,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  onPressed: onEdit,
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: Colors.white70,
-                    size: 18,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                ),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent,
-                    size: 18,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                ),
-              ],
+          InkWell(
+            onTap: onEdit,
+            customBorder: const CircleBorder(),
+            child: const Padding(
+              padding: EdgeInsets.all(5),
+              child: Icon(
+                Icons.edit_outlined,
+                size: 13,
+                color: CoetusColors.coralDeep,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: onDelete,
+            customBorder: const CircleBorder(),
+            child: const Padding(
+              padding: EdgeInsets.all(5),
+              child: Icon(
+                Icons.close,
+                size: 13,
+                color: CoetusColors.coralDeep,
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final String text;
-  final Color background;
-  final Color textColor;
-
-  const _InfoChip({
-    required this.text,
-    required this.background,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    this.isActive = false,
-    required this.onTap,
-  });
-
-  static const Color _active = Color(0xFF818CF8);
-
-  @override
-  Widget build(BuildContext context) {
-    final Color color = isActive ? _active : Colors.white.withOpacity(0.45);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: color, fontSize: 12)),
-          ],
-        ),
       ),
     );
   }

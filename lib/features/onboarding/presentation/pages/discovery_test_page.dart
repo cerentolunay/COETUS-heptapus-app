@@ -1,7 +1,9 @@
-import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:coetus/app/theme/coetus_tokens.dart';
+import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
+import 'package:coetus/features/profile/domain/models/skill_model.dart';
 
 class DiscoveryTestPage extends StatefulWidget {
   const DiscoveryTestPage({super.key});
@@ -10,497 +12,182 @@ class DiscoveryTestPage extends StatefulWidget {
   State<DiscoveryTestPage> createState() => _DiscoveryTestPageState();
 }
 
-class _DiscoveryTestPageState extends State<DiscoveryTestPage>
-    with SingleTickerProviderStateMixin {
-  static const Color _bgStart = Color(0xFF0B1120);
-  static const Color _bgMiddle = Color(0xFF0F172A);
-  static const Color _bgEnd = Color(0xFF1E1B4B);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _blue = Color(0xFF0EA5E9);
-  static const Color _purple = Color(0xFF7C3AED);
-
-  final List<_Question> _questions = const [
-    _Question(
-      id: 0,
-      question: 'How do you prefer to learn new skills?',
-      options: [
-        'Hands-on practice and experimentation',
-        'Structured courses with clear milestones',
-        'One-on-one mentorship and guidance',
-        'Self-paced learning with resources',
-      ],
-      category: 'Learning Style',
-    ),
-    _Question(
-      id: 1,
-      question: "What's your current coding proficiency?",
-      options: [
-        'Beginner - Learning fundamentals',
-        'Intermediate - Building projects',
-        'Advanced - Professional experience',
-        'Expert - Teaching and mentoring others',
-      ],
-      category: 'Technical Skills',
-    ),
-    _Question(
-      id: 2,
-      question: 'How would you rate your English communication?',
-      options: [
-        'Basic - Simple conversations',
-        'Intermediate - Can discuss most topics',
-        'Advanced - Fluent and nuanced',
-        'Native/Professional - Complex discussions',
-      ],
-      category: 'Language Skills',
-    ),
-    _Question(
-      id: 3,
-      question: "What's your availability for skill swapping?",
-      options: [
-        '1-2 hours per week',
-        '3-5 hours per week',
-        '5-10 hours per week',
-        'Flexible schedule',
-      ],
-      category: 'Commitment',
-    ),
-    _Question(
-      id: 4,
-      question: 'Which skill would you most like to teach?',
-      options: [
-        'Guitar and music theory',
-        'Web development and coding',
-        'English language and writing',
-        'Design and creative tools',
-      ],
-      category: 'Teaching Interest',
-    ),
+class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
+  static const List<_InterestCategory> _categories = [
+    _InterestCategory(name: 'Müzik', icon: Icons.music_note_outlined),
+    _InterestCategory(name: 'Yazılım', icon: Icons.code),
+    _InterestCategory(name: 'Dil', icon: Icons.public),
+    _InterestCategory(name: 'Tasarım', icon: Icons.brush_outlined),
+    _InterestCategory(name: 'El sanatları', icon: Icons.content_cut),
+    _InterestCategory(name: 'Fotoğraf', icon: Icons.photo_camera_outlined),
   ];
 
-  int _currentQuestion = 0;
-  final Map<int, String> _answers = {};
-  String? _selectedOption;
-  Timer? _nextTimer;
-  late final AnimationController _backgroundController;
+  final Set<String> _selected = {};
+  bool _isSaving = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _backgroundController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 6),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _nextTimer?.cancel();
-    _backgroundController.dispose();
-    super.dispose();
-  }
-
-  double get _progress =>
-      ((_currentQuestion + 1) / _questions.length) * 100;
-
-  void _handleAnswer(String option) {
+  void _toggle(String category) {
     setState(() {
-      _selectedOption = option;
-    });
-
-    _nextTimer?.cancel();
-    _nextTimer = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-
-      _answers[_currentQuestion] = option;
-
-      if (_currentQuestion < _questions.length - 1) {
-        setState(() {
-          _currentQuestion++;
-          _selectedOption = null;
-        });
+      if (_selected.contains(category)) {
+        _selected.remove(category);
       } else {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            context.go('/profile');
-          }
-        });
+        _selected.add(category);
       }
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final question = _questions[_currentQuestion];
-
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_bgStart, _bgMiddle, _bgEnd],
-          ),
-        ),
-        child: Stack(
-          children: [
-            AnimatedBuilder(
-              animation: _backgroundController,
-              builder: (context, _) {
-                return Opacity(
-                  opacity: 0.10,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(5, (i) {
-                      final angle = math.sin(
-                            (_backgroundController.value * 2 * math.pi) + i,
-                          ) *
-                          0.16;
-                      return Transform.rotate(
-                        angle: angle,
-                        child: Container(
-                          width: 3,
-                          height: double.infinity,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [_cyan, _purple],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                );
-              },
-            ),
-            SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-                    child: Column(
-                      children: [
-                        Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.10),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.flash_on,
-                                    size: 16,
-                                    color: _cyan,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Heptapus Discovery',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            ShaderMask(
-                              shaderCallback: (bounds) {
-                                return const LinearGradient(
-                                  colors: [Colors.white, _cyan, _purple],
-                                ).createShader(bounds);
-                              },
-                              child: const Text(
-                                'Discover Your Profile',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Answer ${_questions.length} questions to find your perfect skill matches',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.50),
-                                fontSize: 14,
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        _ProgressBar(progress: _progress),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Question ${_currentQuestion + 1} of ${_questions.length}',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.50),
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              '${_progress.round()}%',
-                              style: const TextStyle(
-                                color: _cyan,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 400),
-                        transitionBuilder: (child, animation) {
-                          final slide = Tween<Offset>(
-                            begin: const Offset(0.08, 0),
-                            end: Offset.zero,
-                          ).animate(animation);
-
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: slide,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _QuestionCard(
-                          key: ValueKey(question.id),
-                          question: question,
-                          selectedOption: _selectedOption,
-                          onAnswer: _handleAnswer,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const IgnorePointer(
-                    child: SizedBox(
-                      height: 36,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [_bgStart, Colors.transparent],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _slugify(String category) {
+    return category
+        .toLowerCase()
+        .replaceAll('ı', 'i')
+        .replaceAll('ş', 's')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ö', 'o')
+        .replaceAll('ü', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll(RegExp(r'\s+'), '_');
   }
-}
 
-class _QuestionCard extends StatelessWidget {
-  final _Question question;
-  final String? selectedOption;
-  final ValueChanged<String> onAnswer;
+  Future<void> _handleContinue() async {
+    if (_isSaving) return;
 
-  const _QuestionCard({
-    super.key,
-    required this.question,
-    required this.selectedOption,
-    required this.onAnswer,
-  });
+    setState(() {
+      _isSaving = true;
+    });
 
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _purple = Color(0xFF7C3AED);
+    try {
+      final repository = ProfileRepositoryFactory.create();
+      for (final category in _selected) {
+        await repository.saveLearnSkill(
+          SkillModel(id: _slugify(category), name: category, level: 1),
+        );
+      }
 
-  IconData _categoryIcon(String category) {
-    switch (category) {
-      case 'Learning Style':
-        return Icons.psychology_outlined;
-      case 'Technical Skills':
-        return Icons.gps_fixed;
-      case 'Language Skills':
-        return Icons.workspace_premium_outlined;
-      case 'Commitment':
-        return Icons.flash_on;
-      case 'Teaching Interest':
-        return Icons.track_changes;
-      default:
-        return Icons.category_outlined;
+      if (!mounted) return;
+      context.go('/home');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/onboarding');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      key: key,
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.10),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.20),
-            blurRadius: 24,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0x337C3AED),
-                  const Color(0x3306B6D4),
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      backgroundColor: CoetusColors.oat,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  InkWell(
+                    onTap: _handleBack,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: CoetusColors.card,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: CoetusColors.navy,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: SizedBox(
+                        height: 6,
+                        child: Stack(
+                          children: [
+                            Container(color: CoetusColors.border),
+                            FractionallySizedBox(
+                              widthFactor: 1,
+                              child: Container(color: CoetusColors.navy),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              border: Border.all(
-                color: const Color(0x4D7C3AED),
+              const SizedBox(height: 28),
+              Text(
+                'Ne öğrenmek\nistiyorsun?',
+                style: textTheme.headlineMedium?.copyWith(
+                  color: CoetusColors.navyInk,
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _categoryIcon(question.category),
-                  size: 16,
-                  color: _cyan,
+              const SizedBox(height: 8),
+              Text(
+                'En az 3 alan seç, eşleşmeleri buna göre kuruyoruz.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: CoetusColors.muted,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  question.category,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.80),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            question.question,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 28),
-          Expanded(
-            child: Column(
-              children: question.options.map((option) {
-                final isSelected = selectedOption == option;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _AnswerButton(
-                    text: option,
-                    isSelected: isSelected,
-                    onTap: () => onAnswer(option),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnswerButton extends StatelessWidget {
-  final String text;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _AnswerButton({
-    required this.text,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _purple = Color(0xFF7C3AED);
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: isSelected ? 1.02 : 1,
-      duration: const Duration(milliseconds: 180),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: isSelected
-                ? const LinearGradient(colors: [_purple, _cyan])
-                : null,
-            color: isSelected ? null : Colors.white.withValues(alpha: 0.05),
-            border: Border.all(
-              color: isSelected
-                  ? Colors.transparent
-                  : Colors.white.withValues(alpha: 0.10),
-            ),
-          ),
-          child: Row(
-            children: [
+              ),
+              const SizedBox(height: 24),
               Expanded(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                child: GridView.builder(
+                  itemCount: _categories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: 1.15,
                   ),
+                  itemBuilder: (context, index) {
+                    final category = _categories[index];
+                    final isSelected = _selected.contains(category.name);
+                    return _CategoryCard(
+                      category: category,
+                      selected: isSelected,
+                      onTap: () => _toggle(category.name),
+                    );
+                  },
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: isSelected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.45),
-                size: 22,
+              const SizedBox(height: 12),
+              Text(
+                '${_selected.length} alan seçildi',
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall,
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _handleContinue,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: CoetusColors.oat,
+                          ),
+                        )
+                      : const Text('Devam et'),
+                ),
               ),
             ],
           ),
@@ -510,53 +197,69 @@ class _AnswerButton extends StatelessWidget {
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  final double progress;
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({
+    required this.category,
+    required this.selected,
+    required this.onTap,
+  });
 
-  const _ProgressBar({required this.progress});
-
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _blue = Color(0xFF0EA5E9);
-  static const Color _purple = Color(0xFF7C3AED);
+  final _InterestCategory category;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: 8,
-        child: Stack(
-          children: [
-            Container(
-              color: Colors.white.withValues(alpha: 0.05),
-            ),
-            FractionallySizedBox(
-              widthFactor: progress / 100,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_cyan, _blue, _purple],
-                  ),
+    return Material(
+      color: selected ? CoetusColors.navy : CoetusColors.card,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: CoetusShadow.card,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color:
+                      selected ? CoetusColors.oat.withValues(alpha: .18) : CoetusColors.plateWarm,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  category.icon,
+                  color: selected ? CoetusColors.oat : CoetusColors.navy,
+                  size: 22,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(
+                category.name,
+                style: TextStyle(
+                  color: selected ? CoetusColors.oat : CoetusColors.navyInk,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Question {
-  final int id;
-  final String question;
-  final List<String> options;
-  final String category;
+class _InterestCategory {
+  const _InterestCategory({required this.name, required this.icon});
 
-  const _Question({
-    required this.id,
-    required this.question,
-    required this.options,
-    required this.category,
-  });
+  final String name;
+  final IconData icon;
 }
