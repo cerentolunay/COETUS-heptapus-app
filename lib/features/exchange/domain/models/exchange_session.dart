@@ -23,6 +23,8 @@ class ExchangeSession {
   final List<String> participants;
   final String skill;
   final int credits;
+  final bool funded;
+  final List<String> refundVotes;
   final ExchangeSessionStatus status;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -35,6 +37,8 @@ class ExchangeSession {
     required this.participants,
     required this.skill,
     required this.credits,
+    this.funded = false,
+    this.refundVotes = const [],
     this.status = ExchangeSessionStatus.requested,
     this.createdAt,
     this.updatedAt,
@@ -59,6 +63,8 @@ class ExchangeSession {
           map['skillId'] as String? ??
           '',
       credits: _readInt(map['credits']),
+      funded: map['funded'] == true,
+      refundVotes: _readStringList(map['refundVotes']),
       status: ExchangeSessionStatus.fromValue(map['status'] as String?),
       createdAt: _readDateTime(map['createdAt']),
       updatedAt: _readDateTime(map['updatedAt']),
@@ -85,6 +91,8 @@ class ExchangeSession {
       participants: participants ?? this.participants,
       skill: skill ?? this.skill,
       credits: credits ?? this.credits,
+      funded: funded,
+      refundVotes: refundVotes,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -100,6 +108,8 @@ class ExchangeSession {
       'participants': participants,
       'skill': skill,
       'credits': credits,
+      'funded': funded,
+      'refundVotes': refundVotes,
       'status': status.name,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),

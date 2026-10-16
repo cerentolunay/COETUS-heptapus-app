@@ -1,3 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:coetus/features/verification/presentation/verification_page.dart';
+import 'package:coetus/features/verification/presentation/endorse_teaching_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/coetus_tokens.dart';
@@ -28,13 +31,36 @@ class OtherUserProfilePage extends StatelessWidget {
                 sliver: SliverList.list(
                   children: [
                     _buildHero(),
+                    if (Firebase.apps.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      _SectionCard(
+                        title: 'Çalışmalar ve eşleşme onayları',
+                        icon: Icons.verified_outlined,
+                        child: VerifiedSkillsPanel(ownerId: profile.id),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                EndorseTeachingPage(teacherId: profile.id),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.favorite_rounded,
+                          color: CoetusPalette.red,
+                        ),
+                        label: const Text('Bu kişi bana öğretti'),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     _SectionCard(
-                      title: 'Bio',
+                      title: 'Hakkında',
                       icon: Icons.notes_outlined,
                       child: Text(
                         profile.bio.trim().isEmpty
-                            ? 'Bu kullanici henuz bio eklememis.'
+                            ? 'Bu kullanıcı henüz bio eklememiş.'
                             : profile.bio,
                         style: const TextStyle(
                           color: _textSoft,
@@ -45,28 +71,28 @@ class OtherUserProfilePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
                     _SectionCard(
-                      title: 'Ogretir',
+                      title: 'Öğretir',
                       icon: Icons.school_outlined,
                       child: _SkillWrap(
                         skills: profile.teachSkills,
-                        emptyText: 'Henuz ogretecegi skill eklememis.',
+                        emptyText: 'Henüz öğreteceği yetenek eklememiş.',
                         accent: _cyan,
                       ),
                     ),
                     const SizedBox(height: 14),
                     _SectionCard(
-                      title: 'Ogrenmek istiyor',
+                      title: 'Öğrenmek istiyor',
                       icon: Icons.gps_fixed,
                       child: _SkillWrap(
                         skills: profile.learnSkills,
-                        emptyText: 'Henuz ogrenmek istedigi skill yok.',
+                        emptyText: 'Henüz Öğrenmek istediği yetenek yok.',
                         accent: _violet,
                       ),
                     ),
                     if (profile.matchReason.trim().isNotEmpty) ...[
                       const SizedBox(height: 14),
                       _SectionCard(
-                        title: 'Neden onerildi',
+                        title: 'Neden önerildi',
                         icon: Icons.auto_awesome_outlined,
                         child: Text(
                           profile.matchReason,
@@ -100,7 +126,7 @@ class OtherUserProfilePage extends StatelessWidget {
           const SizedBox(width: 4),
           const Expanded(
             child: Text(
-              'Profil Detayi',
+              'Profil Detayı',
               style: TextStyle(
                 color: CoetusColors.navyInk,
                 fontSize: 17,
@@ -127,24 +153,59 @@ class OtherUserProfilePage extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_violet, _cyan]),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  profile.initials,
-                  style: const TextStyle(
-                    color: CoetusColors.oat,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [_violet, _cyan]),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: profile.photoUrl?.trim().isNotEmpty == true
+                        ? Image.network(
+                            profile.photoUrl!,
+                            fit: BoxFit.cover,
+                            width: 64,
+                            height: 64,
+                            errorBuilder: (_, error, stack) => _initials(),
+                          )
+                        : _initials(),
                   ),
-                ),
+                  Positioned(
+                    right: -8,
+                    bottom: -8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: CoetusPalette.lime,
+                        border: Border.all(
+                          color: CoetusPalette.cream,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        profile.compatibilityAvailable
+                            ? '%${profile.matchScore.clamp(0, 100)}'
+                            : 'Yeni',
+                        style: const TextStyle(
+                          color: CoetusPalette.purple,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,8 +223,6 @@ class OtherUserProfilePage extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (profile.verified)
-                          const Icon(Icons.verified, color: _cyan, size: 22),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -199,18 +258,18 @@ class OtherUserProfilePage extends StatelessWidget {
             runSpacing: 10,
             children: [
               _MetricPill(
-                label: '${profile.trustScore}% Trust',
+                label: '%${profile.trustScore} güven',
                 icon: Icons.shield_outlined,
                 color: _green,
               ),
-              if (profile.matchScore > 0)
+              if (profile.compatibilityAvailable)
                 _MetricPill(
-                  label: '${profile.matchScore}% Match',
-                  icon: Icons.favorite_outline,
+                  label: '%${profile.matchScore.clamp(0, 100)} uyum',
+                  icon: Icons.auto_awesome_outlined,
                   color: _cyan,
                 ),
               _MetricPill(
-                label: '${profile.creditsRequired} HC',
+                label: '${profile.creditsRequired} kredi',
                 icon: Icons.bolt_outlined,
                 color: _violet,
               ),
@@ -220,6 +279,17 @@ class OtherUserProfilePage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _initials() => Center(
+    child: Text(
+      profile.initials,
+      style: const TextStyle(
+        color: CoetusPalette.cream,
+        fontSize: 21,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
+  );
 }
 
 class OtherUserProfileData {
@@ -230,6 +300,9 @@ class OtherUserProfileData {
   final int trustScore;
   final bool verified;
   final int matchScore;
+  final String? photoUrl;
+  final bool? hasCompatibilityScore;
+  bool get compatibilityAvailable => hasCompatibilityScore ?? matchScore > 0;
   final int creditsRequired;
   final String matchReason;
   final List<OtherUserSkillData> teachSkills;
@@ -243,6 +316,8 @@ class OtherUserProfileData {
     required this.trustScore,
     required this.verified,
     this.matchScore = 0,
+    this.photoUrl,
+    this.hasCompatibilityScore,
     this.creditsRequired = 0,
     this.matchReason = '',
     this.teachSkills = const [],
@@ -265,11 +340,15 @@ class OtherUserSkillData {
   final String name;
   final String category;
   final int? level;
+  final bool verified;
+  final int peerApprovalCount;
 
   const OtherUserSkillData({
     required this.name,
     this.category = '',
+    this.peerApprovalCount = 0,
     this.level,
+    this.verified = false,
   });
 }
 
@@ -343,8 +422,10 @@ class _SkillWrap extends StatelessWidget {
       runSpacing: 8,
       children: skills.map((skill) {
         final meta = [
+          if (skill.peerApprovalCount > 0)
+            'Eşleştiği ${skill.peerApprovalCount} kişiden onay',
           if (skill.category.trim().isNotEmpty) skill.category,
-          if (skill.level != null) 'Level ${skill.level}/7',
+          if (skill.level != null) 'Seviye ${skill.level}/7',
         ].join(' - ');
 
         return Container(

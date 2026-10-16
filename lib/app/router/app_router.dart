@@ -1,3 +1,5 @@
+import 'package:coetus/features/community/community.dart';
+import 'package:coetus/features/verification/presentation/verification_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
@@ -88,6 +90,8 @@ class AppRouter {
     '/exchange-history',
     '/exchange-detail',
     '/notifications',
+    '/verification',
+    '/community-post',
   ];
 
   /// Profile completion route - sadece incomplete profilliler erişebilir
@@ -98,7 +102,7 @@ class AppRouter {
   }
 
   static final GoRouter router = GoRouter(
-    initialLocation: '/matching',
+    initialLocation: '/',
     debugLogDiagnostics: true,
 
     /// Hem auth hem profile notifier'larını dinle
@@ -169,6 +173,15 @@ class AppRouter {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/community-post/:postId',
+        builder: (context, state) =>
+            CommunityPostPage(postId: state.pathParameters['postId']!),
+      ),
+      GoRoute(
+        path: '/verification',
+        builder: (context, state) => const VerificationPage(),
+      ),
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(
         path: '/welcome',
@@ -201,7 +214,11 @@ class AppRouter {
       // Şimdilik seni MatchingFeedPage'e veya Profile'a atsın:
       GoRoute(
         path: '/home',
-        builder: (context, state) => const MatchingFeedPage(),
+        builder: (context, state) => MatchingFeedPage(
+          authorId: state.uri.queryParameters['author'],
+          skillId: state.uri.queryParameters['skill'],
+          learn: state.uri.queryParameters['learn'] == '1',
+        ),
       ),
       // -------------------------------------------
       GoRoute(
@@ -218,7 +235,11 @@ class AppRouter {
       ),
       GoRoute(
         path: '/matching',
-        builder: (context, state) => const MatchingFeedPage(),
+        builder: (context, state) => MatchingFeedPage(
+          authorId: state.uri.queryParameters['author'],
+          skillId: state.uri.queryParameters['skill'],
+          learn: state.uri.queryParameters['learn'] == '1',
+        ),
       ),
       GoRoute(path: '/chat', builder: (context, state) => const ChatListPage()),
       GoRoute(

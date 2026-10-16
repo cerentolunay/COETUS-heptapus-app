@@ -1,189 +1,186 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:coetus/app/theme/coetus_tokens.dart';
+import 'package:coetus/widgets/coetus_mascot.dart';
 
-class WelcomePage extends StatelessWidget {
+class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+  State<WelcomePage> createState() => _WelcomePageState();
+}
 
+class _WelcomePageState extends State<WelcomePage> {
+  final _celebration = ValueNotifier<int>(0);
+  bool _starting = false;
+
+  @override
+  void dispose() {
+    _celebration.dispose();
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    if (_starting) return;
+    setState(() => _starting = true);
+    _celebration.value++;
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+    }
+    if (mounted) context.go('/onboarding');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: CoetusColors.navy,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 18,
+                    runSpacing: 10,
+                    children: [
+                      Text('coetus', style: text.headlineMedium),
+                      const _Pill(
+                        label: 'Birlikte geliş.',
+                        color: CoetusPalette.lime,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 26),
+                    decoration: BoxDecoration(
+                      color: CoetusPalette.purple,
+                      borderRadius: BorderRadius.circular(36),
+                    ),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Coetus',
-                          style: textTheme.headlineSmall?.copyWith(
-                            color: CoetusColors.oat,
+                        const _Pill(
+                          label: 'MERAK ET. PAYLAŞ. GELİŞ.',
+                          color: CoetusPalette.lavender,
+                        ),
+                        Center(
+                          child: CoetusMascot(
+                            size: 166,
+                            celebration: _celebration,
                           ),
                         ),
-                        const SizedBox(height: 32),
                         Text(
-                          'Yeteneğin\nsenin paran.',
-                          style: textTheme.displaySmall?.copyWith(
-                            color: CoetusColors.oat,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.9,
-                            fontSize: 38,
-                            height: 1.15,
+                          'Sen öğret.\nSen de öğren.',
+                          style: text.displaySmall?.copyWith(
+                            color: CoetusPalette.cream,
+                            fontSize: 40,
+                            height: 1.08,
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "Coetus'ta bir konuyu öğretip kredi kazanırsın, "
-                          'o krediyle sana lazım olan başka bir yeteneği '
-                          'öğrenirsin.',
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: CoetusColors.oat.withValues(alpha: .70),
-                            fontSize: 15.5,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const _WelcomeFeatureRow(
-                          iconBackground: CoetusColors.plateWarm,
-                          icon: Icons.school_outlined,
-                          iconColor: CoetusColors.navy,
-                          title: 'Öğret',
-                          subtitle: 'Bildiğin konuyu bir oturumda anlat',
                         ),
                         const SizedBox(height: 14),
-                        const _WelcomeFeatureRow(
-                          iconBackground: CoetusColors.coral,
-                          icon: Icons.add_circle_outline,
-                          iconColor: Colors.white,
-                          title: 'Kredi kazan',
-                          subtitle:
-                              'Oturum onaylanınca kredi hesabına geçer',
+                        Text(
+                          'Bildiğini paylaş, kredi kazan. Merak ettiğin yeteneği topluluktan öğren.',
+                          style: text.bodyLarge?.copyWith(
+                            color: CoetusPalette.cream,
+                          ),
                         ),
-                        const SizedBox(height: 14),
-                        const _WelcomeFeatureRow(
-                          iconBackground: CoetusColors.plateWarm,
-                          icon: Icons.menu_book_outlined,
-                          iconColor: CoetusColors.navy,
-                          title: 'Öğren',
-                          subtitle: 'Krediyi istediğin yetenekte harca',
+                        const SizedBox(height: 18),
+                        const Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _Pill(label: 'Tasarım', color: CoetusPalette.lime),
+                            _Pill(
+                              label: 'Yazılım',
+                              color: CoetusPalette.lavender,
+                            ),
+                            _Pill(
+                              label: 'Müzik',
+                              color: CoetusPalette.softLavender,
+                            ),
+                            _Pill(
+                              label: 'Yabancı dil',
+                              color: CoetusPalette.softLavender,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 32),
-                    Column(
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    '01  Öğret    ·    02  Kredi kazan    ·    03  Öğren',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: CoetusPalette.purple,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  ElevatedButton(
+                    onPressed: _starting ? null : _start,
+                    child: const Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
                       children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => context.go('/onboarding'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: CoetusColors.oat,
-                              foregroundColor: CoetusColors.navy,
-                            ),
-                            child: const Text('Ücretsiz hesap aç'),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () => context.go('/login'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: CoetusColors.oat,
-                              side: BorderSide(
-                                color: CoetusColors.oat.withValues(alpha: .45),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: const Text('Giriş yap'),
-                          ),
-                        ),
+                        Text('Ücretsiz hesap aç'),
+                        Icon(Icons.arrow_outward_rounded),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: _starting ? null : () => context.go('/login'),
+                    child: const Text(
+                      'Zaten hesabım var · Giriş yap',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Para yerine yeteneğinle başla.',
+                    textAlign: TextAlign.center,
+                    style: text.bodySmall,
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _WelcomeFeatureRow extends StatelessWidget {
-  const _WelcomeFeatureRow({
-    required this.iconBackground,
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final Color iconBackground;
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.color});
+  final String label;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: CoetusColors.oat.withValues(alpha: .09),
-        borderRadius: BorderRadius.circular(CoetusRadius.card),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(100),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: CoetusPalette.purple,
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        letterSpacing: .15,
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: iconBackground,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: CoetusColors.oat,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: CoetusColors.oat.withValues(alpha: .65),
-                    fontSize: 12.5,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }

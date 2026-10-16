@@ -1,175 +1,220 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'coetus_tokens.dart';
 
-/// Coetus ThemeData.
-/// pubspec.yaml: google_fonts: ^6.2.1
-///
-/// MaterialApp(theme: coetusTheme(), home: ...)
-ThemeData coetusTheme() {
+ThemeData coetusTheme({
+  bool useGoogleFonts = true,
+  String? fallbackFontFamily,
+}) {
   final base = ThemeData.light(useMaterial3: true);
-
-  // Başlık: Plus Jakarta Sans · Gövde: DM Sans
-  TextStyle head(double size, FontWeight w, {double ls = -0.4, Color? c}) =>
-      GoogleFonts.plusJakartaSans(
-        fontSize: size,
-        fontWeight: w,
-        letterSpacing: ls,
-        height: 1.2,
-        color: c ?? CoetusColors.navyInk,
+  TextStyle font(TextStyle style, {bool heading = false}) => !useGoogleFonts
+      ? style.copyWith(fontFamily: fallbackFontFamily)
+      : heading
+      ? GoogleFonts.plusJakartaSans(textStyle: style)
+      : GoogleFonts.dmSans(textStyle: style);
+  TextStyle head(double size, FontWeight weight, {double spacing = -.4}) =>
+      font(
+        TextStyle(
+          fontSize: size,
+          fontWeight: weight,
+          letterSpacing: spacing,
+          height: 1.2,
+          color: CoetusColors.navyInk,
+        ),
+        heading: true,
       );
-
-  TextStyle body(double size, FontWeight w, {Color? c, double h = 1.55}) =>
-      GoogleFonts.dmSans(
-        fontSize: size,
-        fontWeight: w,
-        height: h,
-        color: c ?? CoetusColors.body,
-      );
-
-  final textTheme = TextTheme(
-    displaySmall: head(30, FontWeight.w800, ls: -0.9),
-    headlineMedium: head(27, FontWeight.w800, ls: -0.7),
-    headlineSmall: head(22, FontWeight.w800, ls: -0.5),
-    titleLarge: head(17, FontWeight.w700, ls: -0.2),
-    titleMedium: head(14, FontWeight.w700, ls: 0),
-    titleSmall: head(13, FontWeight.w600, ls: 0),
-    bodyLarge: body(13.5, FontWeight.w400, h: 1.6),
-    bodyMedium: body(13, FontWeight.w400),
-    bodySmall: body(11.5, FontWeight.w400, c: CoetusColors.muted, h: 1.45),
-    labelLarge: GoogleFonts.plusJakartaSans(
-        fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0),
-    labelMedium: body(12, FontWeight.w500, c: CoetusColors.muted),
-    labelSmall: GoogleFonts.dmSans(
-      fontSize: 10.5,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 1.3,
-      color: CoetusColors.muted,
-    ),
+  TextStyle body(
+    double size, {
+    FontWeight weight = FontWeight.w400,
+    Color color = CoetusColors.body,
+  }) => font(
+    TextStyle(fontSize: size, fontWeight: weight, height: 1.55, color: color),
   );
-
+  final text = TextTheme(
+    displaySmall: head(36, FontWeight.w800, spacing: -1.2),
+    headlineMedium: head(28, FontWeight.w800, spacing: -.8),
+    headlineSmall: head(23, FontWeight.w800),
+    titleLarge: head(18, FontWeight.w700),
+    titleMedium: head(15, FontWeight.w700, spacing: 0),
+    titleSmall: head(13, FontWeight.w600, spacing: 0),
+    bodyLarge: body(15),
+    bodyMedium: body(13),
+    bodySmall: body(12, color: CoetusColors.muted),
+    labelLarge: head(15, FontWeight.w700, spacing: 0),
+    labelMedium: body(12, weight: FontWeight.w600),
+    labelSmall: body(11, weight: FontWeight.w700),
+  );
+  final scheme = ColorScheme.fromSeed(seedColor: CoetusPalette.purple).copyWith(
+    primary: CoetusPalette.purple,
+    onPrimary: CoetusPalette.cream,
+    primaryContainer: CoetusPalette.lime,
+    onPrimaryContainer: CoetusPalette.purple,
+    secondary: CoetusPalette.blue,
+    onSecondary: CoetusPalette.cream,
+    secondaryContainer: CoetusPalette.softLavender,
+    onSecondaryContainer: CoetusPalette.purple,
+    tertiary: CoetusPalette.lime,
+    onTertiary: CoetusPalette.purple,
+    surface: CoetusPalette.cream,
+    onSurface: CoetusPalette.purpleInk,
+    onSurfaceVariant: CoetusColors.muted,
+    outline: CoetusColors.borderStrong,
+    error: CoetusColors.danger,
+  );
   return base.copyWith(
-    scaffoldBackgroundColor: CoetusColors.oat,
-    colorScheme: base.colorScheme.copyWith(
-      primary: CoetusColors.navy,
-      onPrimary: CoetusColors.oat,
-      secondary: CoetusColors.coral,
-      onSecondary: Colors.white,
-      surface: CoetusColors.card,
-      onSurface: CoetusColors.ink,
-      error: CoetusColors.danger,
-    ),
-    textTheme: textTheme,
+    scaffoldBackgroundColor: CoetusPalette.lavender,
+    colorScheme: scheme,
+    textTheme: text,
     appBarTheme: AppBarTheme(
-      backgroundColor: CoetusColors.navy,
-      foregroundColor: CoetusColors.oat,
+      backgroundColor: CoetusPalette.purple,
+      foregroundColor: CoetusPalette.cream,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: head(15, FontWeight.w700, c: CoetusColors.oat),
-      systemOverlayStyle: null,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      titleTextStyle: text.titleLarge?.copyWith(color: CoetusPalette.cream),
+      systemOverlayStyle: SystemUiOverlayStyle.light,
     ),
     dividerColor: CoetusColors.border,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: CoetusColors.navy,
-        foregroundColor: CoetusColors.oat,
-        disabledBackgroundColor: const Color(0x1F1E3A63),
-        disabledForegroundColor: const Color(0x661B2436),
+        backgroundColor: CoetusPalette.lime,
+        foregroundColor: CoetusPalette.purple,
+        disabledBackgroundColor: CoetusPalette.softLavender,
+        disabledForegroundColor: CoetusColors.muted,
         elevation: 0,
-        minimumSize: const Size.fromHeight(54),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        textStyle: textTheme.labelLarge,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(CoetusRadius.button)),
+        minimumSize: const Size.fromHeight(56),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+        textStyle: text.labelLarge,
+        shape: const StadiumBorder(),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: CoetusPalette.lime,
+        foregroundColor: CoetusPalette.purple,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: text.labelLarge,
+        shape: const StadiumBorder(),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: CoetusColors.navy,
+        foregroundColor: CoetusPalette.purple,
         minimumSize: const Size.fromHeight(52),
-        side: const BorderSide(color: CoetusColors.navy, width: 1.5),
-        textStyle: GoogleFonts.plusJakartaSans(
-            fontSize: 14, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(CoetusRadius.button)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        side: const BorderSide(color: CoetusPalette.purple, width: 1.5),
+        textStyle: text.labelLarge,
+        shape: const StadiumBorder(),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: CoetusColors.navy,
-        textStyle: GoogleFonts.plusJakartaSans(
-            fontSize: 13, fontWeight: FontWeight.w600),
+        foregroundColor: CoetusPalette.purple,
+        textStyle: text.labelMedium,
       ),
     ),
     cardTheme: CardThemeData(
-      color: CoetusColors.card,
+      color: CoetusPalette.cream,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(CoetusRadius.card)),
+        borderRadius: BorderRadius.circular(CoetusRadius.card),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: CoetusPalette.cream,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CoetusRadius.sheet),
+      ),
+      titleTextStyle: text.headlineSmall,
+      contentTextStyle: text.bodyMedium,
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: CoetusPalette.cream,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: CoetusColors.card,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      hintStyle: body(13.5, FontWeight.w400, c: CoetusColors.hint),
-      labelStyle: body(11.5, FontWeight.w500, c: CoetusColors.muted),
-      floatingLabelStyle: body(11.5, FontWeight.w500, c: CoetusColors.navy),
-      errorStyle: body(11, FontWeight.w400, c: CoetusColors.danger),
+      fillColor: CoetusPalette.cream,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+      hintStyle: body(14, color: CoetusColors.hint),
+      labelStyle: body(13, color: CoetusColors.muted),
+      floatingLabelStyle: body(12, color: CoetusPalette.purple),
+      errorStyle: body(12, color: CoetusColors.danger),
+      prefixIconColor: CoetusPalette.purple,
+      suffixIconColor: CoetusPalette.purple,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(CoetusRadius.input),
-        borderSide: const BorderSide(color: CoetusColors.border, width: 1.5),
+        borderSide: const BorderSide(color: CoetusColors.border),
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(CoetusRadius.input),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(CoetusRadius.input),
-        borderSide: const BorderSide(color: CoetusColors.navy, width: 1.5),
+        borderSide: const BorderSide(color: CoetusPalette.purple, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(CoetusRadius.input),
-        borderSide: const BorderSide(color: CoetusColors.danger, width: 1.5),
+        borderSide: const BorderSide(color: CoetusColors.danger),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(CoetusRadius.input),
-        borderSide: const BorderSide(color: CoetusColors.danger, width: 1.5),
+        borderSide: const BorderSide(color: CoetusColors.danger, width: 2),
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: CoetusColors.navyTint,
-      labelStyle: body(12, FontWeight.w600, c: CoetusColors.navy),
+      backgroundColor: CoetusPalette.softLavender,
+      selectedColor: CoetusPalette.lime,
+      labelStyle: body(
+        12,
+        weight: FontWeight.w700,
+        color: CoetusPalette.purple,
+      ),
       side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       shape: const StadiumBorder(),
     ),
     tabBarTheme: TabBarThemeData(
-      labelColor: CoetusColors.navy,
-      unselectedLabelColor: CoetusColors.hint,
-      labelStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 13.5, fontWeight: FontWeight.w700),
-      unselectedLabelStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 13.5, fontWeight: FontWeight.w500),
+      labelColor: CoetusPalette.purple,
+      unselectedLabelColor: CoetusColors.muted,
+      labelStyle: text.labelLarge,
       indicatorSize: TabBarIndicatorSize.label,
       dividerColor: Colors.transparent,
       indicator: const UnderlineTabIndicator(
-        borderSide: BorderSide(color: CoetusColors.navy, width: 2.5),
-        insets: EdgeInsets.only(top: 6),
+        borderSide: BorderSide(color: CoetusPalette.purple, width: 3),
       ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: CoetusColors.navy,
-      selectedItemColor: CoetusColors.oat,
-      unselectedItemColor: Color(0x99F5EFE4),
+      backgroundColor: CoetusPalette.purple,
+      selectedItemColor: CoetusPalette.lime,
+      unselectedItemColor: CoetusPalette.cream,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
-      showUnselectedLabels: true,
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: CoetusPalette.purple,
+      linearTrackColor: CoetusPalette.softLavender,
+    ),
+    sliderTheme: base.sliderTheme.copyWith(
+      activeTrackColor: CoetusPalette.purple,
+      inactiveTrackColor: CoetusPalette.softLavender,
+      thumbColor: CoetusPalette.purple,
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: CoetusColors.navyInk,
-      contentTextStyle: body(13, FontWeight.w400, c: CoetusColors.oat),
+      backgroundColor: CoetusPalette.purple,
+      contentTextStyle: body(13, color: CoetusPalette.cream),
       behavior: SnackBarBehavior.floating,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
   );
 }

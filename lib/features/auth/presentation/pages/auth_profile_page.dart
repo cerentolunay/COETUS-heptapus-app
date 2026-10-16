@@ -1,3 +1,5 @@
+import 'package:coetus/widgets/coetus_mascot.dart';
+import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -46,14 +48,14 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
       if (!mounted) return;
 
       setState(() {
-        _error = 'Kullanici bilgisi alinirken zaman asimi olustu.';
+        _error = 'Kullanıcı bilgisi alınırken zaman aşımı oluştu.';
         _isLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _error = 'Kullanici bilgisi alinamadi. Lutfen tekrar dene.';
+        _error = 'Kullanıcı bilgisi alınamadı. Lütfen tekrar dene.';
         _isLoading = false;
       });
     }
@@ -75,31 +77,31 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Cikis basarili.')));
+      ).showSnackBar(const SnackBar(content: Text('çıkış başarılı.')));
       context.go('/login');
     } on TimeoutException {
       if (!mounted) return;
 
       setState(() {
         _isLoggingOut = false;
-        _error = 'Cikis islemi zaman asimina ugradi.';
+        _error = 'çıkış işlemi zaman asimina ugradi.';
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
         _isLoggingOut = false;
-        _error = 'Cikis yapilamadi. Lutfen tekrar dene.';
+        _error = 'Çıkış yapilamadi. Lütfen tekrar dene.';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const bgStart = Color(0xFF0B1120);
-    const bgMiddle = Color(0xFF0F172A);
-    const bgEnd = Color(0xFF1E1B4B);
-    const cyan = Color(0xFF06B6D4);
+    const bgStart = CoetusPalette.purpleInk;
+    const bgMiddle = CoetusPalette.purple;
+    const bgEnd = CoetusPalette.purple;
+    const cyan = CoetusPalette.lime;
 
     return Scaffold(
       body: Container(
@@ -120,7 +122,9 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.10),
+                  ),
                 ),
                 child: _buildContent(cyan),
               ),
@@ -133,10 +137,7 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
 
   Widget _buildContent(Color cyan) {
     if (_isLoading) {
-      return const SizedBox(
-        height: 120,
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return const SizedBox(height: 120, child: CoetusLoadingState());
     }
 
     if (_error != null) {
@@ -162,13 +163,13 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            'Aktif oturum bulunamadi.',
+            'Aktif oturum bulunamadı.',
             style: TextStyle(color: Colors.white),
           ),
           const SizedBox(height: 14),
           ElevatedButton(
             onPressed: () => context.go('/login'),
-            child: const Text('Login sayfasina git'),
+            child: const Text('Giriş sayfasına git'),
           ),
         ],
       );
@@ -187,15 +188,15 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
           ),
         ),
         const SizedBox(height: 16),
-        _UserRow(label: 'Ad Soyad', value: _user!.name),
+        _UserRow(label: 'Ad soyad', value: _user!.name),
         const SizedBox(height: 8),
-        _UserRow(label: 'Email', value: _user!.email),
+        _UserRow(label: 'E-posta', value: _user!.email),
         const SizedBox(height: 8),
-        _UserRow(label: 'Kredi', value: '${_user!.credits} HC'),
+        _UserRow(label: 'Kredi', value: '${_user!.credits} token'),
         const SizedBox(height: 8),
         _UserRow(
-          label: 'Dogrulama',
-          value: _user!.verified ? 'Dogrulandi' : 'Dogrulanmadi',
+          label: 'Doğrulama',
+          value: _user!.verified ? 'Doğrulandı' : 'Doğrulanmadı',
         ),
         const SizedBox(height: 20),
         if (_error != null)
@@ -210,7 +211,7 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
           onPressed: _isLoggingOut ? null : _handleLogout,
           style: ElevatedButton.styleFrom(
             backgroundColor: cyan,
-            foregroundColor: const Color(0xFF07111F),
+            foregroundColor: CoetusPalette.purpleInk,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -223,7 +224,7 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Text(
-                  'Logout',
+                  'Çıkış yap',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
         ),

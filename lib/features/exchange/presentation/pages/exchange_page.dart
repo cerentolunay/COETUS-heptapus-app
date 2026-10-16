@@ -1,3 +1,6 @@
+import 'package:coetus/features/community/community.dart';
+import 'package:coetus/features/verification/presentation/endorse_teaching_page.dart';
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/features/exchange/data/repositories/exchange_repository_factory.dart';
 import 'package:coetus/features/exchange/domain/models/exchange_session.dart';
 import 'package:coetus/features/exchange/domain/models/match_offer.dart';
@@ -23,7 +26,7 @@ class _ExchangePageState extends State<ExchangePage> {
   late final ExchangeRepository _repository =
       ExchangeRepositoryFactory.create();
 
-  static const List<String> _tabs = ['Aktif', 'Bekleyen', 'Tamamlanan'];
+  static const List<String> _tabs = ['Aktif', 'Bekleyen', 'Geçmiş'];
 
   int _selectedTab = 0;
 
@@ -36,7 +39,7 @@ class _ExchangePageState extends State<ExchangePage> {
       await _repository.acceptOffer(offer.id, userId);
       _showSnack('Teklif kabul edildi.');
     } catch (error) {
-      _showSnack('Teklif kabul edilemedi: $error');
+      _showSnack(communityError(error));
     }
   }
 
@@ -51,13 +54,63 @@ class _ExchangePageState extends State<ExchangePage> {
     }
   }
 
-  /// `ExchangeRepository` şu an bir "oturumu tamamlandı işaretle" metodu
-  /// sunmuyor (sadece streamUserOffers/streamUserSessions/acceptOffer/
-  /// rejectOffer/cancelOffer var). Repository'ye yeni bir yazma metodu
-  /// eklemek bu görevin kapsamı dışında olduğundan bu buton şimdilik
-  /// bilgilendirici bir placeholder'dır.
-  void _markSessionCompleted(ExchangeSession session) {
-    _showSnack('Oturum tamamlama onayı yakında aktif olacak.');
+  void _endorse(ExchangeSession session) {
+    if (_userId != session.studentId) {
+      _showSnack('Yetenek onayını, senden öğrenen kişi verebilir.');
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => EndorseTeachingPage(
+          teacherId: session.teacherId,
+          sessionId: session.id,
+        ),
+      ),
+    );
+  }
+
+  final Set<String> _processing = {};
+  Future<void> _sessionAction(ExchangeSession session, bool refund) async {
+    if (_processing.contains(session.id)) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(refund ? 'İptal ve iade isteği' : 'Öğrenme tamamlandı mı?'),
+        content: Text(
+          refund
+              ? 'İki taraf da onayladığında ${session.credits} token öğrenciye iade edilir. İlk onay tek başına iade yapmaz.'
+              : '${session.credits} kilitli token öğretmene aktarılacak. Bu işlemi yalnızca oturum tamamlandığında onayla.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text(refund ? 'İptali onayla' : 'Tamamla ve aktar'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+    _processing.add(session.id);
+    try {
+      await communityCall(
+        refund ? 'cancelLearningSession' : 'completeLearningSession',
+        {'sessionId': session.id},
+      );
+      _showSnack(
+        refund
+            ? 'İptal onayın kaydedildi. İki onay olduğunda iade yapılır.'
+            : 'Oturum tamamlandı, token aktarıldı.',
+      );
+    } catch (e) {
+      _showSnack(communityError(e));
+    } finally {
+      _processing.remove(session.id);
+    }
   }
 
   void _showSnack(String message) {
@@ -84,28 +137,27 @@ class _ExchangePageState extends State<ExchangePage> {
         return StreamBuilder<List<ExchangeSession>>(
           stream: _repository.streamUserSessions(userId),
           builder: (context, sessionSnapshot) {
-            final hasError =
-                offerSnapshot.hasError || sessionSnapshot.hasError;
-            final isLoading = !hasError &&
+            final hasError = offerSnapshot.hasError || sessionSnapshot.hasError;
+            final isLoading =
+                !hasError &&
                 (offerSnapshot.connectionState == ConnectionState.waiting ||
-                    sessionSnapshot.connectionState ==
-                        ConnectionState.waiting);
+                    sessionSnapshot.connectionState == ConnectionState.waiting);
 
             final offers = offerSnapshot.data ?? const <MatchOffer>[];
-            final sessions =
-                sessionSnapshot.data ?? const <ExchangeSession>[];
+            final sessions = sessionSnapshot.data ?? const <ExchangeSession>[];
             final pendingOffers = offers
                 .where((offer) => offer.status == MatchOfferStatus.pending)
                 .toList();
             final visibleSessions = widget.sessionId == null
                 ? sessions
                 : sessions
-                    .where((session) => session.id == widget.sessionId)
-                    .toList();
+                      .where((session) => session.id == widget.sessionId)
+                      .toList();
 
             // Kredi özeti — orijinal hesaplama mantığı korunuyor: aktif ya da
             // planlı oturumların kredi toplamı ve tamamlanan oturum sayısı.
             final lockedCredits = visibleSessions
+                .where((s) => s.funded && s.studentId == userId)
                 .where(
                   (session) =>
                       session.status == ExchangeSessionStatus.active ||
@@ -129,7 +181,8 @@ class _ExchangePageState extends State<ExchangePage> {
             final completedSessions = visibleSessions
                 .where(
                   (session) =>
-                      session.status == ExchangeSessionStatus.completed,
+                      session.status == ExchangeSessionStatus.completed ||
+                      session.status == ExchangeSessionStatus.cancelled,
                 )
                 .toList();
 
@@ -141,9 +194,7 @@ class _ExchangePageState extends State<ExchangePage> {
                 message: '${offerSnapshot.error ?? sessionSnapshot.error}',
               );
             } else if (isLoading) {
-              tabBody = const Center(
-                child: CircularProgressIndicator(color: CoetusColors.navy),
-              );
+              tabBody = const CoetusLoadingState();
             } else {
               tabBody = _buildTabBody(
                 userId: userId,
@@ -164,7 +215,11 @@ class _ExchangePageState extends State<ExchangePage> {
                         const SizedBox(height: CoetusSpace.lg),
                         CategoryTabs(
                           items: _tabs,
-                          selected: _selectedTab,
+                          selected:
+                              widget.sessionId != null &&
+                                  completedSessions.isNotEmpty
+                              ? 2
+                              : _selectedTab,
                           onChanged: (index) =>
                               setState(() => _selectedTab = index),
                         ),
@@ -215,8 +270,7 @@ class _ExchangePageState extends State<ExchangePage> {
                   Expanded(
                     child: Text(
                       'Takaslarım',
-                      style:
-                          t.headlineSmall?.copyWith(color: CoetusColors.oat),
+                      style: t.headlineSmall?.copyWith(color: CoetusColors.oat),
                     ),
                   ),
                   GestureDetector(
@@ -226,8 +280,7 @@ class _ExchangePageState extends State<ExchangePage> {
                       style: t.labelLarge?.copyWith(
                         color: CoetusColors.oat.withValues(alpha: .85),
                         decoration: TextDecoration.underline,
-                        decorationColor:
-                            CoetusColors.oat.withValues(alpha: .5),
+                        decorationColor: CoetusColors.oat.withValues(alpha: .5),
                       ),
                     ),
                   ),
@@ -248,7 +301,7 @@ class _ExchangePageState extends State<ExchangePage> {
                     Expanded(
                       child: _HeaderStat(
                         label: 'Kilitli',
-                        value: '$lockedCredits HC',
+                        value: '$lockedCredits token',
                       ),
                     ),
                     Container(
@@ -280,14 +333,15 @@ class _ExchangePageState extends State<ExchangePage> {
     required List<ExchangeSession> activeSessions,
     required List<ExchangeSession> completedSessions,
   }) {
-    switch (_selectedTab) {
+    switch (widget.sessionId != null && completedSessions.isNotEmpty
+        ? 2
+        : _selectedTab) {
       case 1:
         if (pendingOffers.isEmpty) {
           return _buildEmpty(
             icon: Icons.inbox_outlined,
             title: 'Bekleyen teklif yok',
-            message:
-                'Gönderdiğin veya aldığın teklifler burada listelenecek.',
+            message: 'Gönderdiğin veya aldığın teklifler burada listelenecek.',
           );
         }
         return ListView.separated(
@@ -328,7 +382,9 @@ class _ExchangePageState extends State<ExchangePage> {
           separatorBuilder: (_, _) => const SizedBox(height: CoetusSpace.md),
           itemBuilder: (context, index) => _SessionCard(
             session: completedSessions[index],
-            onMarkCompleted: _markSessionCompleted,
+            onMarkCompleted: (s) => _sessionAction(s, false),
+            onRefund: (s) => _sessionAction(s, true),
+            onEndorse: _endorse,
           ),
         );
       default:
@@ -336,8 +392,7 @@ class _ExchangePageState extends State<ExchangePage> {
           return _buildEmpty(
             icon: Icons.swap_horiz,
             title: 'Henüz aktif takasın yok',
-            message:
-                'Kabul edilen teklifler burada oturum halinde görünecek.',
+            message: 'Kabul edilen teklifler burada oturum halinde görünecek.',
           );
         }
         return ListView.separated(
@@ -351,7 +406,9 @@ class _ExchangePageState extends State<ExchangePage> {
           separatorBuilder: (_, _) => const SizedBox(height: CoetusSpace.md),
           itemBuilder: (context, index) => _SessionCard(
             session: activeSessions[index],
-            onMarkCompleted: _markSessionCompleted,
+            onMarkCompleted: (s) => _sessionAction(s, false),
+            onRefund: (s) => _sessionAction(s, true),
+            onEndorse: _endorse,
           ),
         );
     }
@@ -426,8 +483,9 @@ class _HeaderStat extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -436,10 +494,7 @@ class _HeaderStat extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: t.headlineMedium?.copyWith(color: CoetusColors.oat),
-        ),
+        Text(value, style: t.headlineMedium?.copyWith(color: CoetusColors.oat)),
       ],
     );
   }
@@ -495,7 +550,7 @@ class _OfferCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    offer.skill.isEmpty ? 'Skill teklifi' : offer.skill,
+                    offer.skill.isEmpty ? 'Yetenek teklifi' : offer.skill,
                     style: t.titleMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -503,7 +558,7 @@ class _OfferCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: CoetusSpace.sm),
-              CoetusChip('${offer.credits} HC', tone: CoetusChipTone.credit),
+              CoetusChip('${offer.credits} token', tone: CoetusChipTone.credit),
             ],
           ),
           const SizedBox(height: CoetusSpace.md),
@@ -538,16 +593,22 @@ class _OfferCard extends StatelessWidget {
 }
 
 class _SessionCard extends StatelessWidget {
-  const _SessionCard({required this.session, required this.onMarkCompleted});
+  const _SessionCard({
+    required this.session,
+    required this.onMarkCompleted,
+    required this.onRefund,
+    required this.onEndorse,
+  });
 
   final ExchangeSession session;
-  final ValueChanged<ExchangeSession> onMarkCompleted;
+  final ValueChanged<ExchangeSession> onMarkCompleted, onRefund, onEndorse;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final timelineIndex = _sessionTimelineIndex(session.status);
-    final showActions = session.status == ExchangeSessionStatus.active ||
+    final showActions =
+        session.status == ExchangeSessionStatus.active ||
         session.status == ExchangeSessionStatus.scheduled;
 
     return Container(
@@ -568,9 +629,7 @@ class _SessionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      session.skill.isEmpty
-                          ? 'Takas oturumu'
-                          : session.skill,
+                      session.skill.isEmpty ? 'Takas oturumu' : session.skill,
                       style: t.titleMedium,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -587,7 +646,7 @@ class _SessionCard extends StatelessWidget {
               ),
               const SizedBox(width: CoetusSpace.sm),
               CoetusChip(
-                '${session.credits} HC',
+                '${session.credits} token',
                 tone: CoetusChipTone.credit,
               ),
             ],
@@ -597,8 +656,7 @@ class _SessionCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextButton(
-                onPressed: () =>
-                    context.go('/exchange-detail/${session.id}'),
+                onPressed: () => context.go('/exchange-detail/${session.id}'),
                 child: const Text('Detay'),
               ),
               TextButton(
@@ -608,25 +666,52 @@ class _SessionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: CoetusSpace.sm),
-          EscrowSteps(
-            labels: const ['Anlaşma', 'Kredi kilitli', 'Oturum', 'Aktarım'],
-            currentIndex: timelineIndex,
-          ),
-          if (showActions) ...[
+          if (session.status == ExchangeSessionStatus.cancelled)
+            const Text(
+              'Oturum iptal edildi; kilitli token öğrenciye iade edildi.',
+            ),
+          if (session.funded &&
+              session.status != ExchangeSessionStatus.cancelled)
+            EscrowSteps(
+              labels: const ['Anlaşma', 'Kredi kilitli', 'Oturum', 'Aktarım'],
+              currentIndex: timelineIndex,
+            ),
+          if (!session.funded)
+            const Text('Bu oturumda token kilidi bulunmuyor.'),
+          if (FirebaseAuth.instance.currentUser?.uid == session.studentId &&
+              (session.status == ExchangeSessionStatus.completed))
+            TextButton.icon(
+              onPressed: () => onEndorse(session),
+              icon: const Icon(Icons.verified_outlined),
+              label: const Text('Bu kişi bana öğretti'),
+            ),
+          if (showActions && session.funded) ...[
             const SizedBox(height: CoetusSpace.lg),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => onMarkCompleted(session),
-                child: const Text('Oturumu tamamlandı işaretle'),
+                onPressed:
+                    FirebaseAuth.instance.currentUser?.uid == session.studentId
+                    ? () => onMarkCompleted(session)
+                    : null,
+                child: const Text('Tamamla ve tokenı aktar'),
               ),
             ),
             const SizedBox(height: CoetusSpace.sm),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () {},
-                child: const Text('Sorun bildir'),
+                onPressed:
+                    session.refundVotes.contains(
+                      FirebaseAuth.instance.currentUser?.uid,
+                    )
+                    ? null
+                    : () => onRefund(session),
+                child: Text(
+                  session.refundVotes.isEmpty
+                      ? 'İptal / iade iste'
+                      : 'İptali onayla',
+                ),
               ),
             ),
           ],

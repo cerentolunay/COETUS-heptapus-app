@@ -1,3 +1,4 @@
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -85,12 +86,12 @@ class _RegisterPageState extends State<RegisterPage>
     final email = value?.trim() ?? '';
 
     if (email.isEmpty) {
-      return 'Email zorunludur';
+      return 'E-posta zorunludur';
     }
 
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     if (!emailRegex.hasMatch(email)) {
-      return 'Geçerli bir email adresi gir';
+      return 'Geçerli bir e-posta adresi gir';
     }
 
     return null;
@@ -394,7 +395,7 @@ class _RegisterPageState extends State<RegisterPage>
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.4,
-                                color: CoetusColors.oat,
+                                color: CoetusPalette.purple,
                               ),
                             )
                           : const Text('Kayıt ol'),
@@ -422,7 +423,12 @@ class _RegisterPageState extends State<RegisterPage>
                         children: [
                           _GoogleIcon(),
                           SizedBox(width: 10),
-                          Text('Google ile devam et'),
+                          Flexible(
+                            child: Text(
+                              'Google ile devam et',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -449,25 +455,8 @@ class _AuthHeaderSection extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
-        Container(
-          width: 52,
-          height: 52,
-          margin: const EdgeInsets.only(bottom: 14),
-          decoration: BoxDecoration(
-            color: CoetusColors.navy,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Center(
-            child: Text(
-              'C',
-              style: TextStyle(
-                color: CoetusColors.oat,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
+        const CoetusMascot(size: 100, animate: false, interactive: false),
+        const SizedBox(height: 16),
         Text(
           headline,
           textAlign: TextAlign.center,
@@ -488,10 +477,7 @@ class _AuthHeaderSection extends StatelessWidget {
 
 /// Giriş / Kayıt pill sekme geçişi.
 class _AuthModeTabs extends StatelessWidget {
-  const _AuthModeTabs({
-    required this.loginActive,
-    this.onTapLogin,
-  });
+  const _AuthModeTabs({required this.loginActive, this.onTapLogin});
 
   final bool loginActive;
   final VoidCallback? onTapLogin;
@@ -545,7 +531,7 @@ class _AuthModeTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: active ? CoetusColors.card : Colors.transparent,
+          color: active ? CoetusPalette.lime : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
         ),
         alignment: Alignment.center,

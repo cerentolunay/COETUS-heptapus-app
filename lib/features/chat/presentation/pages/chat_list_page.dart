@@ -1,3 +1,4 @@
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/chat/data/repositories/chat_repository_factory.dart';
 import 'package:coetus/features/chat/domain/models/chat_thread.dart';
@@ -166,9 +167,7 @@ class _ChatListPageState extends State<ChatListPage> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: CoetusColors.navy),
-          );
+          return const CoetusLoadingState();
         }
 
         final uniqueChats = _deduplicateChatsByParticipant(
@@ -284,7 +283,11 @@ class _ChatListPageState extends State<ChatListPage> {
           children: [
             Icon(icon, color: CoetusColors.navy, size: 42),
             const SizedBox(height: 14),
-            Text(title, textAlign: TextAlign.center, style: textTheme.titleLarge),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(
               subtitle,

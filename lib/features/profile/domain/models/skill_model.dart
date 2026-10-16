@@ -2,17 +2,24 @@ class SkillModel {
   final String id;
   final String name;
   final int level;
+  final int peerApprovalCount;
   final String category;
   final bool teachable;
   final bool learnable;
+  final String? verifiedName;
+  final int? verifiedLevel;
+  bool get verified => verifiedName == name && verifiedLevel == level;
 
   const SkillModel({
     required this.id,
     required this.name,
     required this.level,
+    this.peerApprovalCount = 0,
     this.category = '',
     this.teachable = false,
     this.learnable = false,
+    this.verifiedName,
+    this.verifiedLevel,
   });
 
   SkillModel copyWith({
@@ -30,6 +37,9 @@ class SkillModel {
       category: category ?? this.category,
       teachable: teachable ?? this.teachable,
       learnable: learnable ?? this.learnable,
+      peerApprovalCount: peerApprovalCount,
+      verifiedName: verifiedName,
+      verifiedLevel: verifiedLevel,
     );
   }
 
@@ -52,6 +62,9 @@ class SkillModel {
       category: map['category'] as String? ?? '',
       teachable: map['teachable'] as bool? ?? false,
       learnable: map['learnable'] as bool? ?? false,
+      peerApprovalCount: (map['peerApprovalCount'] as num?)?.toInt() ?? 0,
+      verifiedName: map['verifiedName'] as String?,
+      verifiedLevel: (map['verifiedLevel'] as num?)?.toInt(),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/models/exchange_session.dart';
@@ -49,90 +50,9 @@ class FirebaseExchangeRepository implements ExchangeRepository {
 
   @override
   Future<void> acceptOffer(String matchId, String currentUserId) async {
-    final matchRef = _firestore.collection('matches').doc(matchId);
-    final sessionRef = _firestore.collection('sessions').doc(matchId);
-    final chatRef = _firestore.collection('chats').doc(matchId);
-    final notificationRef = _firestore.collection('notifications').doc();
-
-    await _firestore.runTransaction((transaction) async {
-      final matchSnapshot = await transaction.get(matchRef);
-      if (!matchSnapshot.exists) {
-        throw StateError('Match offer $matchId was not found.');
-      }
-
-      final offer = MatchOffer.fromFirestore(matchSnapshot);
-      if (offer.receiverId != currentUserId) {
-        throw StateError('Only the offer receiver can accept this offer.');
-      }
-
-      final participants = _normalizedParticipants(
-        offer.participants.isEmpty
-            ? [offer.requesterId, offer.receiverId]
-            : offer.participants,
-      );
-      final requesterSnapshot = await transaction.get(
-        _firestore.collection('users').doc(offer.requesterId),
-      );
-      final receiverSnapshot = await transaction.get(
-        _firestore.collection('users').doc(offer.receiverId),
-      );
-      final participantNames = {
-        offer.requesterId: _readUserName(requesterSnapshot),
-        offer.receiverId: _readUserName(receiverSnapshot),
-      };
-      final now = FieldValue.serverTimestamp();
-
-      transaction.set(matchRef, {
-        'id': matchId,
-        'status': MatchOfferStatus.accepted.name,
-        'requesterName': participantNames[offer.requesterId],
-        'receiverName': participantNames[offer.receiverId],
-        'participantNames': participantNames,
-        'updatedAt': now,
-      }, SetOptions(merge: true));
-
-      transaction.set(sessionRef, {
-        'id': sessionRef.id,
-        'matchId': matchId,
-        'teacherId': offer.receiverId,
-        'studentId': offer.requesterId,
-        'participants': participants,
-        'skill': offer.skill,
-        'credits': offer.credits,
-        'status': ExchangeSessionStatus.active.name,
-        'createdAt': now,
-        'updatedAt': now,
-      }, SetOptions(merge: true));
-
-      transaction.set(chatRef, {
-        'id': chatRef.id,
-        'sessionId': sessionRef.id,
-        'matchId': matchId,
-        'participants': participants,
-        'participantNames': participantNames,
-        'skillName': offer.skill,
-        'credits': offer.credits,
-        'status': ExchangeSessionStatus.active.name,
-        'lastMessage': '',
-        'createdAt': now,
-        'updatedAt': now,
-      }, SetOptions(merge: true));
-
-      transaction.set(notificationRef, {
-        'id': notificationRef.id,
-        'userId': offer.requesterId,
-        'senderId': currentUserId,
-        'type': 'offer_accepted',
-        'title': 'Teklif kabul edildi',
-        'message': '${offer.skill} teklifin kabul edildi.',
-        'targetRoute': '/chat-detail',
-        'targetId': chatRef.id,
-        'matchId': matchId,
-        'sessionId': sessionRef.id,
-        'read': false,
-        'createdAt': now,
-      });
-    });
+    await FirebaseFunctions.instanceFor(
+      region: 'europe-west1',
+    ).httpsCallable('acceptLearningOffer').call({'matchId': matchId});
   }
 
   @override
@@ -207,11 +127,6 @@ class FirebaseExchangeRepository implements ExchangeRepository {
         'createdAt': now,
       });
     });
-  }
-
-  List<String> _normalizedParticipants(List<String> participants) {
-    return participants.where((id) => id.trim().isNotEmpty).toSet().toList()
-      ..sort();
   }
 
   Future<List<MatchOffer>> _enrichMissingOfferNames(

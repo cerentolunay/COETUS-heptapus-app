@@ -1,3 +1,6 @@
+import 'package:coetus/features/verification/presentation/verification_page.dart';
+import 'package:coetus/widgets/coetus_delete_dialog.dart';
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -28,7 +31,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     id: 'u1',
     name: 'Alex Chen',
     email: 'alex@example.com',
-    bio: 'Skill swapping enthusiast',
+    bio: 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
   );
 
   List<SkillModel> _skills = const [
@@ -49,11 +52,10 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   bool _isLoadingProfile = true;
   bool _isSigningOut = false;
 
-  // Bu renkler yalnızca aşağıdaki, dokunulmaması istenen dialog metodları
-  // tarafından kullanılıyor.
-  static const Color _card = Color(0xFF1A1A2E);
-  static const Color _indigo = Color(0xFF6366F1);
-  static const Color _violet = Color(0xFF8B5CF6);
+  // Dialog surfaces use the shared dark purple palette.
+  static const Color _card = CoetusPalette.purple;
+  static const Color _indigo = CoetusPalette.blue;
+  static const Color _violet = CoetusPalette.blue;
 
   @override
   void initState() {
@@ -103,7 +105,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
         return AlertDialog(
           backgroundColor: _card,
           title: const Text(
-            'Edit Skill',
+            'Yeteneği düzenle',
             style: TextStyle(color: Colors.white),
           ),
           content: StatefulBuilder(
@@ -116,14 +118,15 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     controller: nameController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Skill name',
+                      fillColor: _card,
+                      hintText: 'Yetenek adı',
                       hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.40),
+                        color: Colors.white.withValues(alpha: 0.40),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.12),
+                          color: Colors.white.withValues(alpha: 0.12),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -134,9 +137,9 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Level: ${selectedLevel.toInt()}/7',
+                    'Seviye: ${selectedLevel.toInt()}/7',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -146,7 +149,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     max: 7,
                     divisions: 6,
                     activeColor: _indigo,
-                    inactiveColor: Colors.white.withOpacity(0.15),
+                    inactiveColor: Colors.white.withValues(alpha: 0.15),
                     onChanged: (value) {
                       setDialogState(() {
                         selectedLevel = value;
@@ -161,8 +164,8 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.70)),
+                'Vazgeç',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
               ),
             ),
             ElevatedButton(
@@ -192,7 +195,10 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: _indigo),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Kaydet',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -203,50 +209,16 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showDeleteSkillDialog(SkillModel skill) async {
-    await showDialog<void>(
+    await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: _card,
-          title: const Text(
-            'Delete Skill',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: Text(
-            '${skill.name} skillini silmek istiyor musun?',
-            style: TextStyle(color: Colors.white.withOpacity(0.80)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.70)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                setState(() {
-                  _skills.removeWhere((s) => s.id == skill.id);
-                });
-
-                await _profileRepository.deleteTeachSkill(skill.id);
-
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-              ),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+      barrierDismissible: false,
+      builder: (_) => CoetusDeleteDialog(
+        name: skill.name,
+        onDelete: () async {
+          final updated = await _profileRepository.deleteTeachSkill(skill.id);
+          if (mounted) setState(() => _applyProfile(updated));
+        },
+      ),
     );
   }
 
@@ -278,7 +250,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('${newSkill.name} added')));
+    ).showSnackBar(SnackBar(content: Text('${newSkill.name} eklendi')));
   }
 
   Future<void> _showAddGoalDialog() async {
@@ -306,16 +278,22 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: _card,
-          title: const Text('Edit Goal', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'Hedefi düzenle',
+            style: TextStyle(color: Colors.white),
+          ),
           content: TextField(
             controller: nameController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Goal name',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.40)),
+              fillColor: _card,
+              hintText: 'Hedef adı',
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.40)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -327,8 +305,8 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.70)),
+                'Vazgeç',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
               ),
             ),
             ElevatedButton(
@@ -356,7 +334,10 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: _violet),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Kaydet',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -367,50 +348,16 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showDeleteGoalDialog(SkillModel goal) async {
-    await showDialog<void>(
+    await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: _card,
-          title: const Text(
-            'Delete Goal',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: Text(
-            '${goal.name} hedefini silmek istiyor musun?',
-            style: TextStyle(color: Colors.white.withOpacity(0.80)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.70)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                setState(() {
-                  _learningGoals.removeWhere((item) => item.id == goal.id);
-                });
-
-                await _profileRepository.deleteLearnSkill(goal.id);
-
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-              ),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+      barrierDismissible: false,
+      builder: (_) => CoetusDeleteDialog(
+        name: goal.name,
+        onDelete: () async {
+          final updated = await _profileRepository.deleteLearnSkill(goal.id);
+          if (mounted) setState(() => _applyProfile(updated));
+        },
+      ),
     );
   }
 
@@ -422,19 +369,21 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
         title: const Text('Çıkış Yap', style: TextStyle(color: Colors.white)),
         content: Text(
           'Hesabından çıkış yapmak istediğine emin misin?',
-          style: TextStyle(color: Colors.white.withOpacity(0.80)),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.80)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
               'İptal',
-              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CoetusColors.danger,
+            ),
             child: const Text(
               'Çıkış Yap',
               style: TextStyle(color: Colors.white),
@@ -466,7 +415,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
     if (_isLoadingProfile) {
       return const Scaffold(
         backgroundColor: CoetusColors.oat,
-        body: Center(child: CircularProgressIndicator()),
+        body: CoetusLoadingState(),
       );
     }
 
@@ -493,6 +442,23 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.verified_outlined),
+                              title: const Text(
+                                'Çalışmalarım ve eşleşme onayları',
+                              ),
+                              subtitle: const Text(
+                                'Kanıt paylaş · Onay al · Token kazan',
+                              ),
+                              trailing: const Icon(Icons.arrow_outward_rounded),
+                              onTap: () async {
+                                await context.push('/verification');
+                                if (mounted) await _loadProfile();
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                           _buildSkillsSection(t),
                           const SizedBox(height: CoetusSpace.xxl),
                           _buildLearningGoalsSection(t),
@@ -559,9 +525,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     child: Center(
                       child: Text(
                         'Profil',
-                        style: t.titleMedium?.copyWith(
-                          color: CoetusColors.oat,
-                        ),
+                        style: t.titleMedium?.copyWith(color: CoetusColors.oat),
                       ),
                     ),
                   ),
@@ -612,13 +576,12 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                             ),
                           ),
                         ],
-                        if (_user.verified || _user.trustScore > 0) ...[
+                        if (_user.trustScore > 0) ...[
                           const SizedBox(height: CoetusSpace.sm),
                           Wrap(
                             spacing: CoetusSpace.sm,
                             runSpacing: CoetusSpace.sm,
                             children: [
-                              if (_user.verified) _buildVerifiedPill(),
                               if (_user.trustScore > 0) _buildTrustPill(),
                             ],
                           ),
@@ -675,31 +638,6 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
       width: 1,
       height: 26,
       color: Colors.white.withValues(alpha: .15),
-    );
-  }
-
-  Widget _buildVerifiedPill() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: CoetusColors.coral,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified, size: 13, color: Colors.white),
-          SizedBox(width: 4),
-          Text(
-            'Doğrulanmış',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -905,6 +843,24 @@ class _SkillRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text('Seviye ${skill.level}', style: t.bodySmall),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => VerificationPage(skillId: skill.id),
+                    ),
+                  ),
+                  child: const Text('Çalışma ekle (isteğe bağlı)'),
+                ),
+                if (skill.peerApprovalCount > 0)
+                  Text(
+                    'Eşleştiği ${skill.peerApprovalCount} kişiden onay',
+                    style: TextStyle(
+                      color: CoetusColors.successDeep,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -986,11 +942,7 @@ class _GoalChip extends StatelessWidget {
             customBorder: const CircleBorder(),
             child: const Padding(
               padding: EdgeInsets.all(5),
-              child: Icon(
-                Icons.close,
-                size: 13,
-                color: CoetusColors.coralDeep,
-              ),
+              child: Icon(Icons.close, size: 13, color: CoetusColors.coralDeep),
             ),
           ),
         ],
@@ -1010,8 +962,8 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
   final TextEditingController _nameController = TextEditingController();
   double _selectedLevel = 1;
 
-  static const Color _card = Color(0xFF1A1A2E);
-  static const Color _indigo = Color(0xFF6366F1);
+  static const Color _card = CoetusPalette.purple;
+  static const Color _indigo = CoetusPalette.blue;
 
   @override
   void dispose() {
@@ -1037,7 +989,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: _card,
-      title: const Text('Add Skill', style: TextStyle(color: Colors.white)),
+      title: const Text('Yetenek ekle', style: TextStyle(color: Colors.white)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1046,11 +998,14 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
             controller: _nameController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Skill name',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.40)),
+              fillColor: _card,
+              hintText: 'Yetenek adı',
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.40)),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -1060,9 +1015,9 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Level: ${_selectedLevel.toInt()}/7',
+            'Seviye: ${_selectedLevel.toInt()}/7',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1072,7 +1027,7 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
             max: 7,
             divisions: 6,
             activeColor: _indigo,
-            inactiveColor: Colors.white.withOpacity(0.15),
+            inactiveColor: Colors.white.withValues(alpha: 0.15),
             label: _selectedLevel.toInt().toString(),
             onChanged: (value) {
               setState(() {
@@ -1086,14 +1041,14 @@ class _AddSkillDialogState extends State<_AddSkillDialog> {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(
-            'Cancel',
-            style: TextStyle(color: Colors.white.withOpacity(0.70)),
+            'Vazgeç',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
           ),
         ),
         ElevatedButton(
           onPressed: _submit,
           style: ElevatedButton.styleFrom(backgroundColor: _indigo),
-          child: const Text('Add', style: TextStyle(color: Colors.white)),
+          child: const Text('Ekle', style: TextStyle(color: Colors.white)),
         ),
       ],
     );

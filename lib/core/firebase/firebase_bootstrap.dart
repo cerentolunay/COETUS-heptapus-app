@@ -8,12 +8,10 @@ class FirebaseBootstrap {
       return;
     }
 
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } on UnsupportedError {
-      return;
-    }
+    // Do not continue into the router when this platform is unconfigured.
+    // Its auth/profile listeners require an initialized default Firebase app.
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
 }

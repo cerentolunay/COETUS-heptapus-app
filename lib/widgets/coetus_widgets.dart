@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'coetus_mascot.dart';
 
 import '../app/theme/coetus_tokens.dart';
 
@@ -9,8 +9,8 @@ class CreditBadge extends StatelessWidget {
     super.key,
     required this.amount,
     this.dense = false,
-    this.background = CoetusColors.navy,
-    this.foreground = CoetusColors.oat,
+    this.background = CoetusPalette.lime,
+    this.foreground = CoetusPalette.purple,
   });
 
   final int amount;
@@ -23,17 +23,26 @@ class CreditBadge extends StatelessWidget {
     final double size = dense ? 10.5 : 12;
     return Container(
       padding: EdgeInsets.symmetric(
-          horizontal: dense ? 9 : 11, vertical: dense ? 4 : 6),
+        horizontal: dense ? 9 : 11,
+        vertical: dense ? 4 : 6,
+      ),
       decoration: BoxDecoration(
-          color: background, borderRadius: BorderRadius.circular(999)),
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.add_circle_outline, size: size, color: foreground),
           const SizedBox(width: 4),
-          Text('$amount',
-              style: GoogleFonts.dmSans(
-                  fontSize: size, fontWeight: FontWeight.w700, color: foreground)),
+          Text(
+            '$amount',
+            style: TextStyle(
+              fontSize: size,
+              fontWeight: FontWeight.w700,
+              color: foreground,
+            ),
+          ),
         ],
       ),
     );
@@ -42,8 +51,12 @@ class CreditBadge extends StatelessWidget {
 
 /// Durum çipi: müsait / talep / seviye vb.
 class CoetusChip extends StatelessWidget {
-  const CoetusChip(this.label,
-      {super.key, this.tone = CoetusChipTone.neutral, this.dashed = false});
+  const CoetusChip(
+    this.label, {
+    super.key,
+    this.tone = CoetusChipTone.neutral,
+    this.dashed = false,
+  });
 
   final String label;
   final CoetusChipTone tone;
@@ -71,15 +84,16 @@ class CoetusChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: dashed ? Colors.transparent : bg,
         borderRadius: BorderRadius.circular(999),
-        border: dashed
-            ? Border.all(color: CoetusColors.borderStrong)
-            : null,
+        border: dashed ? Border.all(color: CoetusColors.borderStrong) : null,
       ),
-      child: Text(label,
-          style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: dashed ? CoetusColors.navy : fg)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: dashed ? CoetusColors.navy : fg,
+        ),
+      ),
     );
   }
 }
@@ -140,7 +154,9 @@ class SkillCard extends StatelessWidget {
                         width: 72,
                         height: 72,
                         decoration: const BoxDecoration(
-                            color: CoetusColors.navy, shape: BoxShape.circle),
+                          color: CoetusColors.navy,
+                          shape: BoxShape.circle,
+                        ),
                         child: Icon(icon, size: 30, color: CoetusColors.oat),
                       ),
                     ),
@@ -150,23 +166,30 @@ class SkillCard extends StatelessWidget {
                         top: 9,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 4),
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                              color: CoetusColors.card.withValues(alpha: .92),
-                              borderRadius: BorderRadius.circular(999)),
-                          child: Text(statusLabel!,
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: statusTone == CoetusChipTone.success
-                                      ? CoetusColors.successDeep
-                                      : CoetusColors.coralDeep)),
+                            color: CoetusColors.card.withValues(alpha: .92),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            statusLabel!,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: statusTone == CoetusChipTone.success
+                                  ? CoetusColors.successDeep
+                                  : CoetusColors.coralDeep,
+                            ),
+                          ),
                         ),
                       ),
                     Positioned(
-                        right: 9,
-                        top: 9,
-                        child: CreditBadge(amount: credits, dense: true)),
+                      right: 9,
+                      top: 9,
+                      child: CreditBadge(amount: credits, dense: true),
+                    ),
                   ],
                 ),
               ),
@@ -175,10 +198,12 @@ class SkillCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: t.titleSmall),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.titleSmall,
+                    ),
                     const SizedBox(height: 4),
                     Text(subtitle, maxLines: 2, style: t.bodySmall),
                   ],
@@ -194,11 +219,12 @@ class SkillCard extends StatelessWidget {
 
 /// Yatay kaydırılabilir, altı çizili kategori sekmesi.
 class CategoryTabs extends StatelessWidget {
-  const CategoryTabs(
-      {super.key,
-      required this.items,
-      required this.selected,
-      required this.onChanged});
+  const CategoryTabs({
+    super.key,
+    required this.items,
+    required this.selected,
+    required this.onChanged,
+  });
 
   final List<String> items;
   final int selected;
@@ -207,39 +233,18 @@ class CategoryTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 34,
+      height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: CoetusSpace.xl),
         itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 20),
-        itemBuilder: (context, i) {
-          final active = i == selected;
-          return GestureDetector(
-            onTap: () => onChanged(i),
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(items[i],
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13.5,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                        color:
-                            active ? CoetusColors.navy : CoetusColors.hint)),
-                const SizedBox(height: 7),
-                Container(
-                  height: 2.5,
-                  width: active ? null : 0,
-                  constraints: const BoxConstraints(minWidth: 0),
-                  decoration: BoxDecoration(
-                      color: active ? CoetusColors.navy : Colors.transparent,
-                      borderRadius: BorderRadius.circular(2)),
-                ),
-              ],
-            ),
-          );
-        },
+        separatorBuilder: (_, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) => ChoiceChip(
+          label: Text(items[index]),
+          selected: index == selected,
+          showCheckmark: false,
+          onSelected: (_) => onChanged(index),
+        ),
       ),
     );
   }
@@ -273,29 +278,28 @@ class CoetusEmptyState extends StatelessWidget {
         border: Border.all(color: CoetusColors.borderStrong),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: const BoxDecoration(
-                color: CoetusColors.plateWarm, shape: BoxShape.circle),
-            child: Icon(icon, color: CoetusColors.navy, size: 24),
-          ),
+          const CoetusMascot(size: 100, animate: false, interactive: false),
           const SizedBox(height: 10),
           Text(title, style: t.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 6),
           SizedBox(
             width: 230,
-            child: Text(message,
-                style: t.bodySmall, textAlign: TextAlign.center),
+            child: Text(
+              message,
+              style: t.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ),
           if (actionLabel != null) ...[
             const SizedBox(height: 14),
             ElevatedButton(
               onPressed: onAction,
               style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(0, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 20)),
+                minimumSize: const Size(0, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
               child: Text(actionLabel!),
             ),
           ],
@@ -307,8 +311,11 @@ class CoetusEmptyState extends StatelessWidget {
 
 /// Escrow adım göstergesi (Anlaşma → Kredi kilitli → Oturum → Aktarım).
 class EscrowSteps extends StatelessWidget {
-  const EscrowSteps(
-      {super.key, required this.labels, required this.currentIndex});
+  const EscrowSteps({
+    super.key,
+    required this.labels,
+    required this.currentIndex,
+  });
 
   final List<String> labels;
   final int currentIndex;
@@ -319,61 +326,73 @@ class EscrowSteps extends StatelessWidget {
     for (var i = 0; i < labels.length; i++) {
       final done = i < currentIndex;
       final active = i == currentIndex;
-      children.add(Expanded(
-        child: Column(
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: done
-                    ? CoetusColors.navy
+      children.add(
+        Expanded(
+          child: Column(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: done
+                      ? CoetusColors.navy
+                      : active
+                      ? CoetusColors.amber
+                      : CoetusColors.border,
+                ),
+                child: done
+                    ? const Icon(Icons.check, size: 14, color: CoetusColors.oat)
                     : active
-                        ? CoetusColors.amber
-                        : const Color(0x241E3A63),
+                    ? Center(
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: CoetusColors.card,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
-              child: done
-                  ? const Icon(Icons.check,
-                      size: 14, color: CoetusColors.oat)
-                  : active
-                      ? Center(
-                          child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                  color: CoetusColors.card,
-                                  shape: BoxShape.circle)))
-                      : null,
-            ),
-            const SizedBox(height: 6),
-            Text(labels[i],
+              const SizedBox(height: 6),
+              Text(
+                labels[i],
                 textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                    fontSize: 9.5,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                    color: done
-                        ? CoetusColors.navy
-                        : active
-                            ? CoetusColors.amberDeep
-                            : CoetusColors.hint)),
-          ],
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  color: done
+                      ? CoetusColors.navy
+                      : active
+                      ? CoetusColors.amberDeep
+                      : CoetusColors.hint,
+                ),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
       if (i < labels.length - 1) {
-        children.add(Container(
-          width: 26,
-          height: 2,
-          margin: const EdgeInsets.only(bottom: 16),
-          color: i < currentIndex
-              ? CoetusColors.navy
-              : i == currentIndex
-                  ? CoetusColors.amber
-                  : const Color(0x2E1E3A63),
-        ));
+        children.add(
+          Container(
+            width: 26,
+            height: 2,
+            margin: const EdgeInsets.only(bottom: 16),
+            color: i < currentIndex
+                ? CoetusColors.navy
+                : i == currentIndex
+                ? CoetusColors.amber
+                : CoetusColors.borderStrong,
+          ),
+        );
       }
     }
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: children);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
   }
 }
 
@@ -389,12 +408,15 @@ class WarmNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-          color: CoetusColors.plateWarm,
-          borderRadius: BorderRadius.circular(14)),
-      child: Row(children: [
-        Expanded(child: child),
-        if (trailing != null) ...[const SizedBox(width: 10), trailing!],
-      ]),
+        color: CoetusColors.plateWarm,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: child),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        ],
+      ),
     );
   }
 }

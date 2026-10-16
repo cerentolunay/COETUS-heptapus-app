@@ -1,3 +1,4 @@
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/notifications/data/repositories/notification_repository_factory.dart';
 import 'package:coetus/features/notifications/domain/models/app_notification.dart';
@@ -27,6 +28,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     'Teklifler',
     'Oturumlar',
     'Mesajlar',
+    'Topluluk',
   ];
 
   String? get _userId => FirebaseAuth.instance.currentUser?.uid;
@@ -40,10 +42,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
             item.type == AppNotificationType.offerRejected;
       }
       if (_selectedFilterIndex == 2) {
-        return item.type == AppNotificationType.sessionStarted;
+        return item.type == AppNotificationType.sessionStarted ||
+            item.type == AppNotificationType.learningCompleted ||
+            item.type == AppNotificationType.learningRefund;
       }
       if (_selectedFilterIndex == 3) {
         return item.type == AppNotificationType.newMessage;
+      }
+      if (_selectedFilterIndex == 4) {
+        return item.type == AppNotificationType.communityActivity ||
+            item.type == AppNotificationType.tokenSupport;
       }
       return true;
     }).toList();
@@ -62,6 +70,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
   String _resolveRoute(AppNotification item) {
     final targetId = item.targetId.trim();
     switch (item.targetRoute) {
+      case '/community-post':
+        return targetId.isEmpty ? '/matching' : '/community-post/$targetId';
       case '/chat-detail':
         return targetId.isEmpty ? '/chat' : '/chat-detail/$targetId';
       case '/exchange-detail':
@@ -69,6 +79,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       case '/chat':
       case '/exchange':
       case '/notifications':
+      case '/verification':
         return item.targetRoute;
       default:
         return '/exchange';
@@ -155,11 +166,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           return Column(
             children: [
               _buildHeader(unread: 0, onMarkAllRead: null),
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(color: CoetusColors.navy),
-                ),
-              ),
+              const Expanded(child: CoetusLoadingState()),
             ],
           );
         }
@@ -173,8 +180,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
           children: [
             _buildHeader(
               unread: unreadCount,
-              onMarkAllRead:
-                  unreadCount == 0 ? null : () => _markAllAsRead(allItems),
+              onMarkAllRead: unreadCount == 0
+                  ? null
+                  : () => _markAllAsRead(allItems),
             ),
             const SizedBox(height: CoetusSpace.md),
             CategoryTabs(
@@ -210,7 +218,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             for (final item in group.items)
                               Padding(
                                 padding: const EdgeInsets.only(
-                                    bottom: CoetusSpace.md),
+                                  bottom: CoetusSpace.md,
+                                ),
                                 child: _NotificationCard(
                                   item: item,
                                   onTap: () => _openNotification(item),
@@ -252,14 +261,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
               children: [
                 Text(
                   'Bildirimler',
-                  style: textTheme.headlineSmall
-                      ?.copyWith(color: CoetusColors.oat),
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: CoetusColors.oat,
+                  ),
                 ),
                 if (unread > 0) ...[
                   const SizedBox(width: CoetusSpace.sm),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: CoetusColors.oat.withValues(alpha: .16),
                       borderRadius: BorderRadius.circular(CoetusRadius.chip),
@@ -351,8 +363,8 @@ List<NotificationDayGroup> groupNotificationsByDay(
         key == todayKey
             ? 'BUGÜN'
             : key == yesterdayKey
-                ? 'DÜN'
-                : _formatDayLabel(key),
+            ? 'DÜN'
+            : _formatDayLabel(key),
         buckets[key]!,
       ),
   ];
@@ -400,6 +412,21 @@ class _NotificationVisual {
 
 _NotificationVisual _visualFor(AppNotificationType type) {
   switch (type) {
+    case AppNotificationType.communityActivity:
+    case AppNotificationType.tokenSupport:
+    case AppNotificationType.learningCompleted:
+    case AppNotificationType.learningRefund:
+      return const _NotificationVisual(
+        Icons.auto_awesome,
+        CoetusPalette.lime,
+        CoetusPalette.purple,
+      );
+    case AppNotificationType.verificationApproved:
+      return const _NotificationVisual(
+        Icons.verified,
+        CoetusPalette.lime,
+        CoetusPalette.purple,
+      );
     case AppNotificationType.offerReceived:
     case AppNotificationType.offerAccepted:
     case AppNotificationType.offerRejected:
@@ -519,6 +546,16 @@ class _NotificationCard extends StatelessWidget {
 
   String _fallbackTitle(AppNotificationType type) {
     switch (type) {
+      case AppNotificationType.communityActivity:
+        return 'Paylaşımına yorum geldi';
+      case AppNotificationType.tokenSupport:
+        return 'Token desteği aldın';
+      case AppNotificationType.learningCompleted:
+        return 'Oturum tamamlandı';
+      case AppNotificationType.learningRefund:
+        return 'Oturum iptal isteği';
+      case AppNotificationType.verificationApproved:
+        return 'Yeteneğin doğrulandı';
       case AppNotificationType.offerReceived:
         return 'Yeni teklif';
       case AppNotificationType.offerAccepted:

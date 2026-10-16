@@ -42,26 +42,29 @@ class CoetusBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-      decoration: BoxDecoration(
-        color: CoetusColors.navy,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          for (var i = 0; i < _items.length; i++)
-            _NavButton(
-              destination: _items[i],
-              active: i == currentIndex,
-              onTap: () {
-                if (i == currentIndex) return;
-                context.go(_items[i].route);
-              },
-            ),
-        ],
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+        decoration: BoxDecoration(
+          color: CoetusPalette.purple,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (var i = 0; i < _items.length; i++)
+              _NavButton(
+                destination: _items[i],
+                active: i == currentIndex,
+                onTap: () {
+                  if (i == currentIndex) return;
+                  context.go(_items[i].route);
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -94,17 +97,18 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active
-        ? CoetusColors.oat
-        : CoetusColors.oat.withValues(alpha: .6);
+    final color = active ? CoetusPalette.lime : CoetusPalette.cream;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(active ? destination.activeIcon : destination.icon,
-              size: 21, color: color),
+          Icon(
+            active ? destination.activeIcon : destination.icon,
+            size: 21,
+            color: color,
+          ),
           const SizedBox(height: 4),
           Text(
             destination.label,

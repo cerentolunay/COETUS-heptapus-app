@@ -1,3 +1,5 @@
+import 'package:coetus/app/theme/coetus_tokens.dart';
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -29,7 +31,7 @@ class _SplashPageState extends State<SplashPage> {
     if (!mounted) return;
 
     if (!hasSeenOnboarding) {
-      context.go('/onboarding');
+      context.go('/welcome');
       return;
     }
 
@@ -38,17 +40,33 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F), // koyu arka plan
-      body: Center(
-        child: Image.asset(
-          'assets/images/logo.png',
-          width: 160,
-          height: 160,
-          fit: BoxFit.contain,
+    return const Scaffold(
+      backgroundColor: CoetusPalette.purple,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CoetusMascot(size: 190, interactive: false),
+              SizedBox(height: 16),
+              Text(
+                'coetus',
+                style: TextStyle(
+                  color: CoetusPalette.cream,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Birlikte öğren. Birlikte geliş.',
+                style: TextStyle(color: CoetusPalette.lavender),
+              ),
+            ],
+          ),
         ),
       ),
     );
-    
   }
 }

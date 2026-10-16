@@ -183,7 +183,7 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.4,
-                            color: CoetusColors.oat,
+                            color: CoetusPalette.purple,
                           ),
                         )
                       : const Text('Devam et'),
@@ -230,8 +230,9 @@ class _CategoryCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color:
-                      selected ? CoetusColors.oat.withValues(alpha: .18) : CoetusColors.plateWarm,
+                  color: selected
+                      ? CoetusColors.oat.withValues(alpha: .18)
+                      : CoetusColors.plateWarm,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

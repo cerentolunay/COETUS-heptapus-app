@@ -134,7 +134,7 @@ class FirebaseAuthRepository implements AuthRepository {
 
     final profile = _buildProfile(
       user: firebaseUser,
-      fallbackName: firebaseUser.displayName ?? 'Google User',
+      fallbackName: firebaseUser.displayName ?? 'Google kullanıcısı',
       bio: '',
     );
     return _syncUserProfile(
@@ -151,7 +151,7 @@ class FirebaseAuthRepository implements AuthRepository {
   AppUser _buildProfile({
     required User user,
     required String fallbackName,
-    String bio = 'Skill swapping enthusiast',
+    String bio = 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
   }) {
     final name = user.displayName ?? fallbackName;
 

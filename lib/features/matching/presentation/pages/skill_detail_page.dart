@@ -1,3 +1,4 @@
+import '../widgets/match_discovery_widgets.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/matching/models/match_candidate.dart';
 import 'package:coetus/widgets/coetus_widgets.dart';
@@ -32,10 +33,10 @@ class SkillDetailPage extends StatelessWidget {
         : 'Genel';
     final description = candidate.user.bio.trim().isNotEmpty
         ? candidate.user.bio
-        : 'Bu ogretmen henuz bir aciklama eklemedi.';
-    final matchLabel = candidate.matchScore > 0
-        ? '${(candidate.matchScore * 100).round()}% eslesme'
-        : '${(candidate.trustScore * 100).round()}% guven';
+        : 'Bu öğretmen henüz bir açıklama eklemedi.';
+    final matchLabel = compatibilityLabel(candidate) == 'Yeni'
+        ? 'Uyum henüz hesaplanmadı'
+        : '${compatibilityLabel(candidate)} uyum';
 
     return Scaffold(
       backgroundColor: CoetusColors.oat,
@@ -73,7 +74,7 @@ class SkillDetailPage extends StatelessWidget {
                             ),
                             children: [
                               TextSpan(text: '${candidate.user.name} '),
-                              const TextSpan(text: 'karsiliginda '),
+                              const TextSpan(text: 'karşılığında '),
                               TextSpan(
                                 text: candidate.partnerLearnSkills.first.name,
                                 style: const TextStyle(
@@ -83,7 +84,7 @@ class SkillDetailPage extends StatelessWidget {
                               ),
                               const TextSpan(
                                 text:
-                                    ' ogrenmek istiyor. Takas teklifin buna uygunsa oncelik kazanir.',
+                                    ' Öğrenmek istiyor. Takas teklifin buna uygunsa öncelik kazanir.',
                               ),
                             ],
                           ),
@@ -162,30 +163,7 @@ class SkillDetailPage extends StatelessWidget {
           ),
         ),
         const SizedBox(width: CoetusSpace.md),
-        GestureDetector(
-          onTap: onViewProfile,
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: CoetusColors.navyTint,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  _initials(candidate.user.name),
-                  style: const TextStyle(
-                    color: CoetusColors.navy,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        MatchAvatar(candidate: candidate, size: 56, onTap: onViewProfile),
       ],
     );
   }
@@ -197,7 +175,9 @@ class SkillDetailPage extends StatelessWidget {
         color: CoetusColors.card,
         border: Border(top: BorderSide(color: CoetusColors.border)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,30 +190,41 @@ class SkillDetailPage extends StatelessWidget {
               CreditBadge(amount: candidate.creditsRequired),
             ],
           ),
-          const SizedBox(width: CoetusSpace.lg),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
+          const SizedBox(height: CoetusSpace.md),
+          ElevatedButton(
+            onPressed: () async {
+              final yes = await showDialog<bool>(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Birlikte öğrenme teklifi'),
+                  content: Text(
+                    'Teklif göndermek ücretsiz. Öğretmen kabul ederse ${candidate.creditsRequired} tokenın oturum için kilitlenir. Öğrenmeyi tamamladığını onayladığında öğretmene aktarılır.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Vazgeç'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text('Teklif gönder'),
+                    ),
+                  ],
+                ),
+              );
+              if (yes == true && context.mounted) {
                 onSendOffer();
                 Navigator.pop(context);
-              },
-              child: const Text('Takas teklif et'),
+              }
+            },
+            child: const Text(
+              'Ücretsiz teklif gönder',
+              textAlign: TextAlign.center,
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _initials(String name) {
-    final parts = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .take(2)
-        .toList();
-    if (parts.isEmpty) return '?';
-    return parts.map((part) => part[0].toUpperCase()).join();
   }
 }
 

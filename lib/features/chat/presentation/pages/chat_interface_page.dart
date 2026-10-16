@@ -1,3 +1,4 @@
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/chat/data/repositories/chat_repository_factory.dart';
 import 'package:coetus/features/chat/domain/models/chat_message.dart';
@@ -34,7 +35,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
       await _repository.sendMessage(chatId, userId, text);
     } catch (error) {
       _messageController.text = text;
-      _showSnack('Mesaj gonderilemedi: $error');
+      _showSnack('Mesaj gönderilemedi: $error');
     }
   }
 
@@ -89,9 +90,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: CoetusColors.navy),
-          );
+          return const CoetusLoadingState();
         }
 
         final messages = snapshot.data ?? const <ChatMessage>[];
@@ -131,8 +130,8 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
           (thread) => thread.id == chatId,
         );
         final thread = matches.isEmpty ? null : matches.first;
-        final title = thread?.otherParticipantName(currentUserId) ??
-            'Takas sohbeti';
+        final title =
+            thread?.otherParticipantName(currentUserId) ?? 'Takas sohbeti';
         final skillName = thread?.skillName.trim() ?? '';
         final subtitle = skillName.isNotEmpty ? skillName : 'çevrimiçi';
         final credits = thread?.credits ?? 0;
@@ -269,7 +268,11 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
           children: [
             Icon(icon, color: CoetusColors.navy, size: 42),
             const SizedBox(height: 14),
-            Text(title, textAlign: TextAlign.center, style: textTheme.titleLarge),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(
               subtitle,

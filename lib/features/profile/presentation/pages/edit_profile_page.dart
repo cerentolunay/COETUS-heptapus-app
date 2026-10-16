@@ -1,3 +1,4 @@
+import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -71,21 +72,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   String? _validateDisplayName(String? value) {
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'Display name zorunludur';
-    if (text.length < 2) return 'Display name en az 2 karakter olmalıdır';
-    if (text.length > 50) return 'Display name en fazla 50 karakter olabilir';
+    if (text.isEmpty) return 'Görünen ad zorunludur';
+    if (text.length < 2) return 'Görünen ad en az 2 karakter olmalıdır';
+    if (text.length > 50) return 'Görünen ad en fazla 50 karakter olabilir';
     return null;
   }
 
   String? _validateBio(String? value) {
     final text = value?.trim() ?? '';
-    if (text.length > 500) return 'Bio en fazla 500 karakter olabilir';
+    if (text.length > 500) {
+      return 'Hakkında alanı en fazla 500 karakter olabilir';
+    }
     return null;
   }
 
   String? _validateLocation(String? value) {
     final text = value?.trim() ?? '';
-    if (text.length > 100) return 'Location en fazla 100 karakter olabilir';
+    if (text.length > 100) return 'Konum en fazla 100 karakter olabilir';
     return null;
   }
 
@@ -139,7 +142,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: CoetusColors.oat,
-        body: Center(child: CircularProgressIndicator()),
+        body: CoetusLoadingState(),
       );
     }
 
@@ -191,7 +194,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Text('Edit Profile', style: t.headlineSmall),
+                    Text('Profili düzenle', style: t.headlineSmall),
                   ],
                 ),
                 const SizedBox(height: CoetusSpace.xxl),
@@ -212,18 +215,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: CoetusSpace.xl),
                 ],
-                _buildFieldLabel(t, 'Display Name *'),
+                _buildFieldLabel(t, 'Görünen ad *'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _displayNameController,
                   validator: _validateDisplayName,
                   decoration: const InputDecoration(
-                    hintText: 'Display name',
+                    hintText: 'Görünen ad',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                 ),
                 const SizedBox(height: 18),
-                _buildFieldLabel(t, 'Bio'),
+                _buildFieldLabel(t, 'Hakkında'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _bioController,
@@ -231,23 +234,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   minLines: 3,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    hintText: 'Bio',
+                    hintText: 'Hakkında',
                     prefixIcon: Icon(Icons.description_outlined),
                   ),
                 ),
                 const SizedBox(height: 18),
-                _buildFieldLabel(t, 'Lokasyon'),
+                _buildFieldLabel(t, 'Konum'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _locationController,
                   validator: _validateLocation,
                   decoration: const InputDecoration(
-                    hintText: 'Lokasyon',
+                    hintText: 'Konum',
                     prefixIcon: Icon(Icons.location_on_outlined),
                   ),
                 ),
                 const SizedBox(height: 18),
-                _buildFieldLabel(t, 'Profil Fotoğrafı URL'),
+                _buildFieldLabel(t, 'Profil fotoğrafı bağlantısı'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _photoUrlController,
@@ -265,7 +268,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: CoetusColors.oat,
+                            color: CoetusPalette.purple,
                           ),
                         )
                       : const Text('Profili Güncelle'),

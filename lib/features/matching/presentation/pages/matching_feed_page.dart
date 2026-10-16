@@ -1,4 +1,7 @@
+import 'package:coetus/features/community/community.dart';
+import 'package:coetus/features/auth/domain/models/app_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/match_discovery_widgets.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/matching/models/match_candidate.dart';
 import 'package:coetus/features/matching/models/match_explanation.dart';
@@ -19,7 +22,14 @@ import 'package:go_router/go_router.dart';
 /// 2 sütunlu bir kart gridinde tarar. Kart açıldığında [SkillDetailPage]
 /// üzerinden takas teklifi gönderilir.
 class MatchingFeedPage extends StatefulWidget {
-  const MatchingFeedPage({super.key});
+  const MatchingFeedPage({
+    super.key,
+    this.authorId,
+    this.skillId,
+    this.learn = false,
+  });
+  final String? authorId, skillId;
+  final bool learn;
 
   @override
   State<MatchingFeedPage> createState() => _MatchingFeedPageState();
@@ -44,7 +54,15 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   void initState() {
     super.initState();
     _searchController.addListener(() => setState(() {}));
-    _loadMatches();
+    _loadMatches().then((_) {
+      if (mounted && widget.authorId != null && widget.skillId != null) {
+        _openCommunityAuthor(
+          widget.authorId!,
+          widget.skillId!,
+          learn: widget.learn,
+        );
+      }
+    });
   }
 
   @override
@@ -138,7 +156,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Discovery yuklenemedi. Lutfen tekrar dene.';
+        _errorMessage = 'Discovery yüklenemedi. Lütfen tekrar dene.';
       });
     }
   }
@@ -189,15 +207,15 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
   String _buildMatchReason(MatchExplanation explanation) {
     final skillPart = explanation.skillMatchType == SkillMatchType.exact
-        ? 'Ogrenmek istedigin skill ile birebir eslesiyor'
-        : 'Iliskili bir skill uzerinden onerildi';
+        ? 'Öğrenmek istediğin yetenek ile birebir eşleşiyor'
+        : 'İlişkili bir yetenek üzerinden önerildi';
     final trustPart =
-        'ortalama trust ${(explanation.averageTrustScore * 100).round()}%';
+        'ortalama güven ${(explanation.averageTrustScore * 100).round()}%';
     final profilePart =
-        'profil dolulugu ${(explanation.profileCompleteness * 100).round()}%';
+        'profil doluluğu ${(explanation.profileCompleteness * 100).round()}%';
     final availabilityPart = explanation.hasAvailabilityOverlap
-        ? 'uygun zaman cakismasi var'
-        : 'zaman uygunlugu henuz net degil';
+        ? 'uygun zaman çakışması var'
+        : 'zaman uygunluğu henüz net değil';
 
     return '$skillPart; $trustPart, $profilePart ve $availabilityPart.';
   }
@@ -205,26 +223,24 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   Future<void> _sendOffer(MatchCandidate candidate) async {
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
-      _showSnack('Teklif gondermek icin once giris yapmalisin.');
+      _showSnack('Teklif göndermek için önce giriş yapmalısın.');
       return;
     }
 
     final partnerName = candidate.user.name.isEmpty
-        ? 'Kullanici'
+        ? 'Kullanıcı'
         : candidate.user.name;
     final skillName = candidate.teacherSkill.name;
 
     try {
       final matchRef = _firestore.collection('matches').doc();
-      final sessionRef = _firestore.collection('sessions').doc();
+      final sessionRef = _firestore.collection('sessions').doc(matchRef.id);
       final participants = [currentUser.uid, candidate.user.id]..sort();
-      final chatRef = _firestore
-          .collection('chats')
-          .doc(participants.join('_'));
+      final chatRef = _firestore.collection('chats').doc(matchRef.id);
       final currentUserName =
           currentUser.displayName ??
           currentUser.email?.split('@').first ??
-          'Kullanici';
+          'Kullanıcı';
 
       await _firestore.runTransaction((transaction) async {
         transaction.set(matchRef, {
@@ -239,6 +255,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             candidate.user.id: partnerName,
           },
           'skillName': skillName,
+          'skillId': candidate.teacherSkill.id,
+          'sessionId': sessionRef.id,
+          'chatId': chatRef.id,
           'status': 'pending',
           'credits': candidate.creditsRequired,
           'createdAt': FieldValue.serverTimestamp(),
@@ -250,6 +269,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'matchId': matchRef.id,
           'teacherId': candidate.user.id,
           'studentId': currentUser.uid,
+          'participants': participants,
           'skillName': skillName,
           'status': 'requested',
           'credits': candidate.creditsRequired,
@@ -270,7 +290,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'matchId': matchRef.id,
           'sessionId': sessionRef.id,
           'skillName': skillName,
-          'lastMessage': '$skillName icin teklif gonderildi.',
+          'lastMessage': '$skillName için teklif gönderildi.',
           'lastSenderId': currentUser.uid,
           'lastMessageAt': FieldValue.serverTimestamp(),
           'unreadCount': 0,
@@ -284,9 +304,9 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           'userId': candidate.user.id,
           'senderId': currentUser.uid,
           'type': 'match_offer',
-          'title': 'Yeni skill teklifi',
+          'title': 'Yeni yetenek teklifi',
           'message':
-              '${currentUser.displayName ?? 'Bir kullanici'} $skillName icin teklif gonderdi.',
+              '${currentUser.displayName ?? 'Bir kullanıcı'} $skillName için teklif gönderdi.',
           'matchId': matchRef.id,
           'sessionId': sessionRef.id,
           'read': false,
@@ -295,13 +315,13 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       });
 
       if (!mounted) return;
-      _showSnack('$partnerName icin teklif gonderildi.');
+      _showSnack('$partnerName için teklif gönderildi.');
     } on FirebaseException catch (error) {
       if (!mounted) return;
       _showSnack(_mapFirestoreError(error));
     } catch (_) {
       if (!mounted) return;
-      _showSnack('Teklif gonderilemedi. Lutfen tekrar dene.');
+      _showSnack('Teklif gönderilemedi. Lütfen tekrar dene.');
     }
   }
 
@@ -313,22 +333,22 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
 
   String _mapFirestoreError(FirebaseException error) {
     if (error.code == 'permission-denied') {
-      return 'Firestore izinleri bu islem icin uygun degil. Kurallari yayinladigindan emin ol.';
+      return 'Bu işlem için erişim izni bulunmuyor. Lütfen daha sonra tekrar dene.';
     }
     if (error.code == 'unavailable') {
-      return 'Firestore su an kullanilamiyor. Internet baglantini kontrol et.';
+      return 'Bağlantı şu an kullanılamıyor. İnternet bağlantını kontrol et.';
     }
     if (error.code == 'failed-precondition') {
-      return 'Firestore index veya veritabani ayari eksik gorunuyor.';
+      return 'Veriler şu anda getirilemiyor. Lütfen daha sonra tekrar dene.';
     }
-    return 'Firestore hatasi: ${error.message ?? error.code}';
+    return 'İşlem tamamlanamadı. Lütfen yeniden dene.';
   }
 
   void _showProfileDetails(MatchCandidate candidate) {
     final profileData = OtherUserProfileData(
       id: candidate.user.id,
       name: candidate.user.name.isEmpty
-          ? 'Isimsiz Kullanici'
+          ? 'İsimsiz Kullanıcı'
           : candidate.user.name,
       location: candidate.user.location?.trim().isNotEmpty == true
           ? candidate.user.location!
@@ -337,6 +357,8 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       trustScore: candidate.user.trustScore,
       verified: candidate.user.verified,
       matchScore: (candidate.matchScore * 100).round(),
+      photoUrl: candidate.user.photoUrl,
+      hasCompatibilityScore: candidate.explanation.skillCompatibilityScore > 0,
       creditsRequired: candidate.creditsRequired,
       matchReason: _buildMatchReason(candidate.explanation),
       teachSkills: [
@@ -344,6 +366,8 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           name: candidate.teacherSkill.name,
           category: candidate.teacherSkill.category,
           level: candidate.teacherSkill.level,
+          verified: candidate.teacherSkill.verified,
+          peerApprovalCount: candidate.teacherSkill.peerApprovalCount,
         ),
       ],
       learnSkills: candidate.partnerLearnSkills
@@ -376,7 +400,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CoetusColors.oat,
+      backgroundColor: CoetusPalette.lavender,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -390,99 +414,160 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_errorMessage != null) {
-      return _buildErrorState();
-    }
-
-    final visible = _visibleCandidates;
-    if (visible.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(CoetusSpace.xl),
-          child: CoetusEmptyState(
-            title: 'Henuz eslesme yok',
-            message:
-                'Ogretebilecegin bir yetenek ekle, sana uygun kisileri getirelim.',
-            icon: Icons.search_off,
-            actionLabel: 'Yetenek ekle',
-            onAction: () => context.go('/profile'),
-          ),
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: .78,
-      ),
-      itemCount: visible.length,
-      itemBuilder: (context, index) {
-        final candidate = visible[index];
-        return SkillCard(
-          title: candidate.teacherSkill.name,
-          subtitle:
-              '${candidate.teacherSkill.category.isNotEmpty ? candidate.teacherSkill.category : "Genel"} '
-              '· ${candidate.user.name}',
-          icon: categoryIcon(
-            candidate.teacherSkill.category,
-            candidate.teacherSkill.name,
-          ),
-          credits: candidate.creditsRequired,
-          statusLabel: candidate.explanation.hasAvailabilityOverlap
-              ? 'Musait'
-              : null,
-          plate: index.isEven
-              ? CoetusColors.plateWarm
-              : CoetusColors.plateWarmAlt,
-          onTap: () => _openSkillDetail(candidate),
+  Future<void> _openCommunityAuthor(
+    String authorId,
+    String skillId, {
+    bool learn = false,
+  }) async {
+    try {
+      MatchCandidate? candidate;
+      for (final c in _candidates) {
+        if (c.user.id == authorId && c.teacherSkill.id == skillId) {
+          candidate = c;
+          break;
+        }
+      }
+      if (candidate == null) {
+        final ref = _firestore.collection('users').doc(authorId);
+        final user = await ref.get();
+        final skills = await ref.collection('teachSkills').get();
+        if (!user.exists) throw StateError('Profil bulunamadı');
+        final profile = ProfileData(
+          user: AppUser.fromMap({'id': authorId, ...user.data()!}),
+          teachSkills: skills.docs
+              .map((d) => SkillModel.fromMap({'id': d.id, ...d.data()}))
+              .toList(),
+          learnSkills: const [],
         );
-      },
-    );
+        for (final c in _mapProfileToCandidates(profile)) {
+          if (c.teacherSkill.id == skillId) candidate = c;
+        }
+      }
+      if (!mounted) return;
+      if (candidate == null) {
+        _showSnack('Bu yetenek artık profilde bulunmuyor.');
+        return;
+      }
+      if (learn) {
+        _openSkillDetail(candidate);
+      } else {
+        _showProfileDetails(candidate);
+      }
+    } catch (_) {
+      if (mounted) _showSnack('Profil yüklenemedi. Tekrar dene.');
+    }
   }
 
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_outlined,
-              color: CoetusColors.navy,
-              size: 46,
+  Widget _buildBody(BuildContext context) {
+    final visible = _visibleCandidates;
+    return RefreshIndicator(
+      onRefresh: _loadMatches,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(20),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_isLoading) const LinearProgressIndicator(),
+                  if (_errorMessage != null) ...[
+                    Text(_errorMessage!),
+                    TextButton(
+                      onPressed: _loadMatches,
+                      child: const Text('Eşleşmeleri yeniden yükle'),
+                    ),
+                  ],
+                  if (visible.isNotEmpty)
+                    MatchOrbit(
+                      candidates: visible,
+                      onSelected: _openSkillDetail,
+                    ),
+                  if (!_isLoading && visible.isEmpty && _errorMessage == null)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'Henüz eşleşme yok. Profiline yetenek ekleyerek başlayabilirsin.',
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Topluluktan keşfet',
+                          style: TextStyle(
+                            color: CoetusPalette.purple,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton.filled(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const CommunityComposer(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.add),
+                        tooltip: 'Paylaşım oluştur',
+                      ),
+                    ],
+                  ),
+                  const Text('Öğrenilenler, üretilenler ve yeni başlangıçlar.'),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: CommunityFeed(
+              query: _searchController.text,
+              skill: _selectedSkill,
+              scores: {
+                for (final c in _candidates)
+                  if (c.explanation.skillCompatibilityScore > 0)
+                    c.user.id: (c.matchScore * 100).round(),
+              },
+              onLearn: (a, s) => _openCommunityAuthor(a, s, learn: true),
+              onProfile: (a, s) => _openCommunityAuthor(a, s),
             ),
-            const SizedBox(height: 18),
-            ElevatedButton(
-              onPressed: _loadMatches,
-              child: const Text('Tekrar dene'),
+          ),
+          if (visible.isNotEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'Senin için eşleşmeler',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                ),
+              ),
             ),
-          ],
-        ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: SliverList.builder(
+              itemCount: visible.length,
+              itemBuilder: (context, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: MatchProfileCard(
+                  candidate: visible[i],
+                  highlighted: visible[i].user.id == bestMatchUserId(visible),
+                  onTap: () => _openSkillDetail(visible[i]),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    final credits = _currentProfile?.user.credits ?? 0;
-
     return Container(
       decoration: const BoxDecoration(
-        color: CoetusColors.navy,
+        color: CoetusPalette.purple,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
@@ -496,16 +581,25 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             children: [
               Expanded(
                 child: Text(
-                  'Coetus',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: CoetusColors.oat,
-                  ),
+                  'Keşfet',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(color: CoetusPalette.cream),
                 ),
               ),
-              CreditBadge(
-                amount: credits,
-                background: Colors.white.withValues(alpha: .16),
-                foreground: CoetusColors.oat,
+              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: _firestore
+                    .collection('users')
+                    .doc(_firebaseAuth.currentUser?.uid)
+                    .snapshots(),
+                builder: (_, s) => CreditBadge(
+                  amount:
+                      (s.data?.data()?['credits'] as num?)?.toInt() ??
+                      _currentProfile?.user.credits ??
+                      0,
+                  background: CoetusPalette.lime,
+                  foreground: CoetusPalette.purple,
+                ),
               ),
               const SizedBox(width: 10),
               _CircleIconButton(
@@ -517,13 +611,15 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           const SizedBox(height: 16),
           TextField(
             controller: _searchController,
-            style: const TextStyle(color: CoetusColors.oat),
+            style: const TextStyle(color: CoetusPalette.cream),
             decoration: InputDecoration(
-              hintText: 'Skill, isim veya sehir ara...',
-              hintStyle: TextStyle(color: CoetusColors.oat.withValues(alpha: .6)),
+              hintText: 'Yetenek, isim veya şehir ara...',
+              hintStyle: TextStyle(
+                color: CoetusPalette.cream.withValues(alpha: .6),
+              ),
               prefixIcon: Icon(
                 Icons.search,
-                color: CoetusColors.oat.withValues(alpha: .7),
+                color: CoetusPalette.cream.withValues(alpha: .7),
               ),
               filled: true,
               fillColor: Colors.white.withValues(alpha: .12),
@@ -542,7 +638,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(CoetusRadius.input),
                 borderSide: BorderSide(
-                  color: CoetusColors.oat.withValues(alpha: .5),
+                  color: CoetusPalette.cream.withValues(alpha: .5),
                 ),
               ),
             ),
@@ -552,14 +648,14 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             children: [
               Icon(
                 Icons.sort,
-                color: CoetusColors.oat.withValues(alpha: .7),
+                color: CoetusPalette.cream.withValues(alpha: .7),
                 size: 16,
               ),
               const SizedBox(width: 6),
               Text(
-                'Sirala',
+                'Sırala',
                 style: TextStyle(
-                  color: CoetusColors.oat.withValues(alpha: .7),
+                  color: CoetusPalette.cream.withValues(alpha: .7),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -568,11 +664,11 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
               DropdownButtonHideUnderline(
                 child: DropdownButton<_MatchSortOption>(
                   value: _sortOption,
-                  dropdownColor: CoetusColors.navyInk,
+                  dropdownColor: CoetusPalette.purple,
                   borderRadius: BorderRadius.circular(14),
-                  iconEnabledColor: CoetusColors.oat,
+                  iconEnabledColor: CoetusPalette.cream,
                   style: const TextStyle(
-                    color: CoetusColors.oat,
+                    color: CoetusPalette.cream,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -597,21 +693,34 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-                color: CoetusColors.oat,
+                color: CoetusPalette.cream,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: CategoryTabs(
-                items: ['Tumu', ..._skillFilters],
-                selected: _selectedSkill == null
-                    ? 0
-                    : _skillFilters.indexOf(_selectedSkill!) + 1,
-                onChanged: (index) {
-                  setState(() {
-                    _selectedSkill = index == 0
-                        ? null
-                        : _skillFilters[index - 1];
-                  });
-                },
+              child: SizedBox(
+                height: 42,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: _skillFilters.length + 1,
+                  separatorBuilder: (_, index) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final skill = index == 0 ? null : _skillFilters[index - 1];
+                    return ChoiceChip(
+                      label: Text(skill ?? 'Tümü'),
+                      selected: _selectedSkill == skill,
+                      showCheckmark: false,
+                      backgroundColor: CoetusPalette.cream,
+                      selectedColor: CoetusPalette.lime,
+                      labelStyle: const TextStyle(
+                        color: CoetusPalette.purple,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      side: BorderSide.none,
+                      shape: const StadiumBorder(),
+                      onSelected: (_) => setState(() => _selectedSkill = skill),
+                    );
+                  },
+                ),
               ),
             ),
           ],
@@ -672,7 +781,7 @@ class _CircleIconButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(8),
-          child: Icon(icon, color: CoetusColors.oat, size: 18),
+          child: Icon(icon, color: CoetusPalette.cream, size: 18),
         ),
       ),
     );
@@ -680,9 +789,9 @@ class _CircleIconButton extends StatelessWidget {
 }
 
 enum _MatchSortOption {
-  bestMatch('En iyi match'),
-  trust('Trust score'),
-  lowCredit('Dusuk kredi');
+  bestMatch('En yüksek uyum'),
+  trust('Güven puanı'),
+  lowCredit('Düşük kredi');
 
   final String label;
 

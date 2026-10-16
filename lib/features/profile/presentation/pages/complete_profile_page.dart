@@ -34,21 +34,21 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
   String? _validateDisplayName(String? value) {
     final name = value?.trim() ?? '';
-    if (name.isEmpty) return 'Display name zorunludur';
-    if (name.length < 2) return 'Display name en az 2 karakter olmalıdır';
-    if (name.length > 50) return 'Display name en fazla 50 karakter olabilir';
+    if (name.isEmpty) return 'Görünen ad zorunludur';
+    if (name.length < 2) return 'Görünen ad en az 2 karakter olmalıdır';
+    if (name.length > 50) return 'Görünen ad en fazla 50 karakter olabilir';
     return null;
   }
 
   String? _validateBio(String? value) {
     final bio = value?.trim() ?? '';
-    if (bio.length > 500) return 'Bio en fazla 500 karakter olabilir';
+    if (bio.length > 500) return 'Hakkında alanı en fazla 500 karakter olabilir';
     return null;
   }
 
   String? _validateLocation(String? value) {
     final location = value?.trim() ?? '';
-    if (location.length > 100) return 'Location en fazla 100 karakter olabilir';
+    if (location.length > 100) return 'Konum en fazla 100 karakter olabilir';
     return null;
   }
 
@@ -164,7 +164,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                   const SizedBox(height: CoetusSpace.xl),
                 ],
                 // Display Name
-                _buildFieldLabel(t, 'Display Name *'),
+                _buildFieldLabel(t, 'Görünen ad *'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _displayNameController,
@@ -176,7 +176,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 ),
                 const SizedBox(height: 18),
                 // Bio
-                _buildFieldLabel(t, 'Bio'),
+                _buildFieldLabel(t, 'Hakkında'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _bioController,
@@ -190,7 +190,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 ),
                 const SizedBox(height: 18),
                 // Location
-                _buildFieldLabel(t, 'Lokasyon'),
+                _buildFieldLabel(t, 'Konum'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _locationController,
@@ -202,7 +202,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 ),
                 const SizedBox(height: 18),
                 // Photo URL
-                _buildFieldLabel(t, 'Profil Fotoğrafı URL (isteğe bağlı)'),
+                _buildFieldLabel(t, 'Profil fotoğrafı bağlantısı (isteğe bağlı)'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
                   controller: _photoUrlController,
@@ -225,7 +225,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: CoetusColors.oat,
+                                color: CoetusPalette.purple,
                               ),
                             ),
                             SizedBox(width: 10),

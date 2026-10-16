@@ -5,10 +5,23 @@ enum AppNotificationType {
   offerAccepted,
   offerRejected,
   sessionStarted,
-  newMessage;
+  newMessage,
+  verificationApproved,
+  communityActivity,
+  tokenSupport,
+  learningCompleted,
+  learningRefund;
 
   String get value {
     switch (this) {
+      case AppNotificationType.communityActivity:
+        return 'community_activity';
+      case AppNotificationType.tokenSupport:
+        return 'token_support';
+      case AppNotificationType.learningCompleted:
+        return 'learning_completed';
+      case AppNotificationType.learningRefund:
+        return 'learning_refund';
       case AppNotificationType.offerReceived:
         return 'offer_received';
       case AppNotificationType.offerAccepted:
@@ -19,6 +32,8 @@ enum AppNotificationType {
         return 'session_started';
       case AppNotificationType.newMessage:
         return 'new_message';
+      case AppNotificationType.verificationApproved:
+        return 'verification_approved';
     }
   }
 

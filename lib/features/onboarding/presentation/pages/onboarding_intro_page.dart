@@ -1,10 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:coetus/app/theme/coetus_tokens.dart';
+import 'package:coetus/widgets/coetus_mascot.dart';
 
 class OnboardingIntroPage extends StatefulWidget {
   const OnboardingIntroPage({super.key});
@@ -14,252 +13,158 @@ class OnboardingIntroPage extends StatefulWidget {
 }
 
 class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
-  late final TapGestureRecognizer _loginTapRecognizer;
-
-  @override
-  void initState() {
-    super.initState();
-    _loginTapRecognizer = TapGestureRecognizer()
-      ..onTap = () => _completeOnboarding('/login');
-  }
-
-  @override
-  void dispose() {
-    _loginTapRecognizer.dispose();
-    super.dispose();
-  }
+  bool _continuing = false;
 
   Future<void> _completeOnboarding(String route) async {
+    if (_continuing) return;
+    setState(() => _continuing = true);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
-
     if (!mounted) return;
-
-    if (FirebaseAuth.instance.currentUser != null) {
-      context.go('/home');
-      return;
-    }
-
-    context.go(route);
+    context.go(FirebaseAuth.instance.currentUser != null ? '/home' : route);
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
+    final text = Theme.of(context).textTheme;
     return Scaffold(
-      backgroundColor: CoetusColors.oat,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Coetus',
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: CoetusColors.navyInk,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => _completeOnboarding('/register'),
-                    child: const Text('Atla'),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              const _OnboardingDiagram(),
-              const SizedBox(height: 36),
-              Text(
-                'Bildiğini öğret,\nöğrenmek istediğini al',
-                textAlign: TextAlign.center,
-                style: textTheme.headlineMedium?.copyWith(
-                  color: CoetusColors.navyInk,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Para değil kredi dolaşır. Bir oturum öğrettiğinde '
-                'kazandığın krediyi istediğin yetenekte harcarsın.',
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: CoetusColors.muted,
-                ),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 22,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: CoetusColors.navy,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: CoetusColors.navy.withValues(alpha: .25),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: CoetusColors.navy.withValues(alpha: .25),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _completeOnboarding('/register'),
-                  child: const Text('Başla'),
-                ),
-              ),
-              const SizedBox(height: 14),
-              RichText(
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: CoetusColors.muted,
-                  ),
-                  children: [
-                    const TextSpan(text: 'Hesabım var · '),
-                    TextSpan(
-                      text: 'Giriş yap',
-                      style: const TextStyle(
-                        color: CoetusColors.navy,
-                        fontWeight: FontWeight.w700,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('coetus', style: text.headlineSmall),
                       ),
-                      recognizer: _loginTapRecognizer,
+                      TextButton(
+                        onPressed: _continuing
+                            ? null
+                            : () => _completeOnboarding('/register'),
+                        child: const Text('Atla'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: CoetusPalette.purple,
+                      borderRadius: BorderRadius.circular(36),
                     ),
-                  ],
-                ),
+                    child: Column(
+                      children: [
+                        const CoetusMascot(size: 180),
+                        Text(
+                          'Bir yetenek ver.\nYeni bir dünya keşfet.',
+                          textAlign: TextAlign.center,
+                          style: text.headlineMedium?.copyWith(
+                            color: CoetusPalette.cream,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Burada para değil, bilgi dolaşır. Öğreterek kazandığın kredilerle öğrenmeye devam et.',
+                          textAlign: TextAlign.center,
+                          style: text.bodyMedium?.copyWith(
+                            color: CoetusPalette.cream,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const _Step(
+                    number: '01',
+                    title: 'Bildiğini paylaş',
+                    subtitle: 'Öğretebileceğin yetenekleri profiline ekle.',
+                    icon: Icons.school_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  const _Step(
+                    number: '02',
+                    title: 'Doğru kişiyle eşleş',
+                    subtitle: 'Yetenek ve zaman uyumuna göre keşfet.',
+                    icon: Icons.auto_awesome_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  const _Step(
+                    number: '03',
+                    title: 'Kazan ve öğren',
+                    subtitle:
+                        'Oturumdan kazandığın krediyi yeni bir yetenekte kullan.',
+                    icon: Icons.swap_horiz_rounded,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _continuing
+                        ? null
+                        : () => _completeOnboarding('/register'),
+                    child: const Text('Birlikte başlayalım'),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: _continuing
+                        ? null
+                        : () => _completeOnboarding('/login'),
+                    child: const Text('Hesabım var · Giriş yap'),
+                  ),
+                ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Step extends StatelessWidget {
+  const _Step({
+    required this.number,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+  final String number;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: CoetusPalette.cream,
+      borderRadius: BorderRadius.circular(24),
+    ),
+    child: Row(
+      children: [
+        CircleAvatar(
+          backgroundColor: CoetusPalette.lime,
+          foregroundColor: CoetusPalette.purple,
+          child: Icon(icon),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$number  $title',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OnboardingDiagram extends StatelessWidget {
-  const _OnboardingDiagram();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 250,
-      height: 250,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 250,
-            height: 250,
-            decoration: const BoxDecoration(
-              color: CoetusColors.plateWarm,
-              shape: BoxShape.circle,
-            ),
-          ),
-          Container(
-            width: 190,
-            height: 190,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: CoetusColors.navy.withValues(alpha: .30),
-                width: 1.5,
-              ),
-            ),
-          ),
-          const Positioned(
-            top: 0,
-            child: _DiagramBadge(
-              background: CoetusColors.navy,
-              icon: Icons.school_outlined,
-              iconColor: CoetusColors.oat,
-              label: 'Öğret',
-            ),
-          ),
-          const Positioned(
-            bottom: 6,
-            right: 6,
-            child: _DiagramBadge(
-              background: CoetusColors.coral,
-              icon: Icons.add_circle_outline,
-              iconColor: Colors.white,
-              label: 'Kredi',
-            ),
-          ),
-          const Positioned(
-            bottom: 6,
-            left: 6,
-            child: _DiagramBadge(
-              background: CoetusColors.navy,
-              icon: Icons.menu_book_outlined,
-              iconColor: CoetusColors.oat,
-              label: 'Öğren',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DiagramBadge extends StatelessWidget {
-  const _DiagramBadge({
-    required this.background,
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-  });
-
-  final Color background;
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: background,
-            shape: BoxShape.circle,
-            boxShadow: CoetusShadow.raised,
-          ),
-          child: Icon(icon, color: iconColor, size: 24),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: CoetusColors.navyInk,
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
       ],
-    );
-  }
+    ),
+  );
 }

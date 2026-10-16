@@ -15,7 +15,7 @@ class LocalProfileRepository implements ProfileRepository {
         id: 'local-user',
         name: 'Alex Chen',
         email: 'alex@example.com',
-        bio: 'Skill swapping enthusiast',
+        bio: 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
       ),
       teachSkills: const [
         SkillModel(id: '1', name: 'Guitar', level: 6, category: 'Music', teachable: true),
