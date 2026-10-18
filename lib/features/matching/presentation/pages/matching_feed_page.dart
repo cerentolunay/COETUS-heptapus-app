@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:coetus/features/community/community.dart';
 import 'package:coetus/features/auth/domain/models/app_user.dart';
@@ -38,8 +39,8 @@ class MatchingFeedPage extends StatefulWidget {
 
 class _MatchingFeedPageState extends State<MatchingFeedPage> {
   final TextEditingController _searchController = TextEditingController();
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseAuth get _firebaseAuth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   final ProfileRepository _profileRepository =
       ProfileRepositoryFactory.create();
 
@@ -222,6 +223,12 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   }
 
   Future<void> _sendOffer(MatchCandidate candidate) async {
+    if (PreviewMode.enabled) {
+      _showSnack(
+        'Örnek teklif gösterildi. Gerçek teklif veya token işlemi yapılmadı.',
+      );
+      return;
+    }
     final currentUser = _firebaseAuth.currentUser;
     if (currentUser == null) {
       _showSnack('Teklif göndermek için önce giriş yapmalısın.');
@@ -428,6 +435,10 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
           break;
         }
       }
+      if (candidate == null && PreviewMode.enabled) {
+        _showSnack('Bu örnek profil için detay menüden açılabilir.');
+        return;
+      }
       if (candidate == null) {
         final ref = _firestore.collection('users').doc(authorId);
         final user = await ref.get();
@@ -445,6 +456,10 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
         }
       }
       if (!mounted) return;
+      if (candidate == null && PreviewMode.enabled) {
+        _showSnack('Bu örnek profil için detay menüden açılabilir.');
+        return;
+      }
       if (candidate == null) {
         _showSnack('Bu yetenek artık profilde bulunmuyor.');
         return;
@@ -589,10 +604,12 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
                 ),
               ),
               StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                stream: _firestore
-                    .collection('users')
-                    .doc(_firebaseAuth.currentUser?.uid)
-                    .snapshots(),
+                stream: PreviewMode.enabled
+                    ? null
+                    : _firestore
+                          .collection('users')
+                          .doc(_firebaseAuth.currentUser?.uid)
+                          .snapshots(),
                 builder: (_, s) => CreditBadge(
                   amount:
                       (s.data?.data()?['credits'] as num?)?.toInt() ??

@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/chat/data/repositories/chat_repository_factory.dart';
@@ -22,7 +23,9 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
   final TextEditingController _messageController = TextEditingController();
   late final ChatRepository _repository = ChatRepositoryFactory.create();
 
-  String? get _userId => FirebaseAuth.instance.currentUser?.uid;
+  String? get _userId => (PreviewMode.enabled
+      ? PreviewMode.userId
+      : FirebaseAuth.instance.currentUser?.uid);
 
   Future<void> _sendMessage() async {
     final chatId = widget.chatId;

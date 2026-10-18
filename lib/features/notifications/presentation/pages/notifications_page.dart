@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/notifications/data/repositories/notification_repository_factory.dart';
@@ -31,7 +32,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     'Topluluk',
   ];
 
-  String? get _userId => FirebaseAuth.instance.currentUser?.uid;
+  String? get _userId => (PreviewMode.enabled
+      ? PreviewMode.userId
+      : FirebaseAuth.instance.currentUser?.uid);
 
   List<AppNotification> _filterItems(List<AppNotification> items) {
     if (_selectedFilterIndex == 0) return items;
@@ -253,41 +256,40 @@ class _NotificationsPageState extends State<NotificationsPage> {
           bottomRight: Radius.circular(CoetusRadius.sheet),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Text(
-                  'Bildirimler',
-                  style: textTheme.headlineSmall?.copyWith(
-                    color: CoetusColors.oat,
+          Wrap(
+            spacing: CoetusSpace.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Bildirimler',
+                style: textTheme.headlineSmall?.copyWith(
+                  color: CoetusColors.oat,
+                ),
+              ),
+              if (unread > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: CoetusColors.oat.withValues(alpha: .16),
+                    borderRadius: BorderRadius.circular(CoetusRadius.chip),
+                  ),
+                  child: Text(
+                    '$unread yeni',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: CoetusColors.oat,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-                if (unread > 0) ...[
-                  const SizedBox(width: CoetusSpace.sm),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CoetusColors.oat.withValues(alpha: .16),
-                      borderRadius: BorderRadius.circular(CoetusRadius.chip),
-                    ),
-                    child: Text(
-                      '$unread yeni',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: CoetusColors.oat,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            ],
           ),
+          const SizedBox(height: CoetusSpace.sm),
           GestureDetector(
             onTap: onMarkAllRead,
             behavior: HitTestBehavior.opaque,

@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -10,16 +11,45 @@ import '../domain/skill_verification.dart';
 class VerificationService {
   String? _pendingEntryId, _pendingSignature;
   List<String>? _pendingPaths;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
-    region: 'europe-west1',
-  );
-  String get userId =>
-      FirebaseAuth.instance.currentUser?.uid ??
-      (throw StateError('Önce giriş yapmalısın.'));
+  FirebaseFirestore get _db {
+    if (PreviewMode.enabled) {
+      throw StateError('Önizlemede sunucu işlemi yapılmaz.');
+    }
+    return FirebaseFirestore.instance;
+  }
+
+  FirebaseStorage get _storage {
+    if (PreviewMode.enabled) throw StateError('Önizlemede dosya yüklenmez.');
+    return FirebaseStorage.instance;
+  }
+
+  FirebaseFunctions get _functions {
+    if (PreviewMode.enabled) {
+      throw StateError('Önizlemede sunucu işlemi yapılmaz.');
+    }
+    return FirebaseFunctions.instanceFor(region: 'europe-west1');
+  }
+
+  String get userId => PreviewMode.enabled
+      ? PreviewMode.userId
+      : FirebaseAuth.instance.currentUser?.uid ??
+            (throw StateError('Önce giriş yapmalısın.'));
 
   Stream<List<SkillVerification>> watch({String? ownerId}) {
+    if (PreviewMode.enabled) {
+      return Stream.value(const [
+        SkillVerification(
+          id: 'preview-work',
+          ownerId: PreviewMode.userId,
+          skillName: 'Gitar',
+          status: 'published',
+          type: 'portfolio',
+          description:
+              'Bu hafta öğrendiğim akor geçişlerini bir araya getirdim.',
+          ownerName: 'Deniz',
+        ),
+      ]);
+    }
     Query<Map<String, dynamic>> query = _db
         .collection('skillVerifications')
         .where('ownerId', isEqualTo: ownerId ?? userId);

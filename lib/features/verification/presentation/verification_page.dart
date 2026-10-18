@@ -1,3 +1,5 @@
+import 'package:coetus/preview/preview_mode.dart';
+import 'package:coetus/preview/preview_media.dart';
 import 'package:coetus/features/community/community.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -36,7 +38,10 @@ class _VerificationPageState extends State<VerificationPage> {
   Future<void> _load() async {
     try {
       final profile = await ProfileRepositoryFactory.create().loadProfile();
-      final lost = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+      final lost =
+          !PreviewMode.enabled &&
+              !kIsWeb &&
+              defaultTargetPlatform == TargetPlatform.android
           ? await ImagePicker().retrieveLostData()
           : null;
       if (!mounted) return;
@@ -394,7 +399,7 @@ class _EvidenceMediaState extends State<_EvidenceMedia> {
   @override
   void initState() {
     super.initState();
-    _load();
+    if (!PreviewMode.enabled) _load();
   }
 
   Future<void> _load() async {
@@ -420,6 +425,7 @@ class _EvidenceMediaState extends State<_EvidenceMedia> {
 
   @override
   Widget build(BuildContext context) {
+    if (PreviewMode.enabled) return PreviewMedia(video: widget.video);
     if (_error != null) return Text(_error!);
     if (_url == null) return const Center(child: CircularProgressIndicator());
     if (!widget.video) {

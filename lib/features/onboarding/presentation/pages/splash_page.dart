@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +17,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _handleStartupFlow();
+    if (!PreviewMode.enabled) _handleStartupFlow();
   }
 
   Future<void> _handleStartupFlow() async {

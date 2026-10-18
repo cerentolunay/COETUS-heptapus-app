@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/coetus_tokens.dart';
 import '../../data/services/account_deletion_service.dart';
@@ -13,6 +14,18 @@ class DeleteAccountButton extends StatelessWidget {
           ? null
           : () async {
               try {
+                if (PreviewMode.enabled) {
+                  await showDialog<AccountDeletionResult>(
+                    context: context,
+                    builder: (_) => DeleteAccountDialog(
+                      requiresPassword: true,
+                      onDelete: (_) async => throw StateError(
+                        'Bu bir önizleme. Gerçek hesap silinmez.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
                 final service = AccountDeletionService();
                 final messenger = ScaffoldMessenger.of(context);
                 await showDialog<AccountDeletionResult>(
