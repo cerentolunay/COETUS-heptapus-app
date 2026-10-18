@@ -1,3 +1,4 @@
+import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -77,10 +78,7 @@ class FirebaseProfileRepository implements ProfileRepository {
 
       profiles.add(
         ProfileData(
-          user: AppUser.fromMap({
-            'id': doc.id,
-            ...doc.data(),
-          }),
+          user: AppUser.fromMap({'id': doc.id, ...doc.data()}),
           teachSkills: teachSkills,
           learnSkills: learnSkills,
           availabilitySlots: _readAvailabilitySlots(doc.data()),
@@ -98,8 +96,7 @@ class FirebaseProfileRepository implements ProfileRepository {
       return loadProfile();
     }
 
-    final profileCompleted =
-        user.name.trim().isNotEmpty && user.bio.trim().isNotEmpty;
+    final profileCompleted = user.name.trim().length >= 2;
     final updatedUser = user.copyWith(
       id: firebaseUser.uid,
       email: firebaseUser.email ?? user.email,
@@ -107,7 +104,12 @@ class FirebaseProfileRepository implements ProfileRepository {
     );
 
     await _firestore.collection('users').doc(firebaseUser.uid).set({
-      ...updatedUser.toMap(),
+      'displayName': updatedUser.name,
+      'name': updatedUser.name,
+      'bio': updatedUser.bio,
+      'location': updatedUser.location,
+      'photoUrl': updatedUser.photoUrl,
+      'profileCompleted': profileCompleted,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await firebaseUser.updateDisplayName(updatedUser.name);
@@ -208,11 +210,11 @@ class FirebaseProfileRepository implements ProfileRepository {
     await userDoc.set({
       'skills': teachSkills.map((skill) => skill.toMap()).toList(),
       'teachSkillNames': teachSkills
-          .map((skill) => skill.name.trim().toLowerCase())
+          .map((skill) => skillKey(skill.name))
           .where((name) => name.isNotEmpty)
           .toList(),
       'learnSkillNames': learnSkills
-          .map((skill) => skill.name.trim().toLowerCase())
+          .map((skill) => skillKey(skill.name))
           .where((name) => name.isNotEmpty)
           .toList(),
       'updatedAt': FieldValue.serverTimestamp(),

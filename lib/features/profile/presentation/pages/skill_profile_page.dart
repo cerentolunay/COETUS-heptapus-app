@@ -27,25 +27,9 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
       ProfileRepositoryFactory.create();
   final AuthRepository _authRepository = AuthRepositoryFactory.create();
 
-  AppUser _user = const AppUser(
-    id: 'u1',
-    name: 'Alex Chen',
-    email: 'alex@example.com',
-    bio: 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
-  );
-
-  List<SkillModel> _skills = const [
-    SkillModel(id: '1', name: 'Guitar', level: 6),
-    SkillModel(id: '2', name: 'English', level: 2),
-    SkillModel(id: '3', name: 'Cooking', level: 5),
-    SkillModel(id: '4', name: 'Photography', level: 4),
-  ];
-
-  List<SkillModel> _learningGoals = const [
-    SkillModel(id: '1', name: 'Spanish', level: 1),
-    SkillModel(id: '2', name: 'Yoga', level: 1),
-    SkillModel(id: '3', name: 'Piano', level: 1),
-  ];
+  AppUser _user = const AppUser(id: '', name: '', email: '', bio: '');
+  List<SkillModel> _skills = const [];
+  List<SkillModel> _learningGoals = const [];
 
   List<String> _availabilitySlots = const [];
 
@@ -445,11 +429,9 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                           Card(
                             child: ListTile(
                               leading: const Icon(Icons.verified_outlined),
-                              title: const Text(
-                                'Çalışmalarım ve eşleşme onayları',
-                              ),
+                              title: const Text('Çalışmalarım'),
                               subtitle: const Text(
-                                'Kanıt paylaş · Onay al · Token kazan',
+                                'Çalışmalarını paylaş · Portföyünü göster',
                               ),
                               trailing: const Icon(Icons.arrow_outward_rounded),
                               onTap: () async {
@@ -852,15 +834,6 @@ class _SkillRow extends StatelessWidget {
                   ),
                   child: const Text('Çalışma ekle (isteğe bağlı)'),
                 ),
-                if (skill.peerApprovalCount > 0)
-                  Text(
-                    'Eşleştiği ${skill.peerApprovalCount} kişiden onay',
-                    style: TextStyle(
-                      color: CoetusColors.successDeep,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
               ],
             ),
           ),

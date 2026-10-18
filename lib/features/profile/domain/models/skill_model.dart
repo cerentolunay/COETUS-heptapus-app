@@ -1,3 +1,5 @@
+import 'package:coetus/core/text/skill_normalization.dart';
+
 class SkillModel {
   final String id;
   final String name;
@@ -47,6 +49,7 @@ class SkillModel {
     return {
       'id': id,
       'name': name,
+      'normalizedName': skillKey(name),
       'level': level,
       'category': category,
       'teachable': teachable,

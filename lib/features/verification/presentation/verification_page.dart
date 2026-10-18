@@ -158,7 +158,7 @@ class _VerificationPageState extends State<VerificationPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Çalışmalarım ve eşleşme onayları')),
+    appBar: AppBar(title: const Text('Çalışmalarım')),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : ListView(
@@ -189,12 +189,12 @@ class _VerificationPageState extends State<VerificationPage> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Çalışma örneklerini yeteneğinin altına ekleyebilirsin. Fotoğraf/video tamamen isteğe bağlı; eklemeden de eşleşebilir ve onay alabilirsin. Yayımladığın çalışmalar giriş yapan kişilerce görülebilir.',
+                      'Çalışma örneklerini yeteneğinin altına ekleyebilirsin. Fotoğraf/video tamamen isteğe bağlı; eklemeden de eşleşebilirsin. Yayımladığın çalışmalar giriş yapan kişilerce görülebilir.',
                       style: TextStyle(color: CoetusPalette.cream, height: 1.5),
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'Çalışma örnekleri en fazla +6 güven katkısı sağlar; token kazandırmaz. Tamamlanan eşleşmelerden gelen kişi onayları güvene daha güçlü katkı sağlar.',
+                      'Çalışma örnekleri en fazla +6 güven katkısı sağlar; token kazandırmaz.',
                       style: TextStyle(
                         color: CoetusPalette.lime,
                         height: 1.5,
@@ -301,7 +301,7 @@ class _VerificationPageState extends State<VerificationPage> {
                 ),
               const SizedBox(height: 24),
               Text(
-                'Çalışmaların ve eşleşme onayların',
+                'Çalışmaların',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -316,12 +316,15 @@ class _VerificationPageState extends State<VerificationPage> {
                   }
                   if (snapshot.data!.isEmpty) {
                     return const Text(
-                      'Henüz çalışma örneğin veya eşleşme onayın yok. Çalışma eklemek zorunlu değil.',
+                      'Henüz çalışma örneğin yok. Çalışma eklemek zorunlu değil.',
                     );
                   }
                   return Column(
                     children: snapshot.data!
-                        .where((v) => v.status != 'deleted')
+                        .where(
+                          (v) =>
+                              v.type == 'portfolio' && v.status == 'published',
+                        )
                         .map(
                           (v) => VerificationCard(
                             verification: v,
@@ -466,31 +469,13 @@ class _VerifiedSkillsPanelState extends State<VerifiedSkillsPanel> {
     builder: (context, snapshot) {
       if (snapshot.hasError) return Text(verificationError(snapshot.error!));
       final verified = (snapshot.data ?? [])
-          .where(
-            (v) =>
-                (v.type == 'peer' && v.status == 'approved') ||
-                (v.type == 'portfolio' && v.status == 'published'),
-          )
+          .where((v) => v.type == 'portfolio' && v.status == 'published')
           .toList();
       if (verified.isEmpty) {
-        return const Text(
-          'Henüz çalışma örneği veya tamamlanan eşleşmeden onay yok.',
-        );
-      }
-      final approvals = <String, int>{};
-      for (final v in verified.where((v) => v.type == 'peer')) {
-        approvals.update(v.skillName, (n) => n + 1, ifAbsent: () => 1);
+        return const Text('Henüz çalışma örneği yok.');
       }
       return Column(
         children: [
-          for (final e in approvals.entries)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                '${e.key} · Eşleştiği ${e.value} kişiden onay',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
           ...verified.map(
             (v) => VerificationCard(
               verification: v,
@@ -513,7 +498,7 @@ class EvidenceDetailsPage extends StatelessWidget {
   final SkillVerification verification;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Çalışma ve eşleşme deneyimi')),
+    appBar: AppBar(title: const Text('Çalışma örneği')),
     body: ListView(
       padding: const EdgeInsets.all(24),
       children: [

@@ -3,7 +3,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { approvalEffect, canEndorse, validMedia, portfolioContribution } = require('./verification_policy');
+const { validMedia, portfolioContribution } = require('./verification_policy');
 initializeApp();
 const db = getFirestore();
 const options = { region: 'europe-west1', maxInstances: 10, invoker: 'public' };
@@ -72,30 +72,6 @@ exports.reportPortfolioEntry = onCall(options, async r => {
 });
 // Keep old clients from requesting a manual approval or receiving a misleading badge.
 exports.reviewSkillEvidence = onCall(options, async r => { uidOf(r); throw new HttpsError('failed-precondition','Manuel doğrulama kaldırıldı. Çalışmalar doğrudan portföyde yayımlanır.'); });
-exports.endorseTeaching = onCall(options, async r => {
-  const uid = uidOf(r), sessionId = id(r.data?.sessionId), skillId = id(r.data?.skillId), comment = text(r.data.comment,500);
-  if (comment.length < 10) throw new HttpsError('invalid-argument','Deneyimini en az 10 karakterle anlat.');
-  return db.runTransaction(async tx => {
-    const session = await tx.get(db.doc(`sessions/${sessionId}`));
-    if (!session.exists) throw new HttpsError('not-found','Oturum bulunamadı.');
-    const s = session.data(), ref = db.doc(`skillVerifications/peer_${key(s.teacherId,skillId,uid)}`);
-    const ownerRef = db.doc(`users/${id(s.teacherId)}`), skillRef = ownerRef.collection('teachSkills').doc(skillId), rewardRef = ownerRef.collection('verificationRewards').doc(skillId);
-    const [match,skill,existing,person,owner,reward] = await Promise.all([tx.get(db.doc(`matches/${id(s.matchId)}`)),tx.get(skillRef),tx.get(ref),tx.get(db.doc(`users/${uid}`)),tx.get(ownerRef),tx.get(rewardRef)]);
-    if (!match.exists || !skill.exists || !owner.exists || !canEndorse(s,match.data(),uid,skill.data())) throw new HttpsError('permission-denied','Yalnızca tamamlanan gerçek eşleşmendeki yeteneği onaylayabilirsin.');
-    if (existing.exists) throw new HttpsError('already-exists','Bu kişinin bu yeteneğini zaten onayladın.');
-    const effect = approvalEffect(owner.data(),reward.exists), now = FieldValue.serverTimestamp();
-    tx.create(ref,{ownerId:s.teacherId,skillId,skillName:skill.data().name,skillLevel:skill.data().level,type:'peer',status:'approved',sessionId,
-      studentId:uid,studentName:person.data()?.displayName || person.data()?.name || 'Eşleştiği kişi',description:comment,files:[],reward:effect.reward,createdAt:now});
-    // A peer endorsement is not identity verification: never set users.verified here.
-    tx.update(ownerRef,{credits:effect.credits,trustScore:effect.trustScore,verificationCount:effect.verificationCount,peerApprovalCount:effect.peerApprovalCount});
-    tx.update(skillRef,{verifiedName:skill.data().name,verifiedLevel:skill.data().level,peerApprovalCount: (skill.data().peerApprovalCount || 0)+1});
-    if (!reward.exists) {
-      tx.create(rewardRef,{verificationId:ref.id,amount:effect.reward,createdAt:now});
-      if (effect.reward) tx.create(db.doc(`transactions/verification_${key(s.teacherId,skillId)}`),{fromUserId:'system',toUserId:s.teacherId,amount:effect.reward,type:'peer_reward',verificationId:ref.id,createdAt:now});
-    }
-    tx.create(db.collection('notifications').doc(),{userId:s.teacherId,senderId:uid,type:'verification_approved',title:'Eşleştiğin kişi yeteneğini onayladı',message:`${skill.data().name} için yeni onay aldın.${effect.reward ? ` ${effect.reward} token kazandın!` : ''}`,targetRoute:'/verification',targetId:ref.id,read:false,createdAt:now});
-    return effect;
-  });
-});
+exports.endorseTeaching = onCall(options, async r => { uidOf(r); throw new HttpsError('failed-precondition','Kişi onayı özelliği kaldırıldı. Çalışmalarını portföyünde paylaşabilirsin.'); });
 Object.assign(exports, require('./community'));
 Object.assign(exports, require('./learning'));

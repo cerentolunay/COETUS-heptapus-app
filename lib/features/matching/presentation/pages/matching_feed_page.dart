@@ -1,3 +1,4 @@
+import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:coetus/features/community/community.dart';
 import 'package:coetus/features/auth/domain/models/app_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -72,22 +73,22 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   }
 
   List<MatchCandidate> get _visibleCandidates {
-    final query = _searchController.text.trim().toLowerCase();
+    final query = normalizeText(_searchController.text);
 
     final filtered = _candidates.where((candidate) {
       final location = candidate.user.location ?? '';
       final matchesSearch =
           query.isEmpty ||
-          candidate.user.name.toLowerCase().contains(query) ||
-          location.toLowerCase().contains(query) ||
-          candidate.user.bio.toLowerCase().contains(query) ||
-          candidate.teacherSkill.name.toLowerCase().contains(query) ||
-          candidate.studentSkill.name.toLowerCase().contains(query);
+          normalizeText(candidate.user.name).contains(query) ||
+          normalizeText(location).contains(query) ||
+          normalizeText(candidate.user.bio).contains(query) ||
+          normalizeText(candidate.teacherSkill.name).contains(query) ||
+          normalizeText(candidate.studentSkill.name).contains(query);
 
       final matchesSkill =
           _selectedSkill == null ||
-          candidate.teacherSkill.name == _selectedSkill ||
-          candidate.studentSkill.name == _selectedSkill;
+          skillKey(candidate.teacherSkill.name) == skillKey(_selectedSkill!) ||
+          skillKey(candidate.studentSkill.name) == skillKey(_selectedSkill!);
 
       return matchesSearch && matchesSkill;
     }).toList();

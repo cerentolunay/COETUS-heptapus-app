@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:coetus/features/verification/presentation/verification_page.dart';
-import 'package:coetus/features/verification/presentation/endorse_teaching_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/coetus_tokens.dart';
@@ -34,24 +33,9 @@ class OtherUserProfilePage extends StatelessWidget {
                     if (Firebase.apps.isNotEmpty) ...[
                       const SizedBox(height: 18),
                       _SectionCard(
-                        title: 'Çalışmalar ve eşleşme onayları',
+                        title: 'Çalışmalar',
                         icon: Icons.verified_outlined,
                         child: VerifiedSkillsPanel(ownerId: profile.id),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                EndorseTeachingPage(teacherId: profile.id),
-                          ),
-                        ),
-                        icon: const Icon(
-                          Icons.favorite_rounded,
-                          color: CoetusPalette.red,
-                        ),
-                        label: const Text('Bu kişi bana öğretti'),
                       ),
                     ],
                     const SizedBox(height: 18),
@@ -422,8 +406,6 @@ class _SkillWrap extends StatelessWidget {
       runSpacing: 8,
       children: skills.map((skill) {
         final meta = [
-          if (skill.peerApprovalCount > 0)
-            'Eşleştiği ${skill.peerApprovalCount} kişiden onay',
           if (skill.category.trim().isNotEmpty) skill.category,
           if (skill.level != null) 'Seviye ${skill.level}/7',
         ].join(' - ');

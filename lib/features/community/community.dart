@@ -1,3 +1,4 @@
+import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -80,11 +81,13 @@ class _CommunityFeedState extends State<CommunityFeed> {
       }
       final docs = snapshot.data!.docs.where((d) {
         final p = d.data();
-        final searchable =
-            '${p['caption']} ${p['authorName']} ${p['skillName']}'
-                .toLowerCase();
-        return searchable.contains(widget.query.toLowerCase().trim()) &&
-            (widget.skill == null || p['skillName'] == widget.skill);
+        final searchable = normalizeText(
+          '${p['caption']} ${p['authorName']} ${p['skillName']}',
+        );
+        return searchable.contains(normalizeText(widget.query)) &&
+            (widget.skill == null ||
+                skillKey(p['skillName'] as String? ?? '') ==
+                    skillKey(widget.skill!));
       }).toList();
       return SliverList(
         delegate: SliverChildBuilderDelegate((context, i) {
@@ -224,33 +227,6 @@ class _CommunityPostState extends State<CommunityPost> {
             ),
           ),
           const SizedBox(height: 12),
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(p['authorId'] as String)
-                .snapshots(),
-            builder: (_, s) =>
-                ((s.data?.data()?['peerApprovalCount'] as num?)?.toInt() ?? 0) >
-                    0
-                ? Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.verified,
-                          color: CoetusPalette.purple,
-                          size: 16,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '${s.data?.data()?["peerApprovalCount"]} eşleşme onayı',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
           Text(p['caption'] as String? ?? ''),
           if (media != null) ...[
             const SizedBox(height: 12),

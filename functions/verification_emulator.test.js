@@ -37,24 +37,18 @@ async function seed() {
   }
 }
 const request = (uid, data, reviewer = false) => ({ auth: { uid, token: { verificationReviewer: reviewer } }, data });
-emulatorTest('parallel student endorsements grant exactly one reward per skill', async () => {
+emulatorTest('removed endorsement endpoint cannot grant trust or tokens even for a completed match',async()=>{
   await seed();
-  await Promise.all(['student', 'student2'].map(student => api.endorseTeaching.run(request(student,
-    { sessionId: student, skillId: 'guitar', comment: 'Bu kişiden gitar öğrendim.' }))));
-  const user = (await db.doc('users/teacher').get()).data();
-  assert.equal(user.credits, 10); assert.equal(user.trustScore, 10); assert.equal(user.verificationCount, 1);
-  assert.equal((await db.collection('transactions').get()).size, 1);
-  assert.equal((await db.collection('skillVerifications').get()).size, 2);
-  await assert.rejects(api.endorseTeaching.run(request('student',
-    { sessionId: 'student', skillId: 'guitar', comment: 'Yeniden ödül istiyorum.' })), e => e.code === 'already-exists');
-});
-emulatorTest('self and stranger endorsements cannot award credits', async () => {
-  await seed();
-  for (const uid of ['teacher', 'stranger']) {
-    await assert.rejects(api.endorseTeaching.run(request(uid,
-      { sessionId: 'student', skillId: 'guitar', comment: 'Onay vermeye çalışıyorum.' })), e => e.code === 'permission-denied');
+  for (const uid of ['student','student2','teacher','stranger']) {
+    await assert.rejects(api.endorseTeaching.run(request(uid,{sessionId:'student',skillId:'guitar',comment:'Bu kişi bana öğretti.'})),e=>e.code==='failed-precondition');
   }
-  assert.equal((await db.doc('users/teacher').get()).data().credits, 0);
+  const owner=(await db.doc('users/teacher').get()).data();
+  assert.equal(owner.credits,0);assert.equal(owner.trustScore,0);assert.equal(owner.verified,false);
+  assert.equal((await db.collection('skillVerifications').get()).size,0);
+  assert.equal((await db.collection('transactions').get()).size,0);
+});
+emulatorTest('removed endorsement endpoint still rejects unauthenticated requests',async()=>{
+  await assert.rejects(api.endorseTeaching.run({data:{}}),e=>e.code==='unauthenticated');
 });
 emulatorTest('optional portfolios publish immediately without tokens, endorsements, or identity badges', async () => {
   await seed();
@@ -75,14 +69,6 @@ emulatorTest('optional portfolios publish immediately without tokens, endorsemen
   await assert.rejects(api.deletePortfolioEntry.run(request('student',{entryId:'example'})));
   await api.deletePortfolioEntry.run(request('teacher',{entryId:'example'}));
   await api.deletePortfolioEntry.run(request('teacher',{entryId:'example'}));
-  assert.equal((await db.doc('users/teacher').get()).data().trustScore,0);
-});
-emulatorTest('active or unfunded sessions cannot produce peer endorsements',async()=>{
-  await seed();
-  for (const change of [{status:'active',funded:true},{status:'completed',funded:false}]) {
-    await db.doc('sessions/student').update(change);
-    await assert.rejects(api.endorseTeaching.run(request('student',{sessionId:'student',skillId:'guitar',comment:'Gerçek bir onay vermek istiyorum.'})), e=>e.code==='permission-denied');
-  }
   assert.equal((await db.doc('users/teacher').get()).data().trustScore,0);
 });
 emulatorTest('client cannot forge rewards, verification fields or approved records', async () => {
@@ -264,4 +250,15 @@ emulatorTest('public profile queries expose only published work and peer approva
   assert.equal(snapshot.size,1);
   await assertFails(getDocs(query(collection(client,'skillVerifications'),where('ownerId','==','teacher'))));
   await assertFails(updateDoc(doc(env.authenticatedContext('teacher').firestore(),'users/teacher/teachSkills/guitar'),{peerApprovalCount:100}));
+});
+
+emulatorTest('profile completion atomically saves optional interests and normalized skill names',async()=>{
+  await seed();
+  const student=env.authenticatedContext('student').firestore();
+  const batch=writeBatch(student);
+  batch.update(doc(student,'users/student'),{displayName:'Deniz',bio:'',location:'',interests:['music','software'],onboardingVersion:2,profileCompleted:true,learnSkillNames:['python','gitar']});
+  for(const [id,name,key] of [['python','Python','python'],['gitar','Gitar','gitar']]) batch.set(doc(student,'users/student/learnSkills/'+id),{id,name,normalizedName:key,level:1,learnable:true,teachable:false});
+  await assertSucceeds(batch.commit());
+  assert.equal((await db.doc('users/student').get()).data().profileCompleted,true);
+  assert.equal((await db.collection('users/student/learnSkills').get()).size,2);
 });
