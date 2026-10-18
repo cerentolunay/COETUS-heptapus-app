@@ -1,3 +1,5 @@
+> Güncel dalda “Onay al” kaldırılmıştır. Bu belgedeki kişi onayı/ödül açıklamaları önceki sürümü anlatır; güncel davranış için `13-kayit-ilgi-alanlari.md` belgesine bakın.
+
 # Çalışmalar ve eşleşme onayları
 
 Güncel akışta kimlik doğrulama hizmeti ve manuel kanıt inceleme kuyruğu yoktur. Portföy ve kişi onayları kimlik doğrulaması sayılmaz.

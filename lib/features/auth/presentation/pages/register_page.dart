@@ -455,7 +455,7 @@ class _AuthHeaderSection extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
-        const CoetusMascot(size: 100, animate: false, interactive: false),
+        const CoetusMascot(size: 100, interactive: false),
         const SizedBox(height: 16),
         Text(
           headline,

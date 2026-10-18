@@ -1,3 +1,4 @@
+import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:coetus/features/credit/credit_calculator.dart';
 import 'package:coetus/features/matching/models/match_candidate.dart';
 import 'package:coetus/features/matching/models/match_explanation.dart';
@@ -8,7 +9,7 @@ import 'package:coetus/features/skill_graph/skill_graph_service.dart';
 
 class MatchingService {
   const MatchingService({SkillGraphService? skillGraphService})
-      : _skillGraphService = skillGraphService;
+    : _skillGraphService = skillGraphService;
 
   final SkillGraphService? _skillGraphService;
 
@@ -46,8 +47,7 @@ class MatchingService {
               );
           if (skillLevelScore == 0) continue;
 
-          final combinedSkillScore =
-              skillLevelScore * skillCompatibilityScore;
+          final combinedSkillScore = skillLevelScore * skillCompatibilityScore;
 
           final trustScore = MatchingScoreCalculator.calculatePairTrustScore(
             userTrustScore: currentProfile.user.trustScore,
@@ -129,7 +129,8 @@ class MatchingService {
       return SkillMatchType.exact;
     }
 
-    final relatedScore = _skillGraphService?.relatedSkillScore(
+    final relatedScore =
+        _skillGraphService?.relatedSkillScore(
           fromSkillId: teacherSkill.id,
           toSkillId: studentSkill.id,
         ) ??
@@ -143,8 +144,8 @@ class MatchingService {
   }
 
   bool _isSameSkill(SkillModel first, SkillModel second) {
-    final firstName = first.name.trim().toLowerCase();
-    final secondName = second.name.trim().toLowerCase();
+    final firstName = skillKey(first.name);
+    final secondName = skillKey(second.name);
 
     if (firstName.isNotEmpty && secondName.isNotEmpty) {
       return firstName == secondName;

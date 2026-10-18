@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
-      return request.auth != null;
+      return request.auth != null && !exists(/databases/$(database)/documents/accountDeletions/$(request.auth.uid));
     }
 
     function isOwner(userId) {
@@ -20,7 +20,7 @@ service cloud.firestore {
 
     function immutableProfileFieldsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
+        'accountDeletionPending', 'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
       ]);
     }
     function reviewer() {
@@ -32,7 +32,7 @@ service cloud.firestore {
 
     // User profile root document.
     match /users/{userId} {
-      allow read: if signedIn();
+      allow read: if signedIn() || (request.auth != null && request.auth.uid == userId);
 
       allow create: if isOwner(userId) &&
         request.resource.data.id == userId &&

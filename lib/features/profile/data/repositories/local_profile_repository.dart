@@ -13,8 +13,8 @@ class LocalProfileRepository implements ProfileRepository {
     _profile ??= ProfileData(
       user: LocalAuthRepository.currentUser ?? const AppUser(
         id: 'local-user',
-        name: 'Alex Chen',
-        email: 'alex@example.com',
+        name: 'Kullanıcı',
+        email: '',
         bio: 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
       ),
       teachSkills: const [

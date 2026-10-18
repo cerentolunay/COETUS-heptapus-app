@@ -5,10 +5,8 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { validMedia } = require('./verification_policy');
 const db = getFirestore();
 const options = { region: 'europe-west1', maxInstances: 10, invoker: 'public' };
-function uidOf(r) {
-  if (!r.auth) throw new HttpsError('unauthenticated', 'Önce giriş yapmalısın.');
-  return r.auth.uid;
-}
+const {requireActiveAccount: uidOf,requireUsableProfile}=require('./account_guard');
+
 function id(value) {
   if (typeof value !== 'string' || !value || value.length > 200 || value.includes('/'))
     throw new HttpsError('invalid-argument', 'Geçersiz kayıt.');
@@ -26,6 +24,7 @@ function published(snapshot) {
   return snapshot.data();
 }
 function balance(user) {
+  requireUsableProfile(user);
   const credits = user?.credits ?? 0;
   if (!Number.isSafeInteger(credits) || credits < 0)
     throw new HttpsError('failed-precondition', 'Token bakiyesi doğrulanamadı.');
@@ -37,7 +36,7 @@ function notify(tx, userId, senderId, type, title, message, postId) {
     targetRoute: '/community-post', targetId: postId, read: false, createdAt: FieldValue.serverTimestamp() });
 }
 exports.publishCommunityPost = onCall(options, async r => {
-  const uid = uidOf(r), postId = id(r.data?.postId), skillId = id(r.data?.skillId);
+  const uid = await uidOf(r), postId = id(r.data?.postId), skillId = id(r.data?.skillId);
   const caption = body(r.data.caption, 2000);
   let media = null;
   if (r.data.mediaPath) {
@@ -64,6 +63,7 @@ exports.publishCommunityPost = onCall(options, async r => {
       throw new HttpsError('already-exists', 'Bu paylaşım kaydı zaten kullanılmış.');
     }
     if (!skill.exists || !user.exists) throw new HttpsError('failed-precondition', 'Önce öğrettiğin yeteneği profiline ekle.');
+    requireUsableProfile(user.data());
     tx.create(ref, { authorId: uid, authorName: user.data().displayName || user.data().name || 'Kullanıcı',
       authorPhotoUrl: user.data().photoUrl || '', skillId, skillName: skill.data().name, caption, media,
       status: 'published', likeCount: 0, commentCount: 0, supportTotal: 0, createdAt: FieldValue.serverTimestamp() });
@@ -71,11 +71,12 @@ exports.publishCommunityPost = onCall(options, async r => {
   });
 });
 exports.setCommunityLike = onCall(options, async r => {
-  const uid = uidOf(r), postId = id(r.data?.postId);
+  const uid = await uidOf(r), postId = id(r.data?.postId);
   if (typeof r.data.liked !== 'boolean') throw new HttpsError('invalid-argument', 'Beğeni durumu gerekli.');
   return db.runTransaction(async tx => {
     const ref = db.doc(`communityPosts/${postId}`), like = ref.collection('likes').doc(uid);
-    const [post, previous] = await Promise.all([tx.get(ref), tx.get(like)]);
+    const [post, previous, actor] = await Promise.all([tx.get(ref), tx.get(like), tx.get(db.doc(`users/${uid}`))]);
+    requireUsableProfile(actor.data());
     const p = published(post);
     if (previous.exists === r.data.liked) return { liked: previous.exists };
     if (r.data.liked) tx.create(like, { userId: uid, createdAt: FieldValue.serverTimestamp() });
@@ -85,7 +86,7 @@ exports.setCommunityLike = onCall(options, async r => {
   });
 });
 exports.addCommunityComment = onCall(options, async r => {
-  const uid = uidOf(r), postId = id(r.data?.postId), commentId = id(r.data?.commentId), text = body(r.data.text, 500);
+  const uid = await uidOf(r), postId = id(r.data?.postId), commentId = id(r.data?.commentId), text = body(r.data.text, 500);
   return db.runTransaction(async tx => {
     const ref = db.doc(`communityPosts/${postId}`), comment = ref.collection('comments').doc(commentId);
     const [post, previous, user] = await Promise.all([tx.get(ref), tx.get(comment), tx.get(db.doc(`users/${uid}`))]);
@@ -95,6 +96,7 @@ exports.addCommunityComment = onCall(options, async r => {
       throw new HttpsError('already-exists', 'Yorum kaydı zaten kullanılmış.');
     }
     if (!user.exists) throw new HttpsError('failed-precondition', 'Önce profilini tamamla.');
+    requireUsableProfile(user.data());
     tx.create(comment, { authorId: uid, authorName: user.data().displayName || user.data().name || 'Kullanıcı',
       text, createdAt: FieldValue.serverTimestamp() });
     tx.update(ref, { commentCount: p.commentCount + 1 });
@@ -103,7 +105,7 @@ exports.addCommunityComment = onCall(options, async r => {
   });
 });
 exports.supportCommunityPost = onCall(options, async r => {
-  const uid = uidOf(r), postId = id(r.data?.postId), requestId = id(r.data?.requestId), amount = r.data.amount;
+  const uid = await uidOf(r), postId = id(r.data?.postId), requestId = id(r.data?.requestId), amount = r.data.amount;
   if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100)
     throw new HttpsError('invalid-argument', 'Destek miktarı 1–100 token olmalı.');
   return db.runTransaction(async tx => {
@@ -133,7 +135,7 @@ exports.supportCommunityPost = onCall(options, async r => {
   });
 });
 exports.deleteCommunityPost = onCall(options, async r => {
-  const uid = uidOf(r), ref = db.doc(`communityPosts/${id(r.data?.postId)}`);
+  const uid = await uidOf(r), ref = db.doc(`communityPosts/${id(r.data?.postId)}`);
   const path = await db.runTransaction(async tx => {
     const doc = await tx.get(ref);
     if (!doc.exists || doc.data().authorId !== uid) throw new HttpsError('permission-denied', 'Yalnızca kendi paylaşımını kaldırabilirsin.');

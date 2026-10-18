@@ -1,5 +1,4 @@
 import 'package:coetus/features/community/community.dart';
-import 'package:coetus/features/verification/presentation/endorse_teaching_page.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/features/exchange/data/repositories/exchange_repository_factory.dart';
 import 'package:coetus/features/exchange/domain/models/exchange_session.dart';
@@ -52,22 +51,6 @@ class _ExchangePageState extends State<ExchangePage> {
     } catch (error) {
       _showSnack('Teklif reddedilemedi: $error');
     }
-  }
-
-  void _endorse(ExchangeSession session) {
-    if (_userId != session.studentId) {
-      _showSnack('Yetenek onayını, senden öğrenen kişi verebilir.');
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(
-        builder: (_) => EndorseTeachingPage(
-          teacherId: session.teacherId,
-          sessionId: session.id,
-        ),
-      ),
-    );
   }
 
   final Set<String> _processing = {};
@@ -384,7 +367,6 @@ class _ExchangePageState extends State<ExchangePage> {
             session: completedSessions[index],
             onMarkCompleted: (s) => _sessionAction(s, false),
             onRefund: (s) => _sessionAction(s, true),
-            onEndorse: _endorse,
           ),
         );
       default:
@@ -408,7 +390,6 @@ class _ExchangePageState extends State<ExchangePage> {
             session: activeSessions[index],
             onMarkCompleted: (s) => _sessionAction(s, false),
             onRefund: (s) => _sessionAction(s, true),
-            onEndorse: _endorse,
           ),
         );
     }
@@ -597,11 +578,10 @@ class _SessionCard extends StatelessWidget {
     required this.session,
     required this.onMarkCompleted,
     required this.onRefund,
-    required this.onEndorse,
   });
 
   final ExchangeSession session;
-  final ValueChanged<ExchangeSession> onMarkCompleted, onRefund, onEndorse;
+  final ValueChanged<ExchangeSession> onMarkCompleted, onRefund;
 
   @override
   Widget build(BuildContext context) {
@@ -678,13 +658,6 @@ class _SessionCard extends StatelessWidget {
             ),
           if (!session.funded)
             const Text('Bu oturumda token kilidi bulunmuyor.'),
-          if (FirebaseAuth.instance.currentUser?.uid == session.studentId &&
-              (session.status == ExchangeSessionStatus.completed))
-            TextButton.icon(
-              onPressed: () => onEndorse(session),
-              icon: const Icon(Icons.verified_outlined),
-              label: const Text('Bu kişi bana öğretti'),
-            ),
           if (showActions && session.funded) ...[
             const SizedBox(height: CoetusSpace.lg),
             SizedBox(
