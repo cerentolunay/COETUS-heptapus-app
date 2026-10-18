@@ -1,3 +1,4 @@
+import 'package:coetus/features/auth/presentation/widgets/delete_account_button.dart';
 import 'package:coetus/features/verification/presentation/verification_page.dart';
 import 'package:coetus/widgets/coetus_delete_dialog.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
@@ -457,6 +458,8 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                           ],
                           const SizedBox(height: CoetusSpace.xxl),
                           _buildLogoutButton(),
+                          const SizedBox(height: 8),
+                          DeleteAccountButton(enabled: !_isSigningOut),
                         ],
                       ),
                     ),

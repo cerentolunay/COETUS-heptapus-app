@@ -7,13 +7,14 @@ const { validMedia, portfolioContribution } = require('./verification_policy');
 initializeApp();
 const db = getFirestore();
 const options = { region: 'europe-west1', maxInstances: 10, invoker: 'public' };
-function uidOf(r) { if (!r.auth) throw new HttpsError('unauthenticated', 'Önce giriş yapmalısın.'); return r.auth.uid; }
+const {requireActiveAccount: uidOf,requireUsableProfile}=require('./account_guard');
+
 function text(v, max = 1000) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
 function id(v) { if (typeof v !== 'string' || !v || v.length > 200 || v.includes('/')) throw new HttpsError('invalid-argument', 'Geçersiz kayıt.'); return v; }
 const key = (...parts) => Buffer.from(JSON.stringify(parts)).toString('base64url');
 // Optional portfolio entries are published directly. They never grant tokens or identity badges.
 exports.submitSkillEvidence = onCall(options, async r => {
-  const uid = uidOf(r), skillId = id(r.data?.skillId), entryId = id(r.data?.entryId);
+  const uid = await uidOf(r), skillId = id(r.data?.skillId), entryId = id(r.data?.entryId);
   const description = text(r.data.description), paths = r.data.paths;
   if (description.length < 10 || !Array.isArray(paths) || paths.length > 3)
     throw new HttpsError('invalid-argument', 'Çalışmanı en az 10 karakterle anlat. En fazla 3 dosya ekleyebilirsin.');
@@ -36,6 +37,7 @@ exports.submitSkillEvidence = onCall(options, async r => {
       throw new HttpsError('already-exists', 'Çalışma kaydı zaten kullanılmış.');
     }
     if (!user.exists || !skill.exists) throw new HttpsError('not-found', 'Önce yeteneğini profiline ekle.');
+    requireUsableProfile(user.data());
     const counts = {...(user.data().portfolioSkillCounts || {})}, countKey = key(skillId);
     const before = portfolioContribution(counts);
     if (files.length) counts[countKey] = (counts[countKey] || 0) + 1;
@@ -47,12 +49,13 @@ exports.submitSkillEvidence = onCall(options, async r => {
   });
 });
 exports.deletePortfolioEntry = onCall(options, async r => {
-  const uid = uidOf(r), entryId = id(r.data?.entryId), ref = db.doc(`skillVerifications/${entryId}`);
+  const uid = await uidOf(r), entryId = id(r.data?.entryId), ref = db.doc(`skillVerifications/${entryId}`);
   const files = await db.runTransaction(async tx => {
     const userRef = db.doc(`users/${uid}`);
     const [entry,user] = await Promise.all([tx.get(ref),tx.get(userRef)]);
     if (!entry.exists || entry.data().ownerId !== uid || entry.data().type !== 'portfolio') throw new HttpsError('permission-denied','Yalnızca kendi çalışmanı silebilirsin.');
     const p = entry.data(); if (p.status === 'deleted') return p.files || [];
+    requireUsableProfile(user.data());
     const counts = {...(user.data().portfolioSkillCounts || {})}, countKey = key(p.skillId), before = portfolioContribution(counts);
     if (p.files.length) counts[countKey] = Math.max(0,(counts[countKey] || 0)-1);
     tx.update(ref,{status:'deleted',deletedAt:FieldValue.serverTimestamp()});
@@ -63,7 +66,7 @@ exports.deletePortfolioEntry = onCall(options, async r => {
   return {deleted:true};
 });
 exports.reportPortfolioEntry = onCall(options, async r => {
-  const uid = uidOf(r), entryId = id(r.data?.entryId), reason = text(r.data.reason,500);
+  const uid = await uidOf(r), entryId = id(r.data?.entryId), reason = text(r.data.reason,500);
   if (reason.length < 10) throw new HttpsError('invalid-argument','Şikâyet nedenini en az 10 karakterle anlat.');
   const entry = await db.doc(`skillVerifications/${entryId}`).get();
   if (!entry.exists || entry.data().status !== 'published') throw new HttpsError('not-found','Çalışma bulunamadı.');
@@ -71,7 +74,9 @@ exports.reportPortfolioEntry = onCall(options, async r => {
   return {reported:true};
 });
 // Keep old clients from requesting a manual approval or receiving a misleading badge.
-exports.reviewSkillEvidence = onCall(options, async r => { uidOf(r); throw new HttpsError('failed-precondition','Manuel doğrulama kaldırıldı. Çalışmalar doğrudan portföyde yayımlanır.'); });
-exports.endorseTeaching = onCall(options, async r => { uidOf(r); throw new HttpsError('failed-precondition','Kişi onayı özelliği kaldırıldı. Çalışmalarını portföyünde paylaşabilirsin.'); });
+exports.reviewSkillEvidence = onCall(options, async r => { await uidOf(r); throw new HttpsError('failed-precondition','Manuel doğrulama kaldırıldı. Çalışmalar doğrudan portföyde yayımlanır.'); });
+exports.endorseTeaching = onCall(options, async r => { await uidOf(r); throw new HttpsError('failed-precondition','Kişi onayı özelliği kaldırıldı. Çalışmalarını portföyünde paylaşabilirsin.'); });
 Object.assign(exports, require('./community'));
 Object.assign(exports, require('./learning'));
+
+Object.assign(exports,require('./account_deletion'));

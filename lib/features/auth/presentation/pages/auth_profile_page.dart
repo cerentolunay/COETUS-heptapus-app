@@ -1,3 +1,4 @@
+import '../widgets/delete_account_button.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'dart:async';
@@ -228,6 +229,8 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
         ),
+        const SizedBox(height: 8),
+        DeleteAccountButton(enabled: !_isLoggingOut),
       ],
     );
   }

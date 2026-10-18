@@ -2,16 +2,15 @@
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const db = getFirestore(), options = { region: 'europe-west1', maxInstances: 10, invoker: 'public' };
-function uidOf(r) {
-  if (!r.auth) throw new HttpsError('unauthenticated', 'Önce giriş yapmalısın.');
-  return r.auth.uid;
-}
+const {requireActiveAccount: uidOf,requireUsableProfile}=require('./account_guard');
+
 function id(value) {
   if (typeof value !== 'string' || !value || value.length > 200 || value.includes('/'))
     throw new HttpsError('invalid-argument', 'Geçersiz oturum.');
   return value;
 }
 function credits(doc) {
+  requireUsableProfile(doc.data());
   if (!doc.exists || !Number.isSafeInteger(doc.data().credits) || doc.data().credits < 0)
     throw new HttpsError('failed-precondition', 'Profil bakiyesi doğrulanamadı.');
   return doc.data().credits;
@@ -21,7 +20,7 @@ function notification(tx, uid, sender, type, title, message, sessionId) {
     targetRoute: '/exchange-detail', targetId: sessionId, sessionId, read: false, createdAt: FieldValue.serverTimestamp() });
 }
 exports.acceptLearningOffer = onCall(options, async r => {
-  const uid = uidOf(r), matchId = id(r.data?.matchId);
+  const uid = await uidOf(r), matchId = id(r.data?.matchId);
   return db.runTransaction(async tx => {
     const matchRef = db.doc(`matches/${matchId}`), escrowRef = db.doc(`escrows/${matchId}`);
     const [match, escrow] = await Promise.all([tx.get(matchRef), tx.get(escrowRef)]);
@@ -58,7 +57,7 @@ exports.acceptLearningOffer = onCall(options, async r => {
   });
 });
 exports.completeLearningSession = onCall(options, async r => {
-  const uid = uidOf(r), sessionId = id(r.data?.sessionId);
+  const uid = await uidOf(r), sessionId = id(r.data?.sessionId);
   return db.runTransaction(async tx => {
     const sessionRef = db.doc(`sessions/${sessionId}`), escrowRef = db.doc(`escrows/${sessionId}`);
     const [session, escrow] = await Promise.all([tx.get(sessionRef), tx.get(escrowRef)]);
@@ -86,7 +85,7 @@ exports.completeLearningSession = onCall(options, async r => {
   });
 });
 exports.cancelLearningSession = onCall(options, async r => {
-  const uid = uidOf(r), sessionId = id(r.data?.sessionId);
+  const uid = await uidOf(r), sessionId = id(r.data?.sessionId);
   return db.runTransaction(async tx => {
     const sessionRef = db.doc(`sessions/${sessionId}`), escrowRef = db.doc(`escrows/${sessionId}`);
     const [session, escrow] = await Promise.all([tx.get(sessionRef), tx.get(escrowRef)]);

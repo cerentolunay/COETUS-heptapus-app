@@ -17,7 +17,7 @@ before(async () => {
   db = require('firebase-admin/firestore').getFirestore();
   bucket = require('firebase-admin/storage').getStorage().bucket();
 });
-beforeEach(async () => { if (enabled) { await env.clearFirestore(); await env.clearStorage(); } });
+beforeEach(async () => { if (enabled) { await env.clearFirestore(); await env.clearStorage(); if(process.env.FIREBASE_AUTH_EMULATOR_HOST) await fetch('http://'+process.env.FIREBASE_AUTH_EMULATOR_HOST+'/emulator/v1/projects/demo-coetus/accounts',{method:'DELETE'}); } });
 after(async () => {
   if (enabled) {
     if (env) await env.cleanup();
@@ -261,4 +261,93 @@ emulatorTest('profile completion atomically saves optional interests and normali
   await assertSucceeds(batch.commit());
   assert.equal((await db.doc('users/student').get()).data().profileCompleted,true);
   assert.equal((await db.collection('users/student/learnSkills').get()).size,2);
+});
+
+const deletionTest=(name,fn)=>test(name,{skip:!enabled||!process.env.FIREBASE_AUTH_EMULATOR_HOST},fn);
+const deletionRequest=(uid,extra={})=>({auth:{uid,token:{auth_time:Math.floor(Date.now()/1000)}},data:{confirm:true,...extra}});
+deletionTest('account deletion requires explicit confirmation and recent sign-in',async()=>{
+  await seed();
+  await assert.rejects(api.deleteAccount.run({data:{confirm:true}}),e=>e.code==='unauthenticated');
+  await assert.rejects(api.deleteAccount.run({...deletionRequest('teacher'),auth:{uid:'teacher',token:{auth_time:1}}}),e=>e.code==='unauthenticated');
+  await assert.rejects(api.deleteAccount.run(deletionRequest('teacher',{confirm:false})),e=>e.code==='invalid-argument');
+  assert.equal((await db.doc('users/teacher').get()).exists,true);
+  assert.equal((await db.collection('accountDeletions').get()).size,0);
+});
+deletionTest('locked sessions prevent deletion for either participant without changing balances',async()=>{
+  await communitySeed();await pending();
+  await api.acceptLearningOffer.run(request('teacher',{matchId:'funded'}));
+  for(const uid of ['student','teacher'])await assert.rejects(api.deleteAccount.run(deletionRequest(uid)),e=>e.code==='failed-precondition');
+  assert.equal((await db.collection('accountDeletions').get()).size,0);
+  assert.equal((await db.doc('users/student').get()).data().credits,70);
+  assert.equal((await db.doc('users/student').get()).data().lockedCredits,30);
+});
+deletionTest('deletion removes Auth, profile, authored content and media while retaining anonymous transaction history',async()=>{
+  await communitySeed();
+  const auth=require('firebase-admin/auth').getAuth();await auth.createUser({uid:'student',email:'student@example.test',password:'TestPassword123!'});
+  await db.doc('users/student/learnSkills/python').set({name:'Python',level:1});
+  await api.addCommunityComment.run(request('student',{postId:'post',commentId:'mine',text:'Kendi yorumumu yazıyorum.'}));
+  await api.setCommunityLike.run(request('student',{postId:'post',liked:true}));
+  await api.supportCommunityPost.run(request('student',{postId:'post',requestId:'tip',amount:3}));
+  await db.doc('communityPosts/my-post').set({authorId:'student',status:'published'});
+  await db.doc('communityPosts/my-post/comments/other').set({authorId:'teacher',text:'Başkasının yorumu'});
+  await db.doc('skillVerifications/work').set({ownerId:'student',type:'portfolio',status:'published'});
+  await db.doc('chats/shared').set({participants:['student','teacher'],participantNames:{student:'Deniz',teacher:'Ece'},lastMessage:'Özel metnim',lastSenderId:'student'});
+  await db.doc('chats/shared/messages/mine').set({senderId:'student',text:'Özel metnim'});
+  await db.doc('chats/shared/messages/other').set({senderId:'teacher',text:'Karşı tarafın mesajı'});
+  const path='portfolioMedia/student/work/file.png';await bucket.file(path).save(Buffer.from('private'),{metadata:{contentType:'image/png'}});
+  const result=await api.deleteAccount.run(deletionRequest('student',{uid:'teacher'}));
+  assert.equal(result.deleted,true);assert.equal(result.pendingCleanup,false);
+  await assert.rejects(auth.getUser('student'),e=>e.code==='auth/user-not-found');
+  assert.equal((await db.doc('users/student').get()).exists,false);
+  assert.equal((await db.collection('users/student/learnSkills').get()).size,0);
+  assert.equal((await db.doc('communityPosts/my-post').get()).exists,false);
+  assert.equal((await db.doc('skillVerifications/work').get()).exists,false);
+  assert.equal((await db.doc('communityPosts/post').get()).data().likeCount,0);
+  assert.equal((await db.doc('communityPosts/post').get()).data().commentCount,0);
+  assert.equal((await db.doc('chats/shared/messages/mine').get()).exists,false);
+  assert.equal((await db.doc('chats/shared/messages/other').get()).exists,true);
+  assert.equal((await db.doc('chats/shared').get()).data().participantNames.student,'Silinmiş hesap');
+  assert.equal((await db.collection('transactions').get()).size,1);
+  assert.equal((await bucket.file(path).exists())[0],false);
+  assert.equal((await db.doc('users/teacher').get()).exists,true);
+  assert.equal((await db.doc('accountDeletions/student').get()).data().status,'completed');
+  await api.cleanupDeletedAccount.run({uid:'student'});
+  assert.equal((await db.doc('communityPosts/post').get()).data().commentCount,0);
+});
+deletionTest('deleting accounts cannot write, upload, call features, or recreate their profile with a stale token',async()=>{
+  await communitySeed();
+  await db.doc('accountDeletions/student').set({status:'processing'});
+  await db.doc('users/student').update({accountDeletionPending:true});
+  const actor=env.authenticatedContext('student'),client=actor.firestore();
+  await assertFails(updateDoc(doc(client,'users/student'),{displayName:'Geri geldim'}));
+  await assertFails(setDoc(doc(client,'users/student/teachSkills/fake'),{name:'Python',level:1}));
+  await assertFails(uploadBytes(ref(actor.storage('gs://demo-coetus.appspot.com'),'communityMedia/student/new/sample.png'),new Uint8Array([1]),{contentType:'image/png'}));
+  await assert.rejects(api.setCommunityLike.run(request('student',{postId:'post',liked:true})),e=>e.code==='failed-precondition');
+  await db.doc('users/teacher').update({credits:5});
+  await db.doc('communityPosts/deleting').set({authorId:'student',status:'published',supportTotal:0});
+  await assert.rejects(api.supportCommunityPost.run(request('teacher',{postId:'deleting',requestId:'blocked',amount:1})),e=>e.code==='failed-precondition'&&e.message.includes('silinme'));
+  assert.equal((await db.doc('users/teacher').get()).data().credits,5);
+  await db.doc('users/student').delete();
+  await assertFails(setDoc(doc(client,'users/student'),{id:'student',email:'student@example.test',credits:0}));
+});
+
+deletionTest('account deletion racing with session acceptance cannot lose locked funds',async()=>{
+  await communitySeed();await pending('race',80);
+  const auth=require('firebase-admin/auth').getAuth();await auth.createUser({uid:'teacher',email:'teacher@example.test',password:'TestPassword123!'});
+  const results=await Promise.allSettled([api.acceptLearningOffer.run(request('teacher',{matchId:'race'})),api.deleteAccount.run(deletionRequest('teacher'))]);
+  const accepted=results[0].status==='fulfilled',deleted=results[1].status==='fulfilled';
+  assert.notEqual(accepted,deleted);
+  const student=(await db.doc('users/student').get()).data();
+  assert.equal(student.credits,accepted?20:100);
+  assert.equal(student.lockedCredits||0,accepted?80:0);
+  assert.equal((await db.doc('users/teacher').get()).exists,!deleted);
+});
+
+deletionTest('background Auth deletion preserves wallets if a console deletion bypasses the app guard',async()=>{
+  await communitySeed();await pending('external',80);
+  await api.acceptLearningOffer.run(request('teacher',{matchId:'external'}));
+  await assert.rejects(api.cleanupDeletedAccount.run({uid:'teacher'}));
+  assert.equal((await db.doc('users/teacher').get()).exists,true);
+  assert.equal((await db.doc('users/student').get()).data().lockedCredits,80);
+  assert.equal((await db.doc('escrows/external').get()).data().status,'locked');
 });
