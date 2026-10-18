@@ -16,6 +16,7 @@ class CompleteProfilePage extends StatefulWidget {
     super.key,
     this.onSubmit,
     this.initialName,
+    this.initialSelection,
     this.locateCity,
     this.onCompleted,
   });
@@ -23,6 +24,7 @@ class CompleteProfilePage extends StatefulWidget {
   final Future<String> Function()? locateCity;
   final VoidCallback? onCompleted;
   final String? initialName;
+  final InterestSelection? initialSelection;
   @override
   State<CompleteProfilePage> createState() => _CompleteProfilePageState();
 }
@@ -33,13 +35,14 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       _bio = TextEditingController(),
       _location = TextEditingController(),
       _photo = TextEditingController();
-  final _selection = InterestSelection();
+  late final InterestSelection _selection;
   bool _busy = false, _locating = false, _settings = false;
   int _step = 0;
   String? _error, _locationMessage;
   @override
   void initState() {
     super.initState();
+    _selection = widget.initialSelection ?? InterestSelection();
     _name.text =
         widget.initialName ??
         (Firebase.apps.isNotEmpty

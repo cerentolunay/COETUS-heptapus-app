@@ -1,3 +1,4 @@
+import '../features/premium/presentation/pages/premium_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -33,6 +34,7 @@ import 'preview_mode.dart';
 import 'preview_repositories.dart';
 
 const previewScreens = <({String group, String name, String path})>[
+  (group: 'Profil', name: 'Premium ve token paketleri', path: '/premium'),
   (group: 'Başlangıç', name: 'Açılış', path: '/splash'),
   (group: 'Başlangıç', name: 'Karşılama', path: '/welcome'),
   (group: 'Başlangıç', name: 'Tanıtım', path: '/onboarding'),
@@ -203,6 +205,7 @@ class _PreviewAppState extends State<PreviewApp> {
     '/login' => const LoginPage(),
     '/register' => const RegisterPage(),
     '/forgot-password' => const ForgotPasswordPage(),
+    '/premium' => const PremiumPage(),
     '/discovery' => const DiscoveryTestPage(),
     '/complete-profile' => CompleteProfilePage(
       initialName: '',

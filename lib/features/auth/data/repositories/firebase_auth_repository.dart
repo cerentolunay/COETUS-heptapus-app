@@ -1,3 +1,4 @@
+import '../services/welcome_gift_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -23,36 +24,8 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AppUser?> getCurrentUser() async {
-    final firebaseUser = _firebaseAuth.currentUser;
-    if (firebaseUser == null) {
-      return null;
-    }
-
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(firebaseUser.uid)
-        .get()
-        .timeout(_requestTimeout);
-    final data = snapshot.data();
-
-    if (data == null) {
-      return AppUser(
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? '',
-        email: firebaseUser.email ?? '',
-        bio: '',
-      );
-    }
-
-    return AppUser.fromMap({
-      'id': firebaseUser.uid,
-      'email': firebaseUser.email ?? data['email'] ?? '',
-      'displayName':
-          data['displayName'] ?? data['name'] ?? firebaseUser.displayName ?? '',
-      ...data,
-    });
-  }
+  Future<AppUser?> getCurrentUser() =>
+      _mapFirebaseUser(_firebaseAuth.currentUser);
 
   @override
   Future<AppUser> signIn({
@@ -100,19 +73,17 @@ class FirebaseAuthRepository implements AuthRepository {
       bio: '',
     );
 
-    try {
-      return await _syncUserProfile(profile, includeCreatedAt: true);
-    } catch (_) {
-      await firebaseUser.delete().timeout(_requestTimeout);
-      rethrow;
-    }
+    // Profile/gift writes are idempotent. A network failure must not delete an
+    // Auth account whose profile or welcome receipt has already committed.
+    return _syncUserProfile(profile);
   }
 
   @override
   Future<AppUser> signInWithGoogle() async {
     final googleSignIn = GoogleSignIn(scopes: <String>['email']);
 
-    final googleUser = await googleSignIn.signIn().timeout(_requestTimeout);
+    // Account selection is user-driven; do not time out an open account picker.
+    final googleUser = await googleSignIn.signIn();
     if (googleUser == null) {
       throw StateError('Google sign-in was cancelled.');
     }
@@ -137,10 +108,7 @@ class FirebaseAuthRepository implements AuthRepository {
       fallbackName: firebaseUser.displayName ?? 'Google kullanıcısı',
       bio: '',
     );
-    return _syncUserProfile(
-      profile,
-      includeCreatedAt: userCredential.additionalUserInfo?.isNewUser ?? false,
-    );
+    return _syncUserProfile(profile);
   }
 
   @override
@@ -167,40 +135,32 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
-  Future<AppUser> _syncUserProfile(
-    AppUser profile, {
-    bool includeCreatedAt = false,
-  }) async {
+  Future<AppUser> _syncUserProfile(AppUser profile) async {
     final userDoc = _firestore.collection('users').doc(profile.id);
 
-    final data = <String, dynamic>{
-      ...profile.toMap(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
-    if (includeCreatedAt) {
-      data['createdAt'] = FieldValue.serverTimestamp();
-      await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
-      return profile;
-    }
-
-    final snapshot = await userDoc.get().timeout(_requestTimeout);
-    if (!snapshot.exists) {
-      await userDoc.set(data, SetOptions(merge: true)).timeout(_requestTimeout);
-      return profile;
-    }
-
-    await userDoc
-        .set({
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true))
+    await _firestore
+        .runTransaction((tx) async {
+          final existing = await tx.get(userDoc);
+          if (!existing.exists) {
+            tx.set(userDoc, {
+              ...profile.toMap(),
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // Repeated email/Google callbacks never reset credits or profile data.
+            tx.update(userDoc, {'updatedAt': FieldValue.serverTimestamp()});
+          }
+        })
         .timeout(_requestTimeout);
-
-    final existingData = snapshot.data() ?? <String, dynamic>{};
+    await WelcomeGiftService(
+      _firestore,
+    ).claim(profile.id).timeout(_requestTimeout);
+    final snapshot = await userDoc.get().timeout(_requestTimeout);
     return AppUser.fromMap({
       'id': profile.id,
       'email': profile.email,
-      ...existingData,
+      ...?snapshot.data(),
     });
   }
 
@@ -209,11 +169,14 @@ class FirebaseAuthRepository implements AuthRepository {
       return null;
     }
 
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(firebaseUser.uid)
-        .get()
-        .timeout(_requestTimeout);
+    final userDoc = _firestore.collection('users').doc(firebaseUser.uid);
+    var snapshot = await userDoc.get().timeout(_requestTimeout);
+    if (snapshot.exists) {
+      await WelcomeGiftService(
+        _firestore,
+      ).claim(firebaseUser.uid).timeout(_requestTimeout);
+      snapshot = await userDoc.get().timeout(_requestTimeout);
+    }
     final data = snapshot.data();
 
     if (data == null) {

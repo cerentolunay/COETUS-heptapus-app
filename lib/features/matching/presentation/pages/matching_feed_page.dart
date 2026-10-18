@@ -809,7 +809,7 @@ class _CircleIconButton extends StatelessWidget {
 enum _MatchSortOption {
   bestMatch('En yüksek uyum'),
   trust('Güven puanı'),
-  lowCredit('Düşük kredi');
+  lowCredit('Düşük token');
 
   final String label;
 

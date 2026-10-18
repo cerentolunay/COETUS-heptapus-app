@@ -193,7 +193,10 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
         const SizedBox(height: 8),
         _UserRow(label: 'E-posta', value: _user!.email),
         const SizedBox(height: 8),
-        _UserRow(label: 'Kredi', value: '${_user!.credits} token'),
+        InkWell(
+          onTap: () => context.push('/premium'),
+          child: _UserRow(label: 'Token', value: '${_user!.credits} token'),
+        ),
         const SizedBox(height: 8),
         _UserRow(
           label: 'Doğrulama',

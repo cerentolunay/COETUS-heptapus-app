@@ -234,7 +234,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         if (credits > 0)
-                          TextSpan(text: " · $credits kredi escrow'da"),
+                          TextSpan(text: " · $credits token escrow'da"),
                       ],
                     ),
                   ),

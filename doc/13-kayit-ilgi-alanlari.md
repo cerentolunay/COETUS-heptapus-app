@@ -14,3 +14,17 @@
 Flutter davranış testleri ve Firebase emülatör testleri çalıştırılır; Android ARM64 debug APK derlenir. Gerçek GPS izin penceresi fiziksel Android/iOS cihazda ayrıca kontrol edilmelidir; iOS derlemesi Windows ortamında çalıştırılmamıştır.
 
 Bu dal inceleme içindir. Canlı sunucuya yayımlanmamıştır; PR birleştirilmeden ve yayın yapılmadan eski canlı onay işlevi değişmez.
+
+## Ortak ilgi alanı ekranı
+
+Girişteki keşfet ekranı ve profil tamamlamanın ikinci adımı aynı `InterestTree`
+bileşenini kullanır. Ana alanlar iki sütunlu kartlardır; karta dokununca o satırın
+altında beceri dalları açılır. Birden fazla alan açılabilir. Dalı kapatmak seçilen
+becerileri veya öğrenme/paylaşma amaçlarını silmez. Ekle/öneri ve yönetici onayı
+iki girişte de aynı katalog üzerinden çalışır.
+
+Girişteki seçimler, profil henüz tamamlanmamışsa profil formuna `initialSelection`
+olarak taşınır; son kayıtta ilgi alanı kimlikleri ve gerçek alt beceriler birlikte
+kaydedilir. Örneğin Müzik → Gitar seçiminde genel Müzik adı öğrenme becerisi olarak
+kaydedilmez. Profili tamamlanmış kullanıcıda mevcut profil bilgileri korunarak
+seçimler kaydedilir. Önizlemede yalnızca yerel örnek beceri kayıtları güncellenir.

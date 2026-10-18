@@ -65,7 +65,9 @@ class ProfileCompletionNotifier extends ChangeNotifier {
             notifyListeners();
           },
           onError: (e) {
-            print('Error listening to profile completion stream: $e');
+            if (kDebugMode) {
+              debugPrint('Profile completion stream could not be read.');
+            }
             _isLoading = false;
             notifyListeners();
           },

@@ -86,7 +86,7 @@ class _WelcomePageState extends State<WelcomePage> {
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          'Bildiğini paylaş, kredi kazan. Merak ettiğin yeteneği topluluktan öğren.',
+                          'Bildiğini paylaş, token kazan. Merak ettiğin yeteneği topluluktan öğren.',
                           style: text.bodyLarge?.copyWith(
                             color: CoetusPalette.cream,
                           ),
@@ -116,7 +116,7 @@ class _WelcomePageState extends State<WelcomePage> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    '01  Öğret    ·    02  Kredi kazan    ·    03  Öğren',
+                    '01  Öğret    ·    02  Token kazan    ·    03  Öğren',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: CoetusPalette.purple,

@@ -1,3 +1,4 @@
+import '../widgets/skill_editor_dialog.dart';
 import 'package:coetus/features/auth/presentation/widgets/delete_account_button.dart';
 import 'package:coetus/features/verification/presentation/verification_page.dart';
 import 'package:coetus/widgets/coetus_delete_dialog.dart';
@@ -39,8 +40,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
 
   // Dialog surfaces use the shared dark purple palette.
   static const Color _card = CoetusPalette.purple;
-  static const Color _indigo = CoetusPalette.blue;
-  static const Color _violet = CoetusPalette.blue;
+  static const Color _violet = CoetusPalette.lime;
 
   @override
   void initState() {
@@ -81,116 +81,29 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showEditSkillDialog(SkillModel skill) async {
-    final nameController = TextEditingController(text: skill.name);
-    double selectedLevel = skill.level.toDouble();
-
-    await showDialog<void>(
+    final result = await showDialog<SkillEditorResult>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: _card,
-          title: const Text(
-            'Yeteneği düzenle',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: StatefulBuilder(
-            builder: (context, setDialogState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      fillColor: _card,
-                      hintText: 'Yetenek adı',
-                      hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.40),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: _indigo),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Seviye: ${selectedLevel.toInt()}/7',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Slider(
-                    value: selectedLevel,
-                    min: 1,
-                    max: 7,
-                    divisions: 6,
-                    activeColor: _indigo,
-                    inactiveColor: Colors.white.withValues(alpha: 0.15),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedLevel = value;
-                      });
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Vazgeç',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final updatedName = nameController.text.trim();
-                if (updatedName.isEmpty) return;
-
-                setState(() {
-                  final index = _skills.indexWhere((s) => s.id == skill.id);
-                  if (index != -1) {
-                    _skills[index] = _skills[index].copyWith(
-                      name: updatedName,
-                      level: selectedLevel.toInt(),
-                    );
-                  }
-                });
-
-                await _profileRepository.saveTeachSkill(
-                  skill.copyWith(
-                    name: updatedName,
-                    level: selectedLevel.toInt(),
-                  ),
-                );
-
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo),
-              child: const Text(
-                'Kaydet',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+      builder: (_) => SkillEditorDialog(
+        initialName: skill.name,
+        initialLevel: skill.level,
+        title: 'Yeteneği düzenle',
+      ),
     );
-
-    nameController.dispose();
+    if (!mounted || result == null) return;
+    try {
+      final updated = await _profileRepository.saveTeachSkill(
+        skill.copyWith(name: result.name, level: result.level),
+      );
+      if (mounted) setState(() => _applyProfile(updated));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Beceri kaydedilemedi. Lütfen yeniden dene.'),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showDeleteSkillDialog(SkillModel skill) async {
@@ -218,10 +131,19 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showAddSkillDialog() async {
-    final SkillModel? newSkill = await showDialog<SkillModel>(
+    final result = await showDialog<SkillEditorResult>(
       context: context,
-      builder: (_) => const _AddSkillDialog(),
+      builder: (_) =>
+          const SkillEditorDialog(title: 'Yetenek ekle', confirmLabel: 'Ekle'),
     );
+    final newSkill = result == null
+        ? null
+        : SkillModel(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            name: result.name,
+            level: result.level,
+            teachable: true,
+          );
 
     if (!mounted || newSkill == null) return;
 
@@ -239,10 +161,19 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showAddGoalDialog() async {
-    final SkillModel? newGoal = await showDialog<SkillModel>(
+    final result = await showDialog<SkillEditorResult>(
       context: context,
-      builder: (_) => const _AddSkillDialog(),
+      builder: (_) =>
+          const SkillEditorDialog(title: 'Yetenek ekle', confirmLabel: 'Ekle'),
     );
+    final newGoal = result == null
+        ? null
+        : SkillModel(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            name: result.name,
+            level: result.level,
+            learnable: true,
+          );
 
     if (!mounted || newGoal == null) return;
 
@@ -318,10 +249,13 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                   Navigator.of(dialogContext).pop();
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: _violet),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _violet,
+                foregroundColor: CoetusPalette.purple,
+              ),
               child: const Text(
                 'Kaydet',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: CoetusPalette.purple),
               ),
             ),
           ],
@@ -457,6 +391,12 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                             ),
                           ],
                           const SizedBox(height: CoetusSpace.xxl),
+                          OutlinedButton.icon(
+                            onPressed: () => context.push('/discovery'),
+                            icon: const Icon(Icons.interests_outlined),
+                            label: const Text('İlgi alanlarını keşfet'),
+                          ),
+                          const SizedBox(height: 12),
                           _buildLogoutButton(),
                           const SizedBox(height: 8),
                           DeleteAccountButton(enabled: !_isSigningOut),
@@ -589,9 +529,17 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: _ProfileStat(
-                        value: '${_user.credits}',
-                        label: 'KREDİ',
+                      child: Semantics(
+                        button: true,
+                        label: 'Token bakiyesi. Premium paketlerini incele',
+                        child: InkWell(
+                          onTap: () => context.push('/premium'),
+                          borderRadius: BorderRadius.circular(12),
+                          child: _ProfileStat(
+                            value: '${_user.credits}',
+                            label: 'TOKEN',
+                          ),
+                        ),
                       ),
                     ),
                     _statDivider(),
@@ -923,110 +871,6 @@ class _GoalChip extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _AddSkillDialog extends StatefulWidget {
-  const _AddSkillDialog();
-
-  @override
-  State<_AddSkillDialog> createState() => _AddSkillDialogState();
-}
-
-class _AddSkillDialogState extends State<_AddSkillDialog> {
-  final TextEditingController _nameController = TextEditingController();
-  double _selectedLevel = 1;
-
-  static const Color _card = CoetusPalette.purple;
-  static const Color _indigo = CoetusPalette.blue;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final String skillName = _nameController.text.trim();
-
-    if (skillName.isEmpty) return;
-
-    Navigator.of(context).pop(
-      SkillModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: skillName,
-        level: _selectedLevel.toInt(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: _card,
-      title: const Text('Yetenek ekle', style: TextStyle(color: Colors.white)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _nameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              fillColor: _card,
-              hintText: 'Yetenek adı',
-              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.40)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: _indigo),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Seviye: ${_selectedLevel.toInt()}/7',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Slider(
-            value: _selectedLevel,
-            min: 1,
-            max: 7,
-            divisions: 6,
-            activeColor: _indigo,
-            inactiveColor: Colors.white.withValues(alpha: 0.15),
-            label: _selectedLevel.toInt().toString(),
-            onChanged: (value) {
-              setState(() {
-                _selectedLevel = value;
-              });
-            },
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'Vazgeç',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: _submit,
-          style: ElevatedButton.styleFrom(backgroundColor: _indigo),
-          child: const Text('Ekle', style: TextStyle(color: Colors.white)),
-        ),
-      ],
     );
   }
 }

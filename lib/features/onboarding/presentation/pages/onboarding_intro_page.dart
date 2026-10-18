@@ -74,7 +74,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Burada para değil, bilgi dolaşır. Öğreterek kazandığın kredilerle öğrenmeye devam et.',
+                          'Burada para değil, bilgi dolaşır. Öğreterek kazandığın tokenlarla öğrenmeye devam et.',
                           textAlign: TextAlign.center,
                           style: text.bodyMedium?.copyWith(
                             color: CoetusPalette.cream,
@@ -102,7 +102,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
                     number: '03',
                     title: 'Kazan ve öğren',
                     subtitle:
-                        'Oturumdan kazandığın krediyi yeni bir yetenekte kullan.',
+                        'Oturumdan kazandığın tokenı yeni bir yetenekte kullan.',
                     icon: Icons.swap_horiz_rounded,
                   ),
                   const SizedBox(height: 24),

@@ -36,4 +36,16 @@ Bu repo, 8 kişilik bir öğrenci ekibi tarafından geliştirilen 45 günlük MV
 
 ## Dokümantasyon
 
-Tüm proje planları ve teknik detaylar `/docs` klasöründe bulunmaktadır.
+Tüm proje planları ve teknik detaylar `/doc` klasöründe bulunmaktadır.
+
+
+## Yayına hazırlık
+
+- [Ayrıntılı yayın yol haritası](YAYIN_YOL_HARITASI.md): mevcut durum, eksikler,
+  Firebase/maliyet kararı, Google girişi, token güvenliği, moderasyon, hesap silme,
+  Android/iOS mağaza adımları ve üretime çıkış kontrol listesi.
+- [Gerçek cihaz test matrisi](doc/21-yayin-test-matrisi.md)
+- [Doğrulama kaydı ve sınırlar](doc/22-yayin-hazirligi-dogrulama.md)
+
+Bu belgeler ve GitHub'a yükleme, canlı Firebase veya mağaza yayını yapıldığı
+anlamına gelmez. Ücretli altyapı ve gerçek ödeme bu geliştirme kapsamında açılmaz.

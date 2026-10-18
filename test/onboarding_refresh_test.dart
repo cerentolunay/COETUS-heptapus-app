@@ -1,3 +1,5 @@
+import 'package:coetus/features/onboarding/presentation/pages/discovery_test_page.dart';
+import 'package:coetus/features/profile/presentation/widgets/interest_tree.dart';
 import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:coetus/features/auth/domain/models/app_user.dart';
 import 'package:coetus/features/matching/services/matching_service.dart';
@@ -14,6 +16,72 @@ import 'package:geolocator/geolocator.dart';
 import 'design_refresh_test.dart' show app;
 
 void main() {
+  testWidgets('entry and profile completion share the same expandable cards', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const DiscoveryTestPage()));
+    expect(find.byType(InterestTree), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Gitar'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('interest-branch-music')));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilterChip, 'Gitar'), findsOneWidget);
+    await tester.pumpWidget(
+      app(
+        CompleteProfilePage(
+          initialName: 'Deniz',
+          onSubmit: (_) async {},
+          onCompleted: () {},
+        ),
+      ),
+    );
+    await tester.ensureVisible(find.text('İlgi alanlarına devam et'));
+    await tester.tap(find.text('İlgi alanlarına devam et'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InterestTree), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('interest-branch-music')),
+    );
+    await tester.tap(find.byKey(const ValueKey('interest-branch-music')));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilterChip, 'Gitar'), findsOneWidget);
+  });
+
+  testWidgets('entry selections carry into final profile submission', (
+    tester,
+  ) async {
+    final draft = InterestSelection()
+      ..toggleBranch('music')
+      ..toggleSkill('Gitar', 'Müzik', branchId: 'music');
+    draft.skills.values.single.teach = true;
+    draft.skills.values.single.level = 4;
+    ProfileSetupData? saved;
+    await tester.pumpWidget(
+      app(
+        CompleteProfilePage(
+          initialName: 'Deniz',
+          initialSelection: draft,
+          onSubmit: (data) async => saved = data,
+          onCompleted: () {},
+        ),
+      ),
+    );
+    await tester.ensureVisible(find.text('İlgi alanlarına devam et'));
+    await tester.tap(find.text('İlgi alanlarına devam et'));
+    await tester.pumpAndSettle();
+    final guitar = tester.widget<FilterChip>(
+      find.widgetWithText(FilterChip, 'Gitar'),
+    );
+    expect(guitar.selected, isTrue);
+    await tester.ensureVisible(find.text('Profilimi tamamla'));
+    await tester.tap(find.text('Profilimi tamamla'));
+    await tester.pumpAndSettle();
+    expect(saved!.interests, contains('music'));
+    expect(saved!.skills.single.name, 'Gitar');
+    expect(saved!.skills.single.teachable, isTrue);
+    expect(saved!.skills.single.learnable, isTrue);
+    expect(saved!.skills.single.level, 4);
+  });
+
   test(
     'normalization handles Turkish, case, spacing and decomposed letters without merging languages',
     () {
@@ -181,14 +249,19 @@ void main() {
     await tester.ensureVisible(find.text('İlgi alanlarına devam et'));
     await tester.tap(find.text('İlgi alanlarına devam et'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(FilterChip, 'Müzik'));
-    await tester.tap(find.widgetWithText(FilterChip, 'Müzik'));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('interest-branch-music')),
+    );
+    await tester.tap(find.byKey(const ValueKey('interest-branch-music')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.widgetWithText(FilterChip, 'Gitar'));
     await tester.tap(find.widgetWithText(FilterChip, 'Gitar'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Bu beceriyi paylaşabilirim'));
     await tester.tap(find.text('Bu beceriyi paylaşabilirim'));
+    await tester.pumpAndSettle();
+    expect(find.text('Becerini paylaş'), findsOneWidget);
+    await tester.tap(find.text('Kaydet'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Profilimi tamamla'));
     await tester.tap(find.text('Profilimi tamamla'));
@@ -254,8 +327,10 @@ void main() {
       await tester.ensureVisible(find.text('İlgi alanlarına devam et'));
       await tester.tap(find.text('İlgi alanlarına devam et'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.widgetWithText(FilterChip, 'Müzik'));
-      await tester.tap(find.widgetWithText(FilterChip, 'Müzik'));
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('interest-branch-music')),
+      );
+      await tester.tap(find.byKey(const ValueKey('interest-branch-music')));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     },

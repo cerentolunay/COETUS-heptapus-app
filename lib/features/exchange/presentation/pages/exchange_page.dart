@@ -1,3 +1,4 @@
+import '../../../matching/presentation/pages/match_success_page.dart';
 import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/features/community/community.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
@@ -39,7 +40,18 @@ class _ExchangePageState extends State<ExchangePage> {
     if (userId == null) return;
     try {
       await _repository.acceptOffer(offer.id, userId);
-      _showSnack('Teklif kabul edildi.');
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => MatchSuccessPage(
+            user: MatchedUser(
+              name: offer.requesterName,
+              skills: const [],
+              learningGoals: [MatchedGoal(name: offer.skill, emoji: '✨')],
+            ),
+          ),
+        ),
+      );
     } catch (error) {
       _showSnack(communityError(error));
     }
@@ -140,8 +152,8 @@ class _ExchangePageState extends State<ExchangePage> {
                       .where((session) => session.id == widget.sessionId)
                       .toList();
 
-            // Kredi özeti — orijinal hesaplama mantığı korunuyor: aktif ya da
-            // planlı oturumların kredi toplamı ve tamamlanan oturum sayısı.
+            // Token özeti — orijinal hesaplama mantığı korunuyor: aktif ya da
+            // planlı oturumların token toplamı ve tamamlanan oturum sayısı.
             final lockedCredits = visibleSessions
                 .where((s) => s.funded && s.studentId == userId)
                 .where(
@@ -425,7 +437,7 @@ class _ExchangePageState extends State<ExchangePage> {
   }
 }
 
-/// Escrow zaman çizelgesindeki (Anlaşma → Kredi kilitli → Oturum → Aktarım)
+/// Escrow zaman çizelgesindeki (Anlaşma → Token kilitli → Oturum → Aktarım)
 /// mevcut adımı hesaplar — `secure_chat_escrow_page.dart`'taki
 /// `EscrowStatus` → timeline index eşlemesiyle aynı yaklaşım.
 int _sessionTimelineIndex(ExchangeSessionStatus status) {
@@ -656,7 +668,7 @@ class _SessionCard extends StatelessWidget {
           if (session.funded &&
               session.status != ExchangeSessionStatus.cancelled)
             EscrowSteps(
-              labels: const ['Anlaşma', 'Kredi kilitli', 'Oturum', 'Aktarım'],
+              labels: const ['Anlaşma', 'Token kilitli', 'Oturum', 'Aktarım'],
               currentIndex: timelineIndex,
             ),
           if (!session.funded)

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../profile/presentation/widgets/interest_tree.dart';
+import '../../../profile/domain/onboarding/interest_catalog.dart';
+import '../../../profile/domain/services/profile_completion_service.dart';
+import '../../../../preview/preview_mode.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
-import 'package:coetus/features/profile/domain/models/skill_model.dart';
 
 class DiscoveryTestPage extends StatefulWidget {
   const DiscoveryTestPage({super.key});
@@ -13,57 +17,66 @@ class DiscoveryTestPage extends StatefulWidget {
 }
 
 class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
-  static const List<_InterestCategory> _categories = [
-    _InterestCategory(name: 'Müzik', icon: Icons.music_note_outlined),
-    _InterestCategory(name: 'Yazılım', icon: Icons.code),
-    _InterestCategory(name: 'Dil', icon: Icons.public),
-    _InterestCategory(name: 'Tasarım', icon: Icons.brush_outlined),
-    _InterestCategory(name: 'El sanatları', icon: Icons.content_cut),
-    _InterestCategory(name: 'Fotoğraf', icon: Icons.photo_camera_outlined),
-  ];
-
-  final Set<String> _selected = {};
+  final _selection = InterestSelection();
   bool _isSaving = false;
-
-  void _toggle(String category) {
-    setState(() {
-      if (_selected.contains(category)) {
-        _selected.remove(category);
-      } else {
-        _selected.add(category);
-      }
-    });
-  }
-
-  String _slugify(String category) {
-    return category
-        .toLowerCase()
-        .replaceAll('ı', 'i')
-        .replaceAll('ş', 's')
-        .replaceAll('ğ', 'g')
-        .replaceAll('ö', 'o')
-        .replaceAll('ü', 'u')
-        .replaceAll('ç', 'c')
-        .replaceAll(RegExp(r'\s+'), '_');
-  }
 
   Future<void> _handleContinue() async {
     if (_isSaving) return;
+    if (_selection.skills.values.any((skill) => !skill.learn && !skill.teach)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Seçtiğin her beceri için bir amaç seç veya beceriyi kaldır.',
+          ),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isSaving = true;
     });
 
     try {
-      final repository = ProfileRepositoryFactory.create();
-      for (final category in _selected) {
-        await repository.saveLearnSkill(
-          SkillModel(id: _slugify(category), name: category, level: 1),
+      if (!PreviewMode.enabled && Firebase.apps.isNotEmpty) {
+        final service = ProfileCompletionService();
+        final completed = await service.isProfileCompleted();
+        if (!mounted) return;
+        if (!completed) {
+          context.go('/complete-profile', extra: _selection);
+          return;
+        }
+        final profile = await ProfileRepositoryFactory.create().loadProfile();
+        await service.completeProfile(
+          displayName: profile.user.name,
+          bio: profile.user.bio,
+          location: profile.user.location ?? '',
+          photoUrl: profile.user.photoUrl,
+          interests: _selection.selectedInterestIds,
+          skills: _selection.selectedSkills,
         );
+      } else {
+        final repository = ProfileRepositoryFactory.create();
+        for (final skill in _selection.selectedSkills) {
+          if (skill.learnable) {
+            await repository.saveLearnSkill(skill.copyWith(teachable: false));
+          }
+          if (skill.teachable) {
+            await repository.saveTeachSkill(skill.copyWith(learnable: false));
+          }
+        }
       }
 
       if (!mounted) return;
       context.go('/home');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Seçimlerin kaydedilemedi. Lütfen yeniden dene.'),
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -132,43 +145,18 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
                 ],
               ),
               const SizedBox(height: 28),
-              Text(
-                'Ne öğrenmek\nistiyorsun?',
-                style: textTheme.headlineMedium?.copyWith(
-                  color: CoetusColors.navyInk,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'En az 3 alan seç, eşleşmeleri buna göre kuruyoruz.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: CoetusColors.muted,
-                ),
-              ),
-              const SizedBox(height: 24),
               Expanded(
-                child: GridView.builder(
-                  itemCount: _categories.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    mainAxisExtent: 180,
+                child: SingleChildScrollView(
+                  child: InterestTree(
+                    selection: _selection,
+                    enabled: !_isSaving,
+                    onChanged: () => setState(() {}),
                   ),
-                  itemBuilder: (context, index) {
-                    final category = _categories[index];
-                    final isSelected = _selected.contains(category.name);
-                    return _CategoryCard(
-                      category: category,
-                      selected: isSelected,
-                      onTap: () => _toggle(category.name),
-                    );
-                  },
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                '${_selected.length} alan seçildi',
+                '${_selection.selectedInterestIds.length} alan · ${_selection.skills.length} beceri seçildi',
                 textAlign: TextAlign.center,
                 style: textTheme.bodySmall,
               ),
@@ -195,72 +183,4 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
       ),
     );
   }
-}
-
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _InterestCategory category;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? CoetusColors.navy : CoetusColors.card,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: CoetusShadow.card,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: selected
-                      ? CoetusColors.oat.withValues(alpha: .18)
-                      : CoetusColors.plateWarm,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  category.icon,
-                  color: selected ? CoetusColors.oat : CoetusColors.navy,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                category.name,
-                style: TextStyle(
-                  color: selected ? CoetusColors.oat : CoetusColors.navyInk,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InterestCategory {
-  const _InterestCategory({required this.name, required this.icon});
-
-  final String name;
-  final IconData icon;
 }

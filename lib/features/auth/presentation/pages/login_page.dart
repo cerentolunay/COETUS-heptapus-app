@@ -1,3 +1,4 @@
+import '../../data/services/google_sign_in_error.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'dart:async';
 
@@ -215,45 +216,17 @@ class _LoginPageState extends State<LoginPage>
       );
 
       context.go('/home');
-    } on FirebaseAuthException catch (error) {
+    } catch (error) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(_mapAuthError(error.code))));
-    } on TimeoutException {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google oturumu zaman aşımına uğradı.')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google ile giriş yapılamadı.')),
-      );
+      ).showSnackBar(SnackBar(content: Text(googleSignInError(error))));
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  String _mapAuthError(String code) {
-    switch (code) {
-      case 'account-exists-with-different-credential':
-        return 'Bu hesap farklı bir yöntemle kayıtlı.';
-      case 'invalid-credential':
-        return 'Google kimlik bilgisi geçersiz.';
-      case 'network-request-failed':
-        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
-      case 'user-disabled':
-        return 'Bu kullanıcı devre dışı bırakılmış.';
-      default:
-        return 'Google ile giriş yapılamadı. ($code)';
     }
   }
 
@@ -276,7 +249,7 @@ class _LoginPageState extends State<LoginPage>
                   children: [
                     const _AuthHeaderSection(
                       headline: 'Tekrar hoş geldin',
-                      subtitle: 'Kredi bakiyen ve oturumların seni bekliyor.',
+                      subtitle: 'Token bakiyen ve oturumların seni bekliyor.',
                     ),
                     const SizedBox(height: 24),
                     _AuthModeTabs(
