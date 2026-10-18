@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,10 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
   Future<void> _completeOnboarding(String route) async {
     if (_continuing) return;
     setState(() => _continuing = true);
+    if (PreviewMode.enabled) {
+      context.go(route);
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
     if (!mounted) return;

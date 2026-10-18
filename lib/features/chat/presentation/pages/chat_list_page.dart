@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/chat/data/repositories/chat_repository_factory.dart';
@@ -43,7 +44,9 @@ class _ChatListPageState extends State<ChatListPage> {
     'arşiv',
   ];
 
-  String? get _userId => FirebaseAuth.instance.currentUser?.uid;
+  String? get _userId => (PreviewMode.enabled
+      ? PreviewMode.userId
+      : FirebaseAuth.instance.currentUser?.uid);
 
   @override
   void dispose() {

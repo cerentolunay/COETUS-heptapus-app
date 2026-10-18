@@ -1,3 +1,4 @@
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/features/community/community.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/features/exchange/data/repositories/exchange_repository_factory.dart';
@@ -29,7 +30,9 @@ class _ExchangePageState extends State<ExchangePage> {
 
   int _selectedTab = 0;
 
-  String? get _userId => FirebaseAuth.instance.currentUser?.uid;
+  String? get _userId => (PreviewMode.enabled
+      ? PreviewMode.userId
+      : FirebaseAuth.instance.currentUser?.uid);
 
   Future<void> _acceptOffer(MatchOffer offer) async {
     final userId = _userId;
@@ -664,7 +667,10 @@ class _SessionCard extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed:
-                    FirebaseAuth.instance.currentUser?.uid == session.studentId
+                    (PreviewMode.enabled
+                            ? PreviewMode.userId
+                            : FirebaseAuth.instance.currentUser?.uid) ==
+                        session.studentId
                     ? () => onMarkCompleted(session)
                     : null,
                 child: const Text('Tamamla ve tokenı aktar'),
@@ -676,7 +682,9 @@ class _SessionCard extends StatelessWidget {
               child: OutlinedButton(
                 onPressed:
                     session.refundVotes.contains(
-                      FirebaseAuth.instance.currentUser?.uid,
+                      (PreviewMode.enabled
+                          ? PreviewMode.userId
+                          : FirebaseAuth.instance.currentUser?.uid),
                     )
                     ? null
                     : () => onRefund(session),

@@ -1,3 +1,5 @@
+import 'package:coetus/preview/preview_repositories.dart';
+import 'package:coetus/preview/preview_mode.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import '../../domain/repositories/notification_repository.dart';
@@ -6,7 +8,8 @@ import 'local_notification_repository.dart';
 
 class NotificationRepositoryFactory {
   static NotificationRepository create() {
-    if (Firebase.apps.isNotEmpty) {
+    if (PreviewMode.enabled) return PreviewNotificationRepository();
+    if (!PreviewMode.enabled && Firebase.apps.isNotEmpty) {
       return FirebaseNotificationRepository();
     }
 

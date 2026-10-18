@@ -153,7 +153,7 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
-                    childAspectRatio: 1.15,
+                    mainAxisExtent: 180,
                   ),
                   itemBuilder: (context, index) {
                     final category = _categories[index];

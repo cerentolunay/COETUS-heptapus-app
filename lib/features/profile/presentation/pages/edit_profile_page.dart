@@ -194,7 +194,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Text('Profili düzenle', style: t.headlineSmall),
+                    Expanded(
+                      child: Text('Profili düzenle', style: t.headlineSmall),
+                    ),
                   ],
                 ),
                 const SizedBox(height: CoetusSpace.xxl),
