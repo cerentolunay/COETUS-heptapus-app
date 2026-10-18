@@ -10,7 +10,11 @@ Temizleme idempotenttir. Yönetim konsolundan doğrudan Auth silinerek uygulama 
 
 ## Yayın sırası
 
-Bu değişiklik mevcut PR'ın parçasıdır ve canlıya yayımlanmamıştır. Profildeki düğmenin gerçekten işlem yapabilmesi için sunucu yayını gerekir. Önce `firestore.indexes.json` içindeki yorum/kalp collection-group indekslerinin hazır olduğundan emin olun; ardından kurallar ve yeni `deleteAccount`/`cleanupDeletedAccount` işlevleri ile hesap silme korumaları birlikte yayımlanmalıdır. Yalnızca istemci APK'sını güncellemek yeterli değildir. Auth silme tetikleyicisi v1, callable v2 işlevdir; mevcut Node.js 22 codebase içinde tanımlıdır.
+18 Ekim 2026: Kullanıcının ek ücret doğurabilecek işlemleri durdurma isteği nedeniyle canlı yayın tamamlanmadı. Firestore/Storage kuralları ve gerekli indeksler yayımlandı. Mevcut 13 callable işlevinin güncellemeleri ve `cleanupDeletedAccount` Auth tetikleyicisi Google tarafında tamamlanarak ACTIVE durumuna geçti. `deleteAccount` callable işlevi yayımlanmadı; bu yüzden telefondaki hesap silme düğmesi henüz gerçek silme yapamaz. Gerçek kullanıcı hesabı silinmedi.
+
+Cloud Functions dağıtımı ve kullanımı sıfır maliyet garantisi vermez. Ek ücret riski taşıyan yeni yayın yapılmayacak; geliştirme ve testler yerel emülatörlerde sürdürülecek. Yayın komutunu durdurmak daha önce Google'a gönderilen işlemleri geri almaz ve mevcut bulut kaynaklarını kapatmaz. Fatura tutarı bu kontrol kapsamında doğrulanmadı.
+
+İleride sunucu yayını ayrıca yetkilendirilirse önce collection-group indeksleri, güvenlik kuralları, hesap silme korumaları ve Auth tetikleyicisi doğrulanmalı; `deleteAccount` en son yayımlanmalıdır. Yalnızca APK güncellemek yeterli değildir. PR birleştirilmedi.
 
 ## Test
 
