@@ -83,6 +83,14 @@ Flutter 3.41.5, **tam JDK 21** ve Android SDK kurulu ortamda, kaynak commit'inde
 `java -version` ile birlikte `javac -version` da çalışmalıdır; yalnızca JRE kurulması
 Android derlemesi için yeterli değildir. `JAVA_HOME` JDK dizinini göstermelidir.
 
+SDK paketleri (34/35, mevcut Android eklentilerinin derleme hedefleridir):
+
+```bash
+sdkmanager 'platform-tools' 'platforms;android-34' 'platforms;android-35' 'platforms;android-36' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+```
+
+SDK lisanslarını kullandığın SDK Manager üzerinden tamamladıktan sonra:
+
 ```bash
 flutter pub get --enforce-lockfile
 flutter analyze --no-pub

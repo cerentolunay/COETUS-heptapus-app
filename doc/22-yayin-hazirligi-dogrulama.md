@@ -97,7 +97,8 @@ Telefon paketleri normal giriş noktası (`lib/main.dart`) ve çevrimdışı ön
 (`lib/main_preview.dart`) için ayrı **debug APK** dosyalarıdır. Paket dalındaki
 [`SURUM.md`](https://github.com/cerentolunay/COETUS-heptapus-app/blob/builds/android-preview/SURUM.md)
 başarılı derleme kaydını, kesin kaynak commit'ini, sertifika ve checksum'u taşır.
-Paketin varlığı/sonucu bu kayıttan kontrol edilir. Android SDK 36 / build-tools
-36.0.0 ve **tam JDK 21 (javac dahil)** gerekir; ilk denemede ortamdaki yalnızca
+Paketin varlığı/sonucu bu kayıttan kontrol edilir. Android SDK 36, eklentiler için
+SDK 34/35, build-tools 35.0.0 ve **tam JDK 21 (javac dahil)** gerekir;
+ilk denemede ortamdaki yalnızca
 JRE kurulumu derlemeyi durdurdu, tam JDK eklendi. Mağaza release imzası ve gerçek
 cihaz/servis doğrulaması ayrıca tamamlanmalıdır.
