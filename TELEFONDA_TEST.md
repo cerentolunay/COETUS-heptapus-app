@@ -15,7 +15,8 @@ doğrulanmadı. Normal APK'nın derlenmesi bu servislerin tamamlandığını gö
 
 ## İndir ve kur
 
-1. Telefonda GitHub hesabına giriş yap.
+1. Telefonda APK'yı indireceğin **tarayıcıda**, depoya erişimi olan GitHub hesabına
+   giriş yap. GitHub uygulamasındaki oturum tarayıcıya aktarılmayabilir.
 2. Yukarıdaki tablodan istediğin APK dosyasını indir.
    Bağlantı dosyayı açarsa **Download raw file** seçeneğini kullan.
 3. İndirilen `.apk` dosyasına dokun. Gerekirse Android ayarlarından yalnızca
@@ -25,6 +26,11 @@ doğrulanmadı. Normal APK'nın derlenmesi bu servislerin tamamlandığını gö
 5. Normal pakette test hesabınla giriş yap. Canlı hesap/veri işlemleri gerçek
    Firebase projesinde gerçekleşir; silme ve takas işlemlerini ana hesabında deneme.
 6. Testten sonra tarayıcıya verdiğin yükleme iznini kapatabilirsin.
+
+**404 / Not Found:** Anonim indirme kontrollerinde depo ve dosyalar 404 döndü;
+uzak Git dalları ve dosya boyutları ise doğrulandı. Önce aynı tarayıcıda depoyu
+hesabınla aç, sonra indirme bağlantısını yeniden dene. 404 tek başına APK'nın
+silindiği anlamına gelmez; hesabın depo erişimini de kontrol et.
 
 Paketler **arm64-v8a** Android telefon içindir (Android 7/API 24 ve üzeri).
 iPhone'a kurulmaz. Kurulum başarısızsa telefon modeli,
