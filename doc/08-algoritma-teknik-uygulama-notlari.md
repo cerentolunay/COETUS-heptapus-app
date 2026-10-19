@@ -52,6 +52,12 @@ otomatik guncelleme backend entegrasyonu ile tamamlanir.
 
 ## 4. Credit ve Escrow Uygulamasi
 
+> 19 Ekim 2026 ürün düzeltmesi: Bu bölüm eski tek yönlü öğretici/öğrenci modelini
+> anlatır. Güncel hedef, iki kişinin de hem paylaşıp hem öğrendiği karşılıklı
+> takas ve katılımcı bazlı escrow'dur. Mevcut kod da dönüşüm gerektirir.
+> [Güncel dönüşüm planı](../YAYIN_YOL_HARITASI.md).
+
+
 Credit cost asagidaki formulle hesaplanir:
 
 ```text

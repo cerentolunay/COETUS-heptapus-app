@@ -1,3 +1,5 @@
+import 'package:coetus/features/profile/domain/onboarding/interest_catalog.dart';
+import 'package:coetus/features/premium/presentation/pages/premium_page.dart';
 import 'package:coetus/features/community/community.dart';
 import 'package:coetus/features/verification/presentation/verification_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -78,6 +80,7 @@ class AppRouter {
 
   /// Protected routes - authentication gerekli
   static const List<String> protectedRoutes = [
+    '/premium',
     '/home',
     '/profile',
     '/profile-advanced',
@@ -174,6 +177,10 @@ class AppRouter {
     },
     routes: [
       GoRoute(
+        path: '/premium',
+        builder: (context, state) => const PremiumPage(),
+      ),
+      GoRoute(
         path: '/community-post/:postId',
         builder: (context, state) =>
             CommunityPostPage(postId: state.pathParameters['postId']!),
@@ -207,7 +214,11 @@ class AppRouter {
       // Profile completion route
       GoRoute(
         path: '/complete-profile',
-        builder: (context, state) => const CompleteProfilePage(),
+        builder: (context, state) => CompleteProfilePage(
+          initialSelection: state.extra is InterestSelection
+              ? state.extra as InterestSelection
+              : null,
+        ),
       ),
       // --- REGISTER SONRASI HATAYI ÇÖZEN KISIM ---
       // RegisterPage içinde context.go('/home') dediğin için burayı ekliyoruz.

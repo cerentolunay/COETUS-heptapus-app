@@ -23,11 +23,40 @@ service cloud.firestore {
         'accountDeletionPending', 'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
       ]);
     }
+    function fixedGift(userId, rewardId, amount) {
+      let rewardPath = /databases/$(database)/documents/users/$(userId)/rewards/$(rewardId);
+      return !exists(rewardPath) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credits']) &&
+        resource.data.get('credits', 0) is int && request.resource.data.credits is int &&
+        request.resource.data.credits == resource.data.get('credits', 0) + amount &&
+        getAfter(rewardPath).data.amount == amount;
+    }
     function reviewer() {
       return signedIn() && request.auth.token.get('verificationReviewer', false) == true;
     }
     function unchangedSkillVerification() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verifiedName', 'verifiedLevel', 'peerApprovalCount']);
+    }
+
+    // Suggestions are private until a trusted interest moderator approves them.
+    match /interestSuggestions/{suggestionId} {
+      function interestModerator() {
+        return signedIn() && request.auth.token.get('interestModerator', false) == true;
+      }
+      allow read: if signedIn() && (resource.data.status == 'approved' ||
+        resource.data.ownerId == request.auth.uid || interestModerator());
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['name', 'ownerId', 'status', 'createdAt']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 60 &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time;
+      allow update: if interestModerator() && resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy']) &&
+        request.resource.data.status in ['approved', 'rejected'] &&
+        request.resource.data.reviewedBy == request.auth.uid &&
+        request.resource.data.reviewedAt == request.time;
+      allow delete: if false;
     }
 
     // User profile root document.
@@ -45,10 +74,32 @@ service cloud.firestore {
         request.resource.data.get('peerApprovalCount', 0) == 0 && request.resource.data.get('portfolioTrust', 0) == 0 &&
         request.resource.data.get('portfolioSkillCounts', {}) == {};
 
-      allow update: if isOwner(userId) && immutableProfileFieldsUnchanged();
+      allow update: if isOwner(userId) && (immutableProfileFieldsUnchanged() || fixedGift(userId, 'first_match', 20) || fixedGift(userId, 'welcome', 50));
 
       allow delete: if false;
 
+      match /rewards/{rewardId} {
+        allow read: if isOwner(userId);
+        function walletIncreasedBy(amount) {
+          return getAfter(/databases/$(database)/documents/users/$(userId)).data.credits ==
+            get(/databases/$(database)/documents/users/$(userId)).data.get('credits', 0) + amount;
+        }
+        allow create: if isOwner(userId) && request.resource.data.amount is int &&
+          request.resource.data.createdAt == request.time && (
+            (rewardId == 'welcome' &&
+              request.resource.data.keys().hasOnly(['amount', 'createdAt']) &&
+              request.resource.data.amount == 50 && walletIncreasedBy(50)) ||
+            (rewardId == 'first_match' &&
+              request.resource.data.keys().hasOnly(['amount', 'matchId', 'createdAt']) &&
+              request.resource.data.amount == 20 && request.resource.data.matchId is string &&
+              get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.status == 'accepted' &&
+              userId in get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.participants &&
+              get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.requesterId !=
+                get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.receiverId &&
+              walletIncreasedBy(20))
+          );
+        allow update, delete: if false;
+      }
       match /verificationRewards/{skillId} {
         allow read: if isOwner(userId);
         allow write: if false;

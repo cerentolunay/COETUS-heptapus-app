@@ -199,6 +199,12 @@ EarnedCredits = 60
 
 ## 2.2 Session Tamamlama Süreci
 
+> 19 Ekim 2026 ürün düzeltmesi: Bu bölüm eski tek yönlü öğretici/öğrenci modelini
+> anlatır. Güncel hedef, iki kişinin de hem paylaşıp hem öğrendiği karşılıklı
+> takas ve katılımcı bazlı escrow'dur. Mevcut kod da dönüşüm gerektirir.
+> [Güncel dönüşüm planı](../YAYIN_YOL_HARITASI.md).
+
+
 Kredi transferi yalnızca ders tamamlandıktan sonra gerçekleşir.
 
 Session akışı:

@@ -7,7 +7,8 @@ class CoetusPalette {
   static const lavender = Color(0xFFBB97F5);
   static const purple = Color(0xFF492080);
   static const purpleInk = Color(0xFF291044);
-  static const blue = Color(0xFF6254E8);
+  // Compatibility alias; all accents stay inside the brand palette.
+  static const blue = purple;
   static const lime = Color(0xFFDEFF8A);
   static const pink = Color(0xFFFF547B);
   static const red = Color(0xFFFF547B);
@@ -24,9 +25,9 @@ class CoetusColors {
   static const navy = CoetusPalette.purple;
   static const navyInk = CoetusPalette.purpleInk;
   static const navyTint = CoetusPalette.softLavender;
-  static const coral = CoetusPalette.blue;
+  static const coral = CoetusPalette.red;
   static const coralDeep = CoetusPalette.purple;
-  static const coralSoft = Color(0x246254E8);
+  static const coralSoft = Color(0x24FF547B);
   static const amber = CoetusPalette.lime;
   static const amberDeep = CoetusPalette.purple;
   static const amberSoft = Color(0x80DEFF8A);

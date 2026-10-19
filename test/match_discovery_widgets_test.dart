@@ -61,6 +61,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'rings breathe, avatars are circular and reduced motion stays still',
+    (tester) async {
+      MatchCandidate? selected;
+      Widget orbit({bool reduced = false}) => MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: reduced),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: MatchOrbit(
+                  candidates: [candidate()],
+                  onSelected: (value) => selected = value,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(orbit());
+      final inner = find.byKey(const ValueKey('match-ring-0'));
+      final outer = find.byKey(const ValueKey('match-ring-1'));
+      final innerBefore = tester.getSize(inner);
+      final outerBefore = tester.getSize(outer);
+      await tester.pump(const Duration(seconds: 2));
+      expect(tester.getSize(inner).width, greaterThan(innerBefore.width));
+      expect(tester.getSize(outer).width, lessThan(outerBefore.width));
+      final avatarMaterial = tester.widget<Material>(
+        find.descendant(
+          of: find.byType(MatchAvatar),
+          matching: find.byType(Material),
+        ),
+      );
+      expect(avatarMaterial.shape, isA<CircleBorder>());
+      expect(avatarMaterial.clipBehavior, Clip.antiAlias);
+      await tester.tap(find.byType(MatchAvatar));
+      expect(selected?.user.id, 'ada');
+      await tester.pumpWidget(orbit(reduced: true));
+      final stillSize = tester.getSize(inner);
+      await tester.pump(const Duration(seconds: 2));
+      expect(tester.getSize(inner), stillSize);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   testWidgets('profile card fits a narrow viewport with enlarged text', (
     tester,
   ) async {

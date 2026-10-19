@@ -1,3 +1,4 @@
+import 'package:coetus/widgets/coetus_tap_sparkles.dart';
 import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
@@ -41,30 +42,32 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: CoetusPalette.purple,
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CoetusMascot(size: 190, interactive: false),
-              SizedBox(height: 16),
-              Text(
-                'coetus',
-                style: TextStyle(
-                  color: CoetusPalette.cream,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1,
+        child: CoetusTapSparkles(
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CoetusMascot(size: 190),
+                SizedBox(height: 16),
+                Text(
+                  'coetus',
+                  style: TextStyle(
+                    color: CoetusPalette.cream,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                  ),
                 ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Birlikte öğren. Birlikte geliş.',
-                style: TextStyle(color: CoetusPalette.lavender),
-              ),
-            ],
+                SizedBox(height: 10),
+                Text(
+                  'Birlikte öğren. Birlikte geliş.',
+                  style: TextStyle(color: CoetusPalette.lavender),
+                ),
+              ],
+            ),
           ),
         ),
       ),

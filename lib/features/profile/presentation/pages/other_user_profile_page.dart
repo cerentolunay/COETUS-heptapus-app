@@ -253,7 +253,7 @@ class OtherUserProfilePage extends StatelessWidget {
                   color: _cyan,
                 ),
               _MetricPill(
-                label: '${profile.creditsRequired} kredi',
+                label: '${profile.creditsRequired} token',
                 icon: Icons.bolt_outlined,
                 color: _violet,
               ),

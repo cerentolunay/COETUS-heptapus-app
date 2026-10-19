@@ -115,19 +115,21 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
         ),
         child: SafeArea(
           child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.10),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.10),
+                    ),
                   ),
+                  child: _buildContent(cyan),
                 ),
-                child: _buildContent(cyan),
               ),
             ),
           ),
@@ -193,7 +195,10 @@ class _AuthProfilePageState extends State<AuthProfilePage> {
         const SizedBox(height: 8),
         _UserRow(label: 'E-posta', value: _user!.email),
         const SizedBox(height: 8),
-        _UserRow(label: 'Kredi', value: '${_user!.credits} token'),
+        InkWell(
+          onTap: () => context.push('/premium'),
+          child: _UserRow(label: 'Token', value: '${_user!.credits} token'),
+        ),
         const SizedBox(height: 8),
         _UserRow(
           label: 'Doğrulama',

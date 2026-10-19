@@ -1,18 +1,21 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'coetus_mascot.dart';
 
 import '../app/theme/coetus_tokens.dart';
 
-/// Kredi rozeti — dolu lacivert pill, krem yazı.
+/// Token rozeti — dolu lacivert pill, krem yazı.
 class CreditBadge extends StatelessWidget {
   const CreditBadge({
     super.key,
     required this.amount,
     this.dense = false,
+    this.onTap,
     this.background = CoetusPalette.lime,
     this.foreground = CoetusPalette.purple,
   });
 
+  final VoidCallback? onTap;
   final int amount;
   final bool dense;
   final Color background;
@@ -21,29 +24,37 @@ class CreditBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double size = dense ? 10.5 : 12;
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: dense ? 9 : 11,
-        vertical: dense ? 4 : 6,
-      ),
-      decoration: BoxDecoration(
-        color: background,
+    return Semantics(
+      button: true,
+      label: '$amount token. Premium paketlerini incele',
+      child: InkWell(
+        onTap: onTap ?? () => context.push('/premium'),
         borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.add_circle_outline, size: size, color: foreground),
-          const SizedBox(width: 4),
-          Text(
-            '$amount',
-            style: TextStyle(
-              fontSize: size,
-              fontWeight: FontWeight.w700,
-              color: foreground,
-            ),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: dense ? 9 : 11,
+            vertical: dense ? 4 : 6,
           ),
-        ],
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_circle_outline, size: size, color: foreground),
+              const SizedBox(width: 4),
+              Text(
+                '$amount token',
+                style: TextStyle(
+                  fontSize: size,
+                  fontWeight: FontWeight.w700,
+                  color: foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -309,7 +320,7 @@ class CoetusEmptyState extends StatelessWidget {
   }
 }
 
-/// Escrow adım göstergesi (Anlaşma → Kredi kilitli → Oturum → Aktarım).
+/// Escrow adım göstergesi (Anlaşma → Token kilitli → Oturum → Aktarım).
 class EscrowSteps extends StatelessWidget {
   const EscrowSteps({
     super.key,

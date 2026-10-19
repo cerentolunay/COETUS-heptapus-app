@@ -55,7 +55,7 @@ class LocalAuthRepository implements AuthRepository {
       email: normalizedEmail,
       bio: 'Birlikte öğrenmeye hazır',
       trustScore: 0,
-      credits: 0,
+      credits: 50,
       verified: false,
       profileCompleted: true,
     );

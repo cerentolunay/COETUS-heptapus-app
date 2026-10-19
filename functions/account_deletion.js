@@ -71,6 +71,7 @@ async function cleanupAccount(uid) {
   await removeContributions('likes','userId',uid,'likeCount');
   await deleteQuery(db.collection('skillVerifications').where('ownerId','==',uid),true);
   await deleteQuery(db.collection('skillVerifications').where('studentId','==',uid));
+  await deleteQuery(db.collection('interestSuggestions').where('ownerId','==',uid));
   for(const field of ['userId','senderId'])await deleteQuery(db.collection('notifications').where(field,'==',uid));
   for(const field of ['reporterId','ownerId'])await deleteQuery(db.collection('contentReports').where(field,'==',uid));
   for(const collection of ['matches','sessions','chats'])await anonymizeShared(collection,uid);

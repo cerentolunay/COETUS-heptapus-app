@@ -46,7 +46,7 @@ class CoetusBottomNav extends StatelessWidget {
       top: false,
       child: Container(
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         decoration: BoxDecoration(
           color: CoetusPalette.purple,
           borderRadius: BorderRadius.circular(22),
@@ -55,13 +55,15 @@ class CoetusBottomNav extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             for (var i = 0; i < _items.length; i++)
-              _NavButton(
-                destination: _items[i],
-                active: i == currentIndex,
-                onTap: () {
-                  if (i == currentIndex) return;
-                  context.go(_items[i].route);
-                },
+              Expanded(
+                child: _NavButton(
+                  destination: _items[i],
+                  active: i == currentIndex,
+                  onTap: () {
+                    if (i == currentIndex) return;
+                    context.go(_items[i].route);
+                  },
+                ),
               ),
           ],
         ),

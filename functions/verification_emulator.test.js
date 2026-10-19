@@ -291,6 +291,7 @@ deletionTest('deletion removes Auth, profile, authored content and media while r
   await db.doc('communityPosts/my-post').set({authorId:'student',status:'published'});
   await db.doc('communityPosts/my-post/comments/other').set({authorId:'teacher',text:'Başkasının yorumu'});
   await db.doc('skillVerifications/work').set({ownerId:'student',type:'portfolio',status:'published'});
+  await db.doc('interestSuggestions/mine').set({ownerId:'student',name:'Astronomi',status:'pending'});
   await db.doc('chats/shared').set({participants:['student','teacher'],participantNames:{student:'Deniz',teacher:'Ece'},lastMessage:'Özel metnim',lastSenderId:'student'});
   await db.doc('chats/shared/messages/mine').set({senderId:'student',text:'Özel metnim'});
   await db.doc('chats/shared/messages/other').set({senderId:'teacher',text:'Karşı tarafın mesajı'});
@@ -302,6 +303,7 @@ deletionTest('deletion removes Auth, profile, authored content and media while r
   assert.equal((await db.collection('users/student/learnSkills').get()).size,0);
   assert.equal((await db.doc('communityPosts/my-post').get()).exists,false);
   assert.equal((await db.doc('skillVerifications/work').get()).exists,false);
+  assert.equal((await db.doc('interestSuggestions/mine').get()).exists,false);
   assert.equal((await db.doc('communityPosts/post').get()).data().likeCount,0);
   assert.equal((await db.doc('communityPosts/post').get()).data().commentCount,0);
   assert.equal((await db.doc('chats/shared/messages/mine').get()).exists,false);
@@ -350,4 +352,149 @@ deletionTest('background Auth deletion preserves wallets if a console deletion b
   assert.equal((await db.doc('users/teacher').get()).exists,true);
   assert.equal((await db.doc('users/student').get()).data().lockedCredits,80);
   assert.equal((await db.doc('escrows/external').get()).data().status,'locked');
+});
+
+emulatorTest('interest suggestions stay private and only interest moderators can publish', async () => {
+  const owner = env.authenticatedContext('student').firestore();
+  const other = env.authenticatedContext('student2').firestore();
+  const moderator = env.authenticatedContext('moderator', { interestModerator: true }).firestore();
+  const {serverTimestamp} = require('firebase/firestore');
+  const suggestion = doc(owner, 'interestSuggestions/example');
+  await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'interestSuggestions/anonymous'),
+    {name:'Astronomi', ownerId:'student', status:'pending', createdAt:serverTimestamp()}));
+  await assertFails(setDoc(suggestion, {name:'Astronomi', ownerId:'student', status:'approved', createdAt:serverTimestamp()}));
+  await assertSucceeds(setDoc(suggestion, {name:'Astronomi', ownerId:'student', status:'pending', createdAt:serverTimestamp()}));
+  await assertSucceeds(getDoc(suggestion));
+  await assertFails(getDoc(doc(other, 'interestSuggestions/example')));
+  await assertSucceeds(getDocs(query(collection(moderator,'interestSuggestions'),where('status','==','pending'))));
+  await assertFails(updateDoc(suggestion, {status:'approved', reviewedBy:'student', reviewedAt:serverTimestamp()}));
+  await assertFails(updateDoc(doc(moderator,'interestSuggestions/example'),
+    {name:'Değiştirilmiş', status:'approved', reviewedBy:'moderator', reviewedAt:serverTimestamp()}));
+  await assertSucceeds(updateDoc(doc(moderator,'interestSuggestions/example'),
+    {status:'approved', reviewedBy:'moderator', reviewedAt:serverTimestamp()}));
+  await assertSucceeds(getDocs(query(collection(other,'interestSuggestions'),where('status','==','approved'))));
+  await assertFails(setDoc(suggestion, {name:'Astronomi', ownerId:'student', status:'pending', createdAt:serverTimestamp()}));
+});
+
+emulatorTest('rejected interests cannot be published by their owner or edited after review', async () => {
+  const {serverTimestamp} = require('firebase/firestore');
+  const owner = env.authenticatedContext('student').firestore();
+  const moderator = env.authenticatedContext('moderator', {interestModerator:true}).firestore();
+  await assertSucceeds(setDoc(doc(owner,'interestSuggestions/rejected'),
+    {name:'Öneri', ownerId:'student', status:'pending', createdAt:serverTimestamp()}));
+  await assertSucceeds(updateDoc(doc(moderator,'interestSuggestions/rejected'),
+    {status:'rejected', reviewedBy:'moderator', reviewedAt:serverTimestamp()}));
+  await assertFails(getDoc(doc(env.authenticatedContext('student2').firestore(),'interestSuggestions/rejected')));
+  await assertFails(updateDoc(doc(moderator,'interestSuggestions/rejected'),
+    {status:'approved', reviewedBy:'moderator', reviewedAt:serverTimestamp()}));
+});
+
+emulatorTest('first match gift atomically awards twenty tokens only once', async () => {
+  const {serverTimestamp, runTransaction} = require('firebase/firestore');
+  await seed();
+  await db.doc('users/student').update({credits:0});
+  for (const uid of ['student','teacher']) {
+    const client = env.authenticatedContext(uid).firestore();
+    const reward = doc(client, `users/${uid}/rewards/first_match`);
+    const user = doc(client, `users/${uid}`);
+    const claim = () => runTransaction(client, async tx => {
+      const existing = await tx.get(reward); if (existing.exists()) return false;
+      const wallet = await tx.get(user);
+      tx.set(reward, {amount:20, matchId:'student', createdAt:serverTimestamp()});
+      tx.update(user, {credits:wallet.data().credits+20}); return true;
+    }).catch(async error => {
+      if (error.code === 'permission-denied' && (await getDoc(reward)).exists()) return false;
+      throw error;
+    });
+    const results = await Promise.all([claim(),claim()]);
+    assert.equal(results.filter(Boolean).length,1);
+    assert.equal((await db.doc(`users/${uid}`).get()).data().credits,20);
+    await assertFails(updateDoc(user,{credits:40}));
+    await assertFails(updateDoc(reward,{amount:40}));
+  }
+});
+
+emulatorTest('first match gift rejects forged, pending, foreign and unpaired wallet writes', async () => {
+  const {serverTimestamp} = require('firebase/firestore');
+  await seed();
+  await db.doc('users/student').update({credits:0});
+  await db.doc('matches/pending').set({status:'pending',participants:['student','teacher'],requesterId:'student',receiverId:'teacher'});
+  const client = env.authenticatedContext('student').firestore();
+  const reward = doc(client,'users/student/rewards/first_match');
+  const wallet = doc(client,'users/student');
+  await assertFails(setDoc(reward,{amount:20,matchId:'student',createdAt:serverTimestamp()}));
+  for (const [matchId,amount] of [['missing',20],['pending',20],['student2',20],['student',200]]) {
+    const batch = writeBatch(client);
+    batch.set(reward,{amount,matchId,createdAt:serverTimestamp()}); batch.update(wallet,{credits:amount});
+    await assertFails(batch.commit());
+  }
+  const batch = writeBatch(client);
+  batch.set(reward,{amount:20,matchId:'student',createdAt:serverTimestamp()});
+  batch.update(wallet,{credits:20,trustScore:100});
+  await assertFails(batch.commit());
+  assert.equal((await db.doc('users/student').get()).data().credits,0);
+});
+
+emulatorTest('welcome gift adds fifty once and preserves existing balance across concurrent logins', async () => {
+  const {serverTimestamp,runTransaction} = require('firebase/firestore');
+  await db.doc('users/new-user').set({id:'new-user',email:'new@example.test',credits:0});
+  await db.doc('users/existing-user').set({id:'existing-user',email:'old@example.test',credits:37});
+  for (const [uid,initial] of [['new-user',0],['existing-user',37]]) {
+    const client=env.authenticatedContext(uid).firestore();
+    const user=doc(client,`users/${uid}`),receipt=doc(client,`users/${uid}/rewards/welcome`);
+    const login=()=>runTransaction(client,async tx=>{
+      if((await tx.get(receipt)).exists())return false;
+      const profile=await tx.get(user);
+      tx.set(receipt,{amount:50,createdAt:serverTimestamp()});
+      tx.update(user,{credits:profile.data().credits+50});return true;
+    }).catch(async error=>{
+      if(error.code==='permission-denied'&&(await getDoc(receipt)).exists())return false;
+      throw error;
+    });
+    const results=await Promise.all([login(),login(),login()]);
+    assert.equal(results.filter(Boolean).length,1);
+    assert.equal(await login(),false);
+    assert.equal((await db.doc(`users/${uid}`).get()).data().credits,initial+50);
+    await assertFails(updateDoc(receipt,{amount:100}));
+    const {deleteDoc}=require('firebase/firestore');await assertFails(deleteDoc(receipt));
+    await assertFails(updateDoc(user,{credits:initial+100}));
+  }
+});
+
+emulatorTest('welcome gift rejects arbitrary amounts, foreign wallets, account resets and orphan receipts',async()=>{
+  const {serverTimestamp}=require('firebase/firestore');
+  await db.doc('users/student').set({id:'student',email:'student@example.test',credits:0});
+  await db.doc('users/teacher').set({id:'teacher',email:'teacher@example.test',credits:0});
+  const client=env.authenticatedContext('student').firestore();
+  const user=doc(client,'users/student'),receipt=doc(client,'users/student/rewards/welcome');
+  await assertFails(setDoc(receipt,{amount:50,createdAt:serverTimestamp()}));
+  await assertFails(setDoc(doc(client,'users/fake'),{id:'fake',email:'fake@example.test',credits:50}));
+  for(const amount of [20,49,51,500]) {
+    const batch=writeBatch(client);batch.set(receipt,{amount,createdAt:serverTimestamp()});batch.update(user,{credits:amount});await assertFails(batch.commit());
+  }
+  const foreign=writeBatch(client);foreign.set(doc(client,'users/teacher/rewards/welcome'),{amount:50,createdAt:serverTimestamp()});foreign.update(doc(client,'users/teacher'),{credits:50});await assertFails(foreign.commit());
+  const extra=writeBatch(client);extra.set(receipt,{amount:50,createdAt:serverTimestamp()});extra.update(user,{credits:50,trustScore:100});await assertFails(extra.commit());
+  await db.doc('accountDeletions/student').set({status:'completed'});
+  const deleted=writeBatch(client);deleted.set(receipt,{amount:50,createdAt:serverTimestamp()});deleted.update(user,{credits:50});await assertFails(deleted.commit());
+  assert.equal((await db.doc('users/student').get()).data().credits,0);
+});
+
+emulatorTest('welcome and first match gifts are separate and additive',async()=>{
+  const {serverTimestamp}=require('firebase/firestore');await seed();await db.doc('users/student').update({credits:0});
+  const client=env.authenticatedContext('student').firestore(),user=doc(client,'users/student');
+  const welcome=writeBatch(client);welcome.set(doc(client,'users/student/rewards/welcome'),{amount:50,createdAt:serverTimestamp()});welcome.update(user,{credits:50});await assertSucceeds(welcome.commit());
+  const match=writeBatch(client);match.set(doc(client,'users/student/rewards/first_match'),{amount:20,matchId:'student',createdAt:serverTimestamp()});match.update(user,{credits:70});await assertSucceeds(match.commit());
+  assert.equal((await db.doc('users/student').get()).data().credits,70);
+});
+
+emulatorTest('welcome tokens fund the first learning session without requiring a prior match',async()=>{
+  const {serverTimestamp}=require('firebase/firestore');
+  for(const uid of ['student','teacher'])await db.doc(`users/${uid}`).set({id:uid,email:`${uid}@example.test`,credits:0});
+  await db.doc('matches/first-funded').set({requesterId:'student',receiverId:'teacher',participants:['student','teacher'],status:'pending',skillName:'Gitar',credits:30});
+  const client=env.authenticatedContext('student').firestore();
+  const batch=writeBatch(client);batch.set(doc(client,'users/student/rewards/welcome'),{amount:50,createdAt:serverTimestamp()});batch.update(doc(client,'users/student'),{credits:50});await assertSucceeds(batch.commit());
+  await api.acceptLearningOffer.run(request('teacher',{matchId:'first-funded'}));
+  const student=(await db.doc('users/student').get()).data();
+  assert.equal(student.credits,20);assert.equal(student.lockedCredits,30);
+  assert.equal((await db.doc('sessions/first-funded').get()).data().funded,true);
 });

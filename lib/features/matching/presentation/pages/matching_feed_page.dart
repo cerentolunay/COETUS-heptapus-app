@@ -678,30 +678,37 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Spacer(),
-              DropdownButtonHideUnderline(
-                child: DropdownButton<_MatchSortOption>(
-                  value: _sortOption,
-                  dropdownColor: CoetusPalette.purple,
-                  borderRadius: BorderRadius.circular(14),
-                  iconEnabledColor: CoetusPalette.cream,
-                  style: const TextStyle(
-                    color: CoetusPalette.cream,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<_MatchSortOption>(
+                    value: _sortOption,
+                    isExpanded: true,
+                    dropdownColor: CoetusPalette.purple,
+                    borderRadius: BorderRadius.circular(14),
+                    iconEnabledColor: CoetusPalette.cream,
+                    style: const TextStyle(
+                      color: CoetusPalette.cream,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    items: _MatchSortOption.values
+                        .map(
+                          (option) => DropdownMenuItem(
+                            value: option,
+                            child: Text(
+                              option.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (option) {
+                      if (option == null) return;
+                      setState(() => _sortOption = option);
+                    },
                   ),
-                  items: _MatchSortOption.values
-                      .map(
-                        (option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option.label),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (option) {
-                    if (option == null) return;
-                    setState(() => _sortOption = option);
-                  },
                 ),
               ),
             ],
@@ -809,7 +816,7 @@ class _CircleIconButton extends StatelessWidget {
 enum _MatchSortOption {
   bestMatch('En yüksek uyum'),
   trust('Güven puanı'),
-  lowCredit('Düşük kredi');
+  lowCredit('Düşük token');
 
   final String label;
 

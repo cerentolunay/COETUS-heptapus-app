@@ -336,7 +336,7 @@ class _ChatListCard extends StatelessWidget {
     final hasEscrow = chat.credits > 0 && chat.skillName.isNotEmpty;
     final isPending = chat.status.toLowerCase() == 'pending';
     final String? statusLine = hasEscrow
-        ? "${chat.skillName} · ${chat.credits} kredi escrow'da"
+        ? "${chat.skillName} · ${chat.credits} token escrow'da"
         : (isPending ? 'Teklif onayı bekleniyor' : null);
     final statusColor = hasEscrow
         ? CoetusColors.successDeep

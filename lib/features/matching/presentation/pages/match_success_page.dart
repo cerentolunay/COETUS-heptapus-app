@@ -1,16 +1,64 @@
+import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../../../../preview/preview_mode.dart';
+import '../../data/first_match_gift.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 
-class MatchSuccessPage extends StatelessWidget {
+class MatchSuccessPage extends StatefulWidget {
   const MatchSuccessPage({super.key, required this.user});
   final MatchedUser user;
 
   @override
+  State<MatchSuccessPage> createState() => _MatchSuccessPageState();
+}
+
+class _MatchSuccessPageState extends State<MatchSuccessPage> {
+  bool _gift = false;
+  bool _loadingGift = false;
+  String? _giftError;
+  @override
+  void initState() {
+    super.initState();
+    if (PreviewMode.enabled) {
+      _gift = true;
+    } else {
+      _claimGift();
+    }
+  }
+
+  Future<void> _claimGift() async {
+    if (Firebase.apps.isEmpty || _loadingGift) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    setState(() {
+      _loadingGift = true;
+      _giftError = null;
+    });
+    try {
+      final granted = await FirstMatchGift.claim(uid);
+      if (mounted) setState(() => _gift = granted);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () =>
+              _giftError = 'Hediyen kontrol edilemedi. Yeniden deneyebilirsin.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingGift = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final name = user.name.trim().isEmpty ? 'Yeni arkadaşın' : user.name;
+    final name = widget.user.name.trim().isEmpty
+        ? 'Yeni arkadaşın'
+        : widget.user.name;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -52,13 +100,10 @@ class MatchSuccessPage extends StatelessWidget {
                             const Expanded(
                               child: _Person(label: 'Sen', initial: 'S'),
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Icon(
-                                Icons.favorite_rounded,
-                                color: CoetusPalette.red,
-                                size: 32,
-                              ),
+                            const SizedBox(
+                              width: 104,
+                              height: 112,
+                              child: MatchHeartSparkles(),
                             ),
                             Expanded(
                               child: _Person(
@@ -72,16 +117,73 @@ class MatchSuccessPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  if (_gift) ...[
+                    Container(
+                      key: const ValueKey('first-match-gift'),
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: CoetusPalette.lime,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.card_giftcard_rounded,
+                            color: CoetusPalette.purple,
+                            size: 32,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'İlk eşleşmeni kutluyoruz!',
+                            style: text.titleLarge?.copyWith(
+                              color: CoetusPalette.purple,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'COETUS’tan sana hediye 20 token!',
+                            style: TextStyle(
+                              color: CoetusPalette.purple,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            PreviewMode.enabled
+                                ? 'Önizleme hediyesi · Gerçek bakiyene token eklenmez.'
+                                : 'Hediyen hesabına eklendi. Birlikte öğrenmenin ilk adımı bizden!',
+                            style: const TextStyle(color: CoetusPalette.purple),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  if (_loadingGift)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text('İlk eşleşme hediyen kontrol ediliyor…'),
+                    ),
+                  if (_giftError != null) ...[
+                    Text(_giftError!),
+                    TextButton(
+                      onPressed: _claimGift,
+                      child: const Text('Yeniden dene'),
+                    ),
+                  ],
                   _ExchangeCard(
                     title: 'Sen paylaşacaksın',
-                    items: user.learningGoals
+                    items: widget.user.learningGoals
                         .map((g) => '${g.emoji} ${g.name}')
                         .toList(),
                   ),
                   const SizedBox(height: 12),
                   _ExchangeCard(
                     title: '$name paylaşacak',
-                    items: user.skills
+                    items: widget.user.skills
                         .map((s) => '${s.emoji} ${s.name}')
                         .toList(),
                   ),
@@ -193,4 +295,99 @@ class MatchedGoal {
   final String name;
   final String emoji;
   const MatchedGoal({required this.name, required this.emoji});
+}
+
+/// Particles originate at the heart, expand outward and fade with distance.
+class MatchHeartSparkles extends StatefulWidget {
+  const MatchHeartSparkles({super.key});
+  @override
+  State<MatchHeartSparkles> createState() => _MatchHeartSparklesState();
+}
+
+class _MatchHeartSparklesState extends State<MatchHeartSparkles>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+  );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Eşleşme kutlaması',
+    image: true,
+    child: ExcludeSemantics(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final reduced = MediaQuery.disableAnimationsOf(context);
+          return Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.hardEdge,
+            children: [
+              if (!reduced)
+                for (var i = 0; i < 14; i++)
+                  Builder(
+                    builder: (_) {
+                      final progress = (_controller.value + i / 14) % 1;
+                      final angle = i * 2.39996;
+                      final distance = 8 + progress * 42;
+                      final size =
+                          (i % 3 == 0
+                              ? 13.0
+                              : i % 3 == 1
+                              ? 8.0
+                              : 5.0) *
+                          (1 - .35 * progress);
+                      return Transform.translate(
+                        offset: Offset(
+                          math.cos(angle) * distance,
+                          math.sin(angle) * distance,
+                        ),
+                        child: Opacity(
+                          opacity:
+                              math.sin(progress * math.pi) * (1 - progress),
+                          child: Icon(
+                            i.isEven
+                                ? Icons.auto_awesome
+                                : Icons.favorite_rounded,
+                            size: size,
+                            color: CoetusPalette.red,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              Transform.scale(
+                scale: reduced
+                    ? 1
+                    : 1 + .09 * math.sin(_controller.value * math.pi * 4),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: CoetusPalette.red,
+                  size: 34,
+                  shadows: [Shadow(color: Color(0x66FF5577), blurRadius: 18)],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
 }

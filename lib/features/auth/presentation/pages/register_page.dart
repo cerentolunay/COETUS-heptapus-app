@@ -1,3 +1,4 @@
+import '../../data/services/google_sign_in_error.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'dart:async';
 
@@ -209,45 +210,17 @@ class _RegisterPageState extends State<RegisterPage>
       );
 
       context.go('/discovery');
-    } on FirebaseAuthException catch (error) {
+    } catch (error) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(_mapGoogleAuthError(error.code))));
-    } on TimeoutException {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google oturumu zaman aşımına uğradı.')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google ile kayıt oluşturulamadı.')),
-      );
+      ).showSnackBar(SnackBar(content: Text(googleSignInError(error))));
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  String _mapGoogleAuthError(String code) {
-    switch (code) {
-      case 'account-exists-with-different-credential':
-        return 'Bu hesap farklı bir yöntemle kayıtlı.';
-      case 'invalid-credential':
-        return 'Google kimlik bilgisi geçersiz.';
-      case 'network-request-failed':
-        return 'Ağ hatası oluştu. İnternet bağlantını kontrol et.';
-      case 'user-disabled':
-        return 'Bu kullanıcı devre dışı bırakılmış.';
-      default:
-        return 'Google ile kayıt oluşturulamadı. ($code)';
     }
   }
 

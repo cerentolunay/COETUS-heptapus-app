@@ -80,10 +80,29 @@ class MatchOrbit extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        for (final fraction in [.52, .75])
+                        for (var ring = 0; ring < 2; ring++)
                           Container(
-                            width: size * fraction,
-                            height: size * fraction,
+                            key: ValueKey('match-ring-$ring'),
+                            width:
+                                size *
+                                [.52, .75][ring] *
+                                (1 +
+                                    (MediaQuery.disableAnimationsOf(context)
+                                        ? 0
+                                        : .07 *
+                                              math.sin(
+                                                phase + ring * math.pi / 2,
+                                              ))),
+                            height:
+                                size *
+                                [.52, .75][ring] *
+                                (1 +
+                                    (MediaQuery.disableAnimationsOf(context)
+                                        ? 0
+                                        : .07 *
+                                              math.sin(
+                                                phase + ring * math.pi / 2,
+                                              ))),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
@@ -253,8 +272,7 @@ class MatchAvatar extends StatelessWidget {
               right: 8,
               child: Material(
                 color: highlighted ? CoetusPalette.red : CoetusPalette.lavender,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(size * .36),
+                shape: CircleBorder(
                   side: BorderSide(
                     color: highlighted
                         ? CoetusPalette.red
@@ -377,7 +395,7 @@ class MatchProfileCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       Text(
-                        '${candidate.creditsRequired} kredi',
+                        '${candidate.creditsRequired} token',
                         style: const TextStyle(
                           color: CoetusPalette.purple,
                           fontSize: 12,

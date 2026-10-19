@@ -1,3 +1,5 @@
+import '../../../matching/presentation/pages/match_success_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
@@ -66,6 +68,37 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } catch (_) {}
 
     if (!mounted) return;
+    if (item.type == AppNotificationType.offerAccepted) {
+      var name = 'Yeni arkadaşın';
+      var skill = '';
+      if (!PreviewMode.enabled) {
+        try {
+          final match = await FirebaseFirestore.instance
+              .collection('matches')
+              .doc(item.matchId ?? item.targetId)
+              .get();
+          name = match.data()?['receiverName'] as String? ?? name;
+          skill = match.data()?['skillName'] as String? ?? '';
+        } catch (_) {
+          /* The celebration can still show without profile details. */
+        }
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => MatchSuccessPage(
+            user: MatchedUser(
+              name: name,
+              skills: [
+                if (skill.isNotEmpty) MatchedSkill(name: skill, emoji: '✨'),
+              ],
+              learningGoals: const [],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
     final route = _resolveRoute(item);
     context.go(route);
   }
