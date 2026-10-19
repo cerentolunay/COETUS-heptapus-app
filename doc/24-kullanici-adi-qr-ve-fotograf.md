@@ -14,7 +14,7 @@ Profil düzenlemeden mevcut ilgi alanı ağacı açılır; mevcut beceriler koru
 
 ## Yayın durumu
 
-Canlı Firebase’e Functions, Firestore veya Storage yayını yapılmadı; plan değiştirilmedi ve ücretli hizmet açılmadı. Kullanıcı adı/QR ve fotoğraf yükleme kurallarının gerçek hesaplarda kullanılabilmesi için kuralların ayrıca yayımlanması gerekir. Önizleme ekranları yerel örneklerle çalışır. Bu dal, henüz birleştirilmemiş profil geçmişi/fotoğraf dalının devamıdır.
+İlk geliştirme sırasında canlı Firebase yayını yapılmamıştı. 19 Ekim 2026’da kullanıcı onayıyla yalnızca Firestore kuralları yayımlandı; kullanıcı adı/QR işlemlerinin kuralları artık canlıdır. Storage/fotoğraf ve Functions yayını bekliyor. Plan değiştirilmedi ve ücretli hizmet açılmadı. Önizleme ekranları yerel örneklerle çalışır. Ayrıntılı yayın kaydı: [Düşük yükle canlı yayın](26-dusuk-yuklu-canli-yayin.md). İlgili kaynak dalları henüz main ile birleştirilmedi.
 
 ## Kontroller
 

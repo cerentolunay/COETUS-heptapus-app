@@ -13,9 +13,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class ChatInterfacePage extends StatefulWidget {
-  const ChatInterfacePage({super.key, this.chatId});
+  const ChatInterfacePage({super.key, this.chatId, this.repository});
 
   final String? chatId;
+  final ChatRepository? repository;
 
   @override
   State<ChatInterfacePage> createState() => _ChatInterfacePageState();
@@ -23,7 +24,11 @@ class ChatInterfacePage extends StatefulWidget {
 
 class _ChatInterfacePageState extends State<ChatInterfacePage> {
   final TextEditingController _messageController = TextEditingController();
-  late final ChatRepository _repository = ChatRepositoryFactory.create();
+  late final ChatRepository _repository =
+      widget.repository ?? ChatRepositoryFactory.create();
+  Stream<ChatThread?>? _threadStream;
+  Stream<List<ChatMessage>>? _messageStream;
+  String? _streamChatId, _streamUserId;
 
   String? get _userId => (PreviewMode.enabled
       ? PreviewMode.userId
@@ -32,6 +37,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
   Future<void> _sendMessage() async {
     final chatId = widget.chatId;
     final userId = _userId;
+
     final text = _messageController.text.trim();
     if (chatId == null || userId == null || text.isEmpty) return;
 
@@ -62,6 +68,16 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
     final chatId = widget.chatId;
     final userId = _userId;
 
+    if (chatId != null &&
+        chatId.isNotEmpty &&
+        userId != null &&
+        (chatId != _streamChatId || userId != _streamUserId)) {
+      _streamChatId = chatId;
+      _streamUserId = userId;
+      _threadStream = _repository.streamChat(chatId, userId);
+      _messageStream = _repository.streamMessages(chatId);
+    }
+
     return Scaffold(
       backgroundColor: CoetusColors.oat,
       body: chatId == null || chatId.isEmpty || userId == null
@@ -84,7 +100,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
 
   Widget _buildMessages(String chatId, String userId) {
     return StreamBuilder<List<ChatMessage>>(
-      stream: _repository.streamMessages(chatId),
+      stream: _messageStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return _buildState(
@@ -134,13 +150,10 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
     String currentUserId,
   ) {
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return StreamBuilder<List<ChatThread>>(
-      stream: _repository.streamUserChats(currentUserId),
+    return StreamBuilder<ChatThread?>(
+      stream: _threadStream,
       builder: (context, snapshot) {
-        final matches = (snapshot.data ?? const <ChatThread>[]).where(
-          (thread) => thread.id == chatId,
-        );
-        final thread = matches.isEmpty ? null : matches.first;
+        final thread = snapshot.data;
         final title =
             thread?.otherParticipantName(currentUserId) ?? 'Takas sohbeti';
         final skillName = thread?.skillName.trim() ?? '';
