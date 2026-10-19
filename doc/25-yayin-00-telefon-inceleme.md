@@ -55,6 +55,7 @@ Yerel sütun: 360×800 açılış/galeriye dönüş ve 320×640 / 1.3 yazı öl�
 | 00-F01 | Sohbette 320×640, yazı 1.3 ve 280 piksel klavye alanıyla alt tarafta 21 piksel taşma. Mesaj alanı erişilebilir kalmalı. | Klavye açıkken ek takas bilgi kutusu daraltıldı; başlık ve detay kilit ikonu korunur. Yeni klavye/geri testi geçti. Fiziksel Android klavyesiyle yeniden test bekliyor. |
 | 00-F02 | Görev ve telefon rehberi 28 ekran diyordu; mevcut dalda 30 ekran var. | Güncel liste bu kayda eklendi; eski indirilebilir APK ile yeni dal ayrıldı. |
 | 00-F03 | Önizleme açıklaması token bakiyesinin örnek olduğunu ayrıca belirtmiyordu. | Galeriye “Gösterilen token bakiyesi örnektir; gerçek bakiyen değildir” açıklaması eklendi; çevrimdışı uyarı testi geçti. Ürün sahibinin okuyup onaylaması bekliyor. |
+| 00-F04 | Cihaz testinden sonra Coetus telefonda kurulu görünmedi. Flutter drive varsayılan temizliği aynı paket kimliğindeki uygulamayı kaldırır. | Normal `lib/main.dart` APK yeniden derlenip telefona kuruldu. Test komutuna `--keep-app-running` eklendi; bu komut tamamlandığında test paketi korunur. Yeniden giriş gerekebilir. |
 
 Yerel `phone_preview_readiness_test.dart`: 35 test geçti (30 ekran, dört klavye/geri senaryosu, örnek bakiye açıklaması). Toplam 173 Flutter testi geçti; statik analiz temiz. Klavye ve sistem geri davranışı bu dosyada simüle edilir; gerçek Android IME/predictive back testi sayılmaz. Diğer mevcut testler maskot, dokunma pırıltısı, keşif halkaları, eşleşme kutlaması, ortak ilgi ağacı ve pasif Premium akışını kapsar.
 
@@ -62,7 +63,7 @@ Yerel `phone_preview_readiness_test.dart`: 35 test geçti (30 ekran, dört klavy
 
 ```powershell
 flutter test --no-pub test/phone_preview_readiness_test.dart test/preview_gallery_test.dart
-flutter drive --no-pub --driver test_driver/phone_review_driver.dart --target integration_test/phone_review_test.dart -d TELEFON_KIMLIGI
+flutter drive --no-pub --keep-app-running --driver test_driver/phone_review_driver.dart --target integration_test/phone_review_test.dart -d TELEFON_KIMLIGI
 ```
 
 Telefon açık ve kilitsiz olmalıdır. Cihaz testi, 30 gerçek uygulama ekranını örnek verilerle açar, Flutter hatalarını ve Firebase başlatılmadığını kontrol eder, her ekrandan Ekranlar düğmesiyle galeriye döner. Gerçek hesaplara giriş yapmaz ve kamera/galeri yüklemesi başlatmaz. Ekran görüntüleri ancak çekim tamamlanınca `build/phone-review/screen-01.png` … `screen-30.png`, özet `result.json` içine kaydedilir. Bu dosyalar şu anda oluşmadı; tamamlanmış kanıt olarak gösterilmez. Telefon seri numarası, cihazdaki kişisel içerik ve debug servis URL'leri repoya eklenmez.
