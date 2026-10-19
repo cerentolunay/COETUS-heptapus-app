@@ -618,7 +618,7 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('ÖĞRETEBİLDİĞİ', style: t.labelSmall),
+            Expanded(child: Text('ÖĞRETEBİLDİĞİ', style: t.labelSmall)),
             TextButton.icon(
               onPressed: _showAddSkillDialog,
               icon: const Icon(Icons.add, size: 16),
@@ -789,7 +789,6 @@ class _SkillRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: CoetusSpace.sm),
-          CoetusChip('Sv. ${skill.level}'),
           IconButton(
             onPressed: onEdit,
             icon: const Icon(

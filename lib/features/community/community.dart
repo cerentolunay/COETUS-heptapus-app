@@ -679,6 +679,7 @@ class _CommunitySupportState extends State<CommunitySupport> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('İçerik sahibini destekle'),
+    scrollable: true,
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [

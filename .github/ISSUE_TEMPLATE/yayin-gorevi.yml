@@ -1,0 +1,28 @@
+name: Yayın görevi
+description: COETUS yayın hazırlığındaki bir görevi takip et
+title: "[YAYIN-XX] "
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Görev bağlantısı ve numarası
+      description: YAYIN_GOREVLERI.md içindeki dosyayı ekleyin.
+    validations:
+      required: true
+  - type: textarea
+    id: prerequisites
+    attributes:
+      label: Ön koşullar ve ürün kararları
+  - type: textarea
+    id: steps
+    attributes:
+      label: Yapılacak adımlar
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Kabul ölçütleri ve test kanıtı
+      description: Commit, build, cihaz ve test sonucunu belirtin; parola veya özel anahtar eklemeyin.
+    validations:
+      required: true

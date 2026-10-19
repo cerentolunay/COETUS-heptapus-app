@@ -61,7 +61,34 @@ bağımlılık beyanları ve lockfile bu geliştirmede değiştirilmedi.
 - iOS/Apple imzalama, TestFlight veya App Store; web Firebase kurulumu.
 - Gerçek kullanıcıyla hesap silme, medya temizliği ve moderasyon operasyonu.
 - Premium ödemesi veya üyelik/token satın alımı.
-- GitHub'daki değişikliklerin main ile birleştirilmesi veya mağazaya yayınlanması.
+- Mağazaya yayın; main birleştirme durumu aşağıdaki son tur kaydında izlenir.
 
 Yeni build, kurallar veya sunucu değiştiğinde ilgili testler yeniden çalıştırılır.
 Cihaz/üretim kontrolleri `21-yayin-test-matrisi.md` üzerinden kanıtla kapatılır.
+
+
+## Telefon sürümü hazırlığı — son tur
+
+19 Ekim 2026'da yeniden çalıştırılan kontroller:
+
+| Kontrol | Sonuç |
+|---|---|
+| `flutter analyze --no-pub` | Geçti, uyarı/hata yok |
+| `flutter test --no-pub` | **143 geçti** |
+| Yeni küçük ekran testleri | 28 ekran; 320×640, 1.3 yazı ölçeği; Firebase başlatılmadan gezinme |
+| `npm run check` | Geçti |
+| Auth/Firestore/Storage emülatörleriyle `npm test` | **34 geçti, başarısız/atlanan yok** |
+
+İlk küçük ekran taramasında 8 ekran taşma verdi. Alt menü genişlikleri, keşfet
+sıralama alanı, profil beceri satırı/başlığı, hesap profili kaydırması ve topluluk
+bağış penceresi düzeltildikten sonra 28 ekran ve tüm Flutter testleri geçti.
+Bu tarama ilk açılışı ve ekran galerisine dönüşü kontrol eder; her düğmenin ve
+klavyeli akışın fiziksel cihaz testi değildir.
+
+25 ayrıntılı görev `YAYIN_GOREVLERI.md` ve `gorevler/` altında takip edilir.
+GitHub Issues API ağ erişimi engelli olduğundan gerçek Issue nesneleri oluşturulmadı;
+her görevde önceden doldurulan Issue açma bağlantısı vardır.
+
+Android paketi çevrimdışı **debug önizlemesidir**. Paket dalındaki `SURUM.md`
+başarılı derleme çıktısını, kaynak commit'ini, sertifika ve checksum kaydını taşır.
+Mağaza release imzası ve gerçek cihaz/servis doğrulaması ayrıca tamamlanmalıdır.

@@ -2,6 +2,10 @@
 
 **Durum tarihi: 19 Ekim 2026 (Türkiye saati).**
 
+**Uygulama sırası:** [25 ayrı yayın görevi](YAYIN_GOREVLERI.md).
+Her görev adımlar, bağımlılıklar, sorumlu, kabul ölçütleri ve kanıt alanı içerir.
+İlk adım: [telefon test sürümünü incele](TELEFONDA_TEST.md).
+
 Bu belge, mevcut depoda bulunan özellikleri, bu geliştirme turunda tamamlanan
 çalışmaları ve gerçek kullanıcıya yayın için kalan işleri birlikte takip eder.
 Bir özelliğin kodda veya önizlemede bulunması, üretimde çalıştığının kanıtı değildir.
