@@ -46,3 +46,12 @@ Emülatör testleri bakiye korumayı, eşzamanlı girişleri, kötüye kullanım
 silinmiş hesapları ve ilk eşleşme hediyesiyle toplamı kontrol eder. İlk 50 tokenın
 30 tokenlık ilk oturumu fonlayabildiği ayrıca test edilir. Önizleme verileri gerçek
 kullanıcı bakiyesinin kanıtı değildir.
+
+
+## Karşılıklı takas kapsamı
+
+Bu belgede sözü edilen ilk oturumu fonlama testi mevcut tek yönlü kodu doğrular.
+Hedef üründe iki kişi de hem öğrenir hem paylaşır; çift taraflı escrow ve ortak
+sonuçlandırma henüz uygulanmamıştır. Dönüşüm planı `YAYIN_YOL_HARITASI.md` bölüm 7
+ve `21-yayin-test-matrisi.md` bölüm E'dedir. Welcome 50 ve ilk eşleşme 20 hediyeleri
+bu değişiklikle kaldırılmaz; yeni takas kabulüne bağlanmaları ayrıca test edilir.

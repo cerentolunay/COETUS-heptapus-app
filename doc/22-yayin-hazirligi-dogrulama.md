@@ -6,6 +6,12 @@ Başlangıç ana dalı: `eb6c52a8216886222d7185c5a5033b6f5e9c8524`.
 Çalışma dalı: `feat/coetus-release-preparation`.
 Bu kayıt, canlıya yayın sertifikası veya gerçek cihaz test tutanağı değildir.
 
+**Ürün modeli düzeltmesi:** Aşağıdaki sonuçlar `e7634a1` geliştirmesindeki mevcut
+tek yönlü öğrenme/escrow uygulamasına aittir. Hedef ürün, iki kişinin de öğrendiği
+ve paylaştığı karşılıklı takastır. Çift taraflı escrow ve ortak tamamlama henüz
+uygulanmadı; bu testler onun hazır olduğunu kanıtlamaz. Güncel hedef ve yapılacaklar
+ana yol haritasının bölüm 7'sinde ve cihaz matrisinin E bölümündedir.
+
 ## Son çalıştırılan kontroller
 
 | Kontrol | Sonuç | Kapsam |
@@ -30,8 +36,9 @@ bağımlılık beyanları ve lockfile bu geliştirmede değiştirilmedi.
 - Mevcut bakiyenin sıfırlanmaması; keyfi tutar, başka hesap, silinmiş hesap ve
   tek başına makbuz/bakiye yazımının reddi.
 - İlk eşleşme için ayrı 20 token, welcome ile toplam 70 ve tekrar ödeme yasağı.
-- Önceki eşleşmesi olmayan, ilk 50 tokenı almış hesabın 30 tokenlık oturumu
-  fonlayabilmesi: 20 kullanılabilir + 30 kilitli bakiye.
+- Önceki eşleşmesi olmayan, ilk 50 tokenı almış hesabın **mevcut tek yönlü**
+  30 tokenlık oturumu fonlayabilmesi: 20 kullanılabilir + 30 kilitli bakiye.
+  İki kişinin de katkısını kilitleyen karşılıklı takas bu testin kapsamında değildir.
 - İlgi önerisi gizliliği, yönetici onayı/ret ve yetkisiz yayınlamanın reddi.
 - Mevcut hesap silme, emanet-token, ödeme/iade ve topluluk testlerinin korunması.
 - Giriş/profil ortak ilgi kartları, beceri seçimi ve final forma seçim aktarımı.

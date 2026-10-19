@@ -83,7 +83,12 @@ hesaplarında gerçek kişilerin özel mesajları/medyası kullanılmaz.
 | D06 | Aynı öneriyi tekrar gönder | Kontrolsüz kopya/çoklu yayın oluşmaz | Bekliyor |
 | D07 | Yönetici rolünü kaldır/çıkış-giriş | Yetkisiz işlem ve yönetim erişimi kapanır | Bekliyor |
 
-## E. Token, eşleşme ve emanet
+## E. Karşılıklı öğrenme, token ve iki taraflı emanet
+
+Aşağıdaki hedef testlerin karşılıklı takas kısmı henüz mevcut sunucu koduyla
+sağlanmaz. Eski tek yönlü emülatör testlerinin geçmesi bu tabloyu kapatmaz.
+Escrow çözümünün karşılıklı aktarım mı, sahiplerine iade mi olduğu ürün kararıyla
+netleşmeden çözüm sonucu için test beklentisi uydurulmaz.
 
 | ID | Senaryo | Beklenen davranış | Durum |
 |---|---|---|---|
@@ -91,19 +96,24 @@ hesaplarında gerçek kişilerin özel mesajları/medyası kullanılmaz.
 | E02 | Eski 37 tokenlı hesap, welcome makbuzu yok | 87 olur; bakiye sıfırlanmaz | Bekliyor |
 | E03 | Yeniden giriş/aynı anda iki cihaz | Welcome bir kez; toplam tekrar artmaz | Bekliyor |
 | E04 | İstemciden bakiye/tutar/makbuz değiştir | Reddedilir | Bekliyor |
-| E05 | İlk 50 ile 30 tokenlık teklif kabulü | 20 kullanılabilir, 30 kilitli; önceki eşleşme gerekmez | Bekliyor |
-| E06 | Teklif oluştur | Kabul öncesi token düşmez | Bekliyor |
-| E07 | Yanlış kişi/kendi teklifi kabul etsin | Reddedilir | Bekliyor |
-| E08 | Yetersiz bakiye veya yarışan kabuller | Negatif bakiye/çift kilit oluşmaz | Bekliyor |
-| E09 | İlk eşleşme kutlaması | Kabul eden ve bildirimden gelen kişi erişebilir | Bekliyor |
-| E10 | İlk eşleşme hediyesi | Uygun hesapta ayrı bir kez 20 token | Bekliyor |
-| E11 | Kutlamayı tekrar aç/aynı anda talep et | İkinci 20 verilmez | Bekliyor |
-| E12 | Oturumu yetkili öğrenci tamamlasın | Kilit çözülür, öğretmene bir kez aktarılır | Bekliyor |
-| E13 | Yetkisiz kişi tamamlasın | Reddedilir | Bekliyor |
-| E14 | Tek taraf iade isteği | Hemen token aktarılmaz | Bekliyor |
-| E15 | İki taraf iade onayı | Bir kez iade, çift ödeme yok | Bekliyor |
-| E16 | Aynı oturuma tamamlama/iade yarışması | Tek, tutarlı finansal sonuç | Bekliyor |
-| E17 | Önizleme kutlaması | Örnek hediye açıkça belirtilir; gerçek bakiye değişmez | Bekliyor |
+| E05 | Python ↔ gitar karşılıklı eşleşmesi | A ve B'nin hem öğrenme hem paylaşma becerisi doğrulanır | Bloke: iki yönlü model dönüşümü |
+| E06 | Yalnızca bir yönde uyum | Karşılıklı takas tamamlanmış gibi sunulmaz | Bloke: iki yönlü eşleşme doğrulaması |
+| E07 | İki kişi şartları kabul etmeden teklif | Hiçbir katkı kilitlenmez | Bloke: karşılıklı mutabakat |
+| E08 | İki 50 tokenlı hesap, test için 30'ar katkı | Her birinde 20 kullanılabilir + 30 kilitli, tek atomik işlem | Bloke: çift taraflı escrow |
+| E09 | Bir kişinin bakiyesi yetersiz | Her iki hesapta da yeni kilit yok | Bloke: çift taraflı escrow |
+| E10 | Teklif becerisi/tutarı onay sonrası değişir | Eski onay geçersiz, iki kişi yeniden onaylar | Bloke: anlaşma sürümü |
+| E11 | İlk eşleşme kutlaması ve ayrı 20 hediye | Uygun hesapta bir kez; escrow hesabından ayrı kayıt | Bekliyor; hedef karşılıklı kabul entegrasyonu gerekli |
+| E12 | A tamamladı, B tamamlamadı | Her iki katkı da kilitli, tek yönlü ödeme yok | Bloke: çift onaylı tamamlama |
+| E13 | A ve B tamamladı | Seçilen politikaya göre atomik ve tek çözüm | Bloke: ürün kararı + uygulama |
+| E14 | Tamamlama aynı anda veya tekrar gönderilir | Her katılımcının onayı ve çözüm bir kez işlenir | Bloke: yeni idempotent çözüm |
+| E15 | Karşılıklı iptal | Her kişiye kendi katkısı bir kez iade edilir | Bloke: iki taraflı iade |
+| E16 | Tamamlama/iptal yarışması | İki cüzdanda tek tutarlı sonuç, çift çözüm yok | Bloke: yeni çözüm testleri |
+| E17 | Bir öğrenme yönü eksik/kişi yanıt vermiyor | Tanımlanmış itiraz/zaman aşımı; keyfi serbest bırakma yok | Bloke: politika + uygulama |
+| E18 | Üçüncü hesap/yanlış katılımcı işlem yapar | Okuma/yazma/çözüm reddi | Yeni modelde yeniden test gerekli |
+| E19 | Ağ kesilmesi/uygulama kapanması | Ne yarım kilit ne çift çözüm | Yeni modelde yeniden test gerekli |
+| E20 | Toplam token hesabı | Hediye hariç kullanılabilir + kilitli toplamı korunur | Yeni modelde test gerekli |
+| E21 | Eski aktif tek yönlü oturum | Güvenli sürümlü geçiş; mevcut katkılar kaybolmaz | Bloke: veri geçiş planı |
+| E22 | Önizleme kutlaması | Gerçek bakiye değişmez, örnek olduğu belirtilir | Bekliyor |
 
 ## F. Sohbet, topluluk, medya ve moderasyon
 

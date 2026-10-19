@@ -24,6 +24,19 @@ canlı sürümü olarak dağıtılmamalıdır.
 - İlgi alanı önerileri yalnızca yetkili yönetici onayından sonra yayınlanacak.
 - Ana vurgu paleti mor, lime ve kırmızı; mavi vurgu kullanılmayacak.
 
+### Temel ürün modeli: karşılıklı öğrenen eşleşmiş kişiler
+
+COETUS'ta bir kişi kalıcı olarak öğretmen, diğeri öğrenci değildir. Bir eşleşmede
+**iki kişi de bir beceri paylaşır ve karşı taraftan başka bir beceri öğrenir**.
+Örnek: A, B'ye Python paylaşır; B, A'ya gitar paylaşır. Aynı ortak takasın iki yönü
+vardır. Tokenlar bu karşılıklı taahhüt için escrow'da tutulur; süreç yalnızca tek
+kişinin öğrenip diğer kişinin ödeme aldığı ders olarak modellenmemelidir.
+
+**Önemli kod farkı:** Mevcut `functions/learning.js`, teklif/oturum modelleri ve
+bazı ekranlar hâlâ tek yönlü `teacherId`/`studentId` akışını kullanıyor. Aşağıdaki
+karşılıklı model hedef üründür; yalnızca bu belgenin düzeltilmesiyle kodda çalışır
+hâle gelmez. İki yönlü eşleşme ve escrow dönüşümü üretim öncesi P0 iştir.
+
 ### İlk sürüm için ürün sahibinin kesinleştireceği kararlar
 
 - [ ] Android'de ilk hedef: özel APK testi mi, Google Play testi mi?
@@ -31,6 +44,10 @@ canlı sürümü olarak dağıtılmamalıdır.
 - [ ] İlk sürümde fotoğraf/video, topluluk ve sohbetin hangilerinin açık olacağı.
 - [ ] Yüz yüze görüşmenin desteklenip desteklenmediği ve güvenli kullanım kuralları.
 - [ ] İlk ücretsiz planda kullanıcı/eşleşme sınırı; Premium satışa açılana kadar davranış.
+- [ ] Escrow çözümünde tokenlar karşı tarafa mı aktarılacak, sahiplerine mi dönecek?
+      Bu karar henüz verilmiş sayılmaz; bir tarafa otomatik ödeme varsayılmaz.
+- [ ] İki katkının tutarı, eşit olmak zorunda olup olmadığı ve iki öğrenme yönünün
+      tamamlanma/itiraz/zaman aşımı koşulları.
 - [ ] Aynı kişinin birden fazla hesapla hediye toplamasına karşı uygulanacak politika.
 - [ ] Destek e-postası, gizlilik politikası adresi ve hesap silme talep adresi.
 
@@ -46,7 +63,7 @@ canlı sürümü olarak dağıtılmamalıdır.
 | Ortak ilgi alanı ekranı | Giriş/profil aynı kart ve beceri ağacını kullanır | Gerçek hesapta kaydetme ve tekrar açma testi |
 | İlgi önerisi/onayı | Bekleyen kayıtlar özel, yönetici onayı var | Yöneticinin UID'sine rol atama, canlı kurallar |
 | Beceri seviyesi | Ekle/düzenle/paylaş için ortak mor/lime pencere | Fiziksel cihazda klavye ve büyük yazı kontrolü |
-| Eşleşme/emanet token | Kabul, tamamlama, iptal/iade kodu ve emülatör testleri var | Cloud Functions maliyet/kullanılabilirlik kararı ve canlı test |
+| Eşleşme/emanet token | Mevcut kod/testler tek yönlü ders modelinde | P0: iki kişinin de öğrenip paylaştığı takasa, iki taraflı escrow ve mutabakata dönüşüm; backend kararı ve canlı test |
 | Sohbet | Firestore katılımcı erişim kuralları var | Engelleme, spam politikası, iki cihaz ve çevrimdışı test |
 | Portföy şikâyeti | UI + `reportPortfolioEntry` + `contentReports` var | Gerçek moderasyon takibi ve işlem akışı |
 | Genel moderasyon | İlgi önerisi yönetimi var | Kullanıcı engelleme ve genel sohbet/topluluk şikâyet yönetimi bulunmadı |
@@ -68,7 +85,7 @@ varlığı, fatura veya işlevlerin başarı durumu bu turda canlıdan doğrulan
 |---|---|---|---|
 | P0-1 | Firebase maliyet ve backend kararı | Ürün sahibi + geliştirici | Yazılı kapsam, etkin kaynak listesi |
 | P0-2 | Auth sağlayıcıları ve Android Google imzası | Hesap sahibi + geliştirici | Gerçek cihazda giriş ve reset |
-| P0-3 | Kurallar/indeksler ve token akışı | Geliştirici | Emülatör + gerçek hesapla bir kez 50/20 |
+| P0-3 | Karşılıklı eşleşme, iki taraflı escrow, kurallar/indeksler | Ürün sahibi + geliştirici | İki yönlü beceri uyumu, atomik kilit, iki tarafın tamamlaması; bir kez 50/20 |
 | P0-4 | Hesap silme uçtan uca | Geliştirici + testçi | Auth/veri/medya temizlik kanıtı |
 | P0-5 | Engelleme, şikâyet, moderasyon | Geliştirici + yönetici | Kullanıcı ve yönetici senaryoları |
 | P0-6 | Gizlilik ve mağaza beyanları | Ürün sahibi | Yayındaki erişilebilir sayfalar |
@@ -98,6 +115,8 @@ zorunlu test süresi ve inceleme, kodlama bittiği gün tamamlanmak zorunda değ
 `functions/index.js` ve modülleri şu grupları içeriyor:
 
 - Öğrenme: `acceptLearningOffer`, `completeLearningSession`, `cancelLearningSession`.
+  Bunlar şu an tek yönlü kilit/aktarım içeriyor; karşılıklı takasın hedef davranışı
+  olarak kabul edilmez, bölüm 7'deki dönüşüme dahil edilir.
 - Topluluk: yayın, silme, kalp, yorum, token desteği.
 - Portföy: kanıt/çalışma gönderme, silme ve şikâyet.
 - Hesap: `deleteAccount` ve `cleanupDeletedAccount` Auth tetikleyicisi.
@@ -217,29 +236,94 @@ Bu komut Functions yayınlamaz; Storage ve diğer etkin kaynakların kullanım
 maliyetini ortadan kaldırmaz. Kuralları yayınlamak indekslerin hemen hazır olduğu
 anlamına gelmez; READY durumu beklenir ve gerçek sorgu denenir.
 
-## 7. Adım 4 — gerçek eşleşme, token kilidi ve iade
+## 7. Adım 4 — karşılıklı eşleşme, çift taraflı escrow ve ortak tamamlama
 
-İki ayrı gerçek test hesabı ve iki cihazla:
+### 7.1 Kabul edilecek ürün akışı
 
-1. [ ] Her hesabın bir kez 50 token aldığını doğrula.
-2. [ ] Gerçek alt beceriler ekle; alan adını (Müzik) yanlışlıkla beceri (Gitar)
-       yerine kaydetmediğini doğrula.
-3. [ ] Uygun aday keşfi, filtreler, uyum oranı ve profil detayını kontrol et.
-4. [ ] Öğrenci 30 token teklif etsin; teklif oluştururken bakiye düşmesin.
-5. [ ] Öğretmen kabul etsin: öğrencide 20 kullanılabilir + 30 kilitli token olsun.
-6. [ ] Aynı teklif iki kez/eşzamanlı kabul edilsin; ikinci kilit oluşmasın.
-7. [ ] İlk eşleşme hediyesi yalnızca bir kez ve her katılımcının kendi hesabına verilsin.
-8. [ ] İki taraf aynı sohbete erişsin; üçüncü hesap mesajları okuyamasın.
-9. [ ] Yetkili öğrenci oturumu tamamlasın; tek ödeme öğretmene aktarılsın.
-10. [ ] Tek taraflı iptal talebi ve karşılıklı iade ayrı senaryolarda denensin.
-11. [ ] Tamamlama/iade tekrarları veya yarışmaları çift ödeme yaratmasın.
-12. [ ] Yetersiz bakiye, silinmekte olan hesap ve eski oturum tokenı reddedilsin.
-13. [ ] Uygulama arka plana alınsın/ağ kesilsin; işlem tekrarında makbuzlar ve
-        bakiye tutarlı kalsın. Geçici hata başarı mesajına dönüşmesin.
+**Tutar için öne çıkan öneri:** İki kişinin de aynı miktarı kilitlemesi. Ürün sahibi
+bunu hatırladığı olası model olarak belirtti; henüz kesinleşmiş karar veya mevcut
+kodda bulunan bir kural gibi kabul edilmez. Örneğin A ve B'nin 20'şer token
+kilitlemesi ortak taahhüt/teminat işlevi görebilir. “Eşit tutar kilitleme” ile
+“tamamlanınca kime aktarılacağı” iki ayrı karardır. Herkesin kendi katkısını geri
+alması ve karşılıklı aktarımda net bakiye eşit tutarlarda aynı olabilir; işlem
+kayıtları ve anlaşmazlık politikası yine de açıkça seçilmelidir.
 
-Tokenlar gerçek para olarak sunulmamalı; kullanım, iade ve hesap silmede ne olacağı
-kullanım koşullarında açıkça anlatılmalı. Yatırım/finans ilgi alanı uygulama tokenının
-finansal yatırım ürünü olduğu anlamına gelmemeli.
+1. [ ] A'nın paylaşabileceği beceri B'nin öğrenmek istediğiyle; B'nin paylaşabileceği
+       beceri de A'nın öğrenmek istediğiyle uyuşsun. Örneğin Python ↔ gitar.
+2. [ ] Keşif önerisi ile iki yönü doğrulanmış takas ayrı durumlar olsun. Yalnızca
+       bir yönde uyum varsa sistem bunu tamamlanmış karşılıklı eşleşme gibi sunmasın.
+3. [ ] Teklifte iki paylaşım ve iki öğrenme yönü, eşleşmiş kişiler ve escrow şartları
+       açıkça gösterilsin. Karşı taraf kabul etmeden token kilitlenmesin.
+4. [ ] Her iki kişi kendi katkısını ve karşılıklı şartları onaylasın. Kabul sonrası
+       beceri/tutar değişikliği eski onayı geçersiz kılsın; yeniden mutabakat istensin.
+5. [ ] Katılımcıların escrow katkıları kullanıcı bazında doğrulansın; iki bakiyenin
+       yeterliliği, kilit kayıtları ve oturum geçişi tek atomik işlemde gerçekleşsin.
+       Bir kişinin işlemi başarısızsa diğer kişinin tokenı da yarım kilitli kalmasın.
+6. [ ] İki kişi ortak takasta hem paylaşan hem öğrenen olarak yer alsın. Ekranda
+       “Sen paylaşacaksın / Sen öğreneceksin” ve karşı tarafın karşılıkları görülsün.
+7. [ ] Tek kişinin “tamamladım” demesi escrow'u çözmesin. İki tarafın tamamlanma
+       onayı ayrı kaydedilsin; tek onayda tokenlar kilitli kalsın.
+8. [ ] İki onay geldiğinde, **ürün sahibi tarafından seçilmiş escrow çözüm politikası**
+       tek kez ve atomik uygulansın. Tokenların karşı tarafa aktarılması ile sahibine
+       geri dönmesi farklı politikalardır; bu belge henüz birini seçmez.
+9. [ ] Karşılıklı iptalde herkesin kendi katkısı doğru hesaba yalnızca bir kez iade
+       edilsin. Tek taraflı ayrılma, yalnızca bir öğrenme yönünün gerçekleşmesi,
+       anlaşmazlık ve yanıt vermeyen kişi için ayrı süreç tanımlansın.
+10. [ ] Tekrarlı istek, eşzamanlı iki onay, tamamlama/iptal yarışı ve ağ kesilmesi
+        yeni kilit, çift çözüm veya negatif bakiye yaratmasın.
+
+### 7.2 Kodda gerekli dönüşüm — isim değişikliğiyle tamamlanmaz
+
+- [ ] `matching_service.dart`: yalnızca mevcut kişinin öğrenme becerisi ↔ adayın
+      paylaşma becerisi karşılaştırması yeterli değil. Ters yön de gerçek beceri
+      kayıtlarıyla doğrulansın; `partnerLearnSkills` listesinin bulunması tek başına
+      karşılıklı uyumun kanıtı sayılmasın.
+- [ ] `MatchCandidate`, `MatchOffer` ve `ExchangeSession`: iki kişi ve iki beceri
+      yönünü taşıyacak model tasarlansın. Sabit öğretmen/öğrenci rolüyle ürün anlatılmasın.
+- [ ] Teklif oluşturma ve kabul: iki katkı, fiyat/teminat şartı ve mutabakat sürümü
+      sunucuda doğrulansın; kullanıcı başkasının katkısını keyfi değiştiremesin.
+- [ ] `functions/learning.js`: tek kişinin bakiyesini kilitleyen ve tek kişiye
+      aktaran kabul/tamamlama/iade işlemleri karşılıklı modele dönüştürülsün.
+- [ ] Emanet kayıtlarında kişi bazında katkı ve çözüm; oturumda iki öğrenme yönü ve
+      tamamlanma onayları saklansın. Önerilen kavramlar: `participants`,
+      `skillsByParticipant`, `contributions`, `completionApprovals`, `schemaVersion`.
+      Bunlar mevcut kodda uygulanmış alanlar değil, şema tasarımının başlangıcıdır.
+- [ ] Tutarın iki tarafta aynı olup olmayacağı ve toplam tutarın nasıl hesaplanacağı
+      kararlaştırılsın. Örnek sayılar nihai fiyatlandırma kuralı olarak kodlanmasın.
+- [ ] Kurallar, indeksler, bildirimler, sohbet özeti, Takaslarım ve kutlama ekranı
+      aynı iki taraflı anlaşmayı göstersin. Eski tek yönlü bildirimler değiştirilsin.
+- [ ] Hesap silme, iki kişinin de kilitli katkısını korusun; bir kişinin temizliği
+      diğer kişinin teminatını veya işlem kanıtını silmesin.
+- [ ] Eski tek yönlü belgeler için sürümlü geçiş planı yazılsın. Aktif kilitli
+      kayıtlar alan adları değiştirilerek otomatik karşılıklı takasa çevrilmesin;
+      mevcut taahhütler güvenli biçimde sonuçlandırılsın veya açıkça taşınsın.
+- [ ] Eski tek yönlü testler tarihsel davranışı doğrular; yeni iki yönlü kabul,
+      escrow ve mutabakat testleri ayrıca yazılmadan model tamamlandı sayılmasın.
+
+### 7.3 Tokenların korunumu ve örnek kabul testi
+
+- [ ] Hediye dışındaki kilitleme/çözme/iptal toplam token üretmesin veya yok etmesin.
+      İki kişinin kullanılabilir + kilitli toplamı işlem öncesi/sonrası tutarlı olsun.
+- [ ] 50 token başlangıç ve 20 token eşleşme hediyesi finansal harekete ayrı
+      makbuzlarla işlensin; escrow bakiyesine karışan belirsiz bonus oluşmasın.
+- [ ] İki ayrı hesap ve iki cihazla A: Python paylaşır/gitar öğrenir; B: gitar
+      paylaşır/Python öğrenir senaryosu çalıştırılsın.
+- [ ] Yalnızca test örneği olarak, her biri 50 tokenlı iki kişi 30'ar token
+      kilitlerse A ve B'de ayrı ayrı 20 kullanılabilir + 30 kilitli görünsün.
+      Bu sayı bir fiyat kararı değildir; ilk eşleşme hediyesi testten ayrıştırılsın.
+- [ ] A tek başına tamamladığında iki escrow katkısı da kilitli kalsın.
+- [ ] B de tamamladığında seçilen politikaya göre iki kayıt tek işlemde çözülsün;
+      A'ya veya B'ye tek başına tüm emanet aktarılmasın.
+- [ ] Aynı tamamlanma/iptal istekleri yeniden gönderilsin; çözüm tekrarlanmasın.
+- [ ] Bir kişinin bakiyesi yetersizse ikisinde de yeni kilit oluşmasın.
+- [ ] Sadece bir beceri yönü varsa veya katkı/skill sonradan değiştirilirse teklif
+      geçersiz sayılsın ya da yeniden iki tarafın onayını gerektirsin.
+- [ ] Üçüncü hesap oturumu okuyamasın/değiştiremesin; silinmekte olan hesap ve
+      eski oturum tokenı işlem yapamasın.
+
+Tokenlar gerçek para olarak sunulmamalı; karşılıklı öğrenme, escrow çözümü,
+kısmi gerçekleşme, itiraz ve hesap silmede ne olacağı kullanım koşullarında açıkça
+anlatılmalıdır. Hedef modelin geliştirilmesi, ücretli altyapı açma yetkisi vermez.
 
 ## 8. Adım 5 — moderasyon ve yönetici
 
@@ -477,7 +561,10 @@ Aşağıdakilerin tamamı kanıtla kapanmadan uygulama üretime hazır sayılmaz
 
 - [ ] Maliyet/backend kararı verilmiş, etkin özelliklerin sunucusu kullanılabilir.
 - [ ] E-posta/Google girişi ve reset gerçek cihazda çalışıyor.
-- [ ] 50/20 token tek seferlik; kilit/ödeme/iade tutarlı.
+- [ ] İki yönde beceri uyumu doğrulanıyor; iki kişi de paylaşan ve öğrenen.
+- [ ] Kişi bazında escrow atomik; tek onay çözüm yapmıyor, ortak tamamlama/iptal tutarlı.
+- [ ] Escrow çözüm politikası kesinleşmiş ve test edilmiş; 50/20 hediyeler tek seferlik.
+- [ ] Tek yönlü eski oturumların güvenli geçiş/sonuçlandırma planı uygulanmış.
 - [ ] Özel mesajlar ve özel medya yetkisiz hesaba kapalı.
 - [ ] Hesap silme gerçekten tamamlanıyor veya izlenen güvenli temizlik süreci var.
 - [ ] Engelleme, şikâyet ve yönetim işlemleri çalışıyor; sorumlu kişi belirli.
