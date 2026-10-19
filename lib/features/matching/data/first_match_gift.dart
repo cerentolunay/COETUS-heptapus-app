@@ -14,7 +14,9 @@ class FirstMatchGift {
         .where('participants', arrayContains: uid)
         .get();
     final accepted = matches.docs.where(
-      (doc) => doc.data()['status'] == 'accepted',
+      (doc) =>
+          doc.data()['status'] == 'accepted' &&
+          doc.data()['schemaVersion'] != 2,
     );
     if (accepted.isEmpty) return false;
     final matchId = accepted.first.id;

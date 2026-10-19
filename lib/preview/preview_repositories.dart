@@ -4,6 +4,7 @@ import '../features/chat/domain/models/chat_message.dart';
 import '../features/chat/domain/models/chat_thread.dart';
 import '../features/exchange/data/repositories/local_exchange_repository.dart';
 import '../features/exchange/domain/models/exchange_session.dart';
+import '../features/exchange/domain/mutual_exchange.dart';
 import '../features/exchange/domain/models/match_offer.dart';
 import '../features/notifications/data/repositories/local_notification_repository.dart';
 import '../features/notifications/domain/models/app_notification.dart';
@@ -184,6 +185,7 @@ class PreviewExchangeRepository extends LocalExchangeRepository {
       participants: const [PreviewMode.userId, 'preview-partner'],
       skill: 'Gitar',
       credits: 10,
+      deposits: const {PreviewMode.userId: 50, 'preview-partner': 40},
       createdAt: DateTime.now(),
     ),
   ]);
@@ -205,6 +207,17 @@ class PreviewExchangeRepository extends LocalExchangeRepository {
             skill: 'Gitar',
             credits: 10,
             funded: true,
+            mutual: MutualExchange(
+              participants: const [PreviewMode.userId, 'preview-partner'],
+              deposits: const {PreviewMode.userId: 50, 'preview-partner': 40},
+              status: status.name,
+              completionVotes: status == ExchangeSessionStatus.completed
+                  ? const [PreviewMode.userId, 'preview-partner']
+                  : const ['preview-partner'],
+              completionRequestedAt: DateTime.now().subtract(
+                const Duration(hours: 25),
+              ),
+            ),
             status: status,
             createdAt: DateTime.now(),
           ),

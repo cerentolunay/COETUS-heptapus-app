@@ -1,4 +1,4 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import '../mutual_exchange_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/models/exchange_session.dart';
@@ -50,9 +50,10 @@ class FirebaseExchangeRepository implements ExchangeRepository {
 
   @override
   Future<void> acceptOffer(String matchId, String currentUserId) async {
-    await FirebaseFunctions.instanceFor(
-      region: 'europe-west1',
-    ).httpsCallable('acceptLearningOffer').call({'matchId': matchId});
+    await MutualExchangeService(
+      firestore: _firestore,
+      userId: currentUserId,
+    ).accept(matchId);
   }
 
   @override
@@ -96,6 +97,12 @@ class FirebaseExchangeRepository implements ExchangeRepository {
         throw StateError('Match offer $matchId was not found.');
       }
 
+      if (matchSnapshot.data()?['schemaVersion'] == 2) {
+        transaction.update(_firestore.doc('sessions/$matchId'), {
+          'status': 'cancelled',
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
       final offer = MatchOffer.fromFirestore(matchSnapshot);
       if (!offer.participants.contains(currentUserId)) {
         throw StateError('Only a participant can update this offer.');

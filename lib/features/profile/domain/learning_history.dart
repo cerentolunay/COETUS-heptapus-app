@@ -16,9 +16,10 @@ List<ExchangeSession> completedLearningHistory(
             userId.isNotEmpty &&
             session.status == ExchangeSessionStatus.completed &&
             session.participants.contains(userId) &&
-            (role == LearningHistoryRole.taught
-                ? session.teacherId == userId
-                : session.studentId == userId),
+            (session.isMutual ||
+                (role == LearningHistoryRole.taught
+                    ? session.teacherId == userId
+                    : session.studentId == userId)),
       )
       .toList();
   result.sort((a, b) {

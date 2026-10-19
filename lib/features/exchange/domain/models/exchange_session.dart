@@ -1,3 +1,4 @@
+import '../mutual_exchange.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ExchangeSessionStatus {
@@ -5,7 +6,9 @@ enum ExchangeSessionStatus {
   active,
   scheduled,
   completed,
-  cancelled;
+  cancelled,
+  disputed,
+  expired;
 
   static ExchangeSessionStatus fromValue(String? value) {
     return ExchangeSessionStatus.values.firstWhere(
@@ -23,6 +26,8 @@ class ExchangeSession {
   final List<String> participants;
   final String skill;
   final int credits;
+  final MutualExchange? mutual;
+  bool get isMutual => mutual != null;
   final bool funded;
   final List<String> refundVotes;
   final ExchangeSessionStatus status;
@@ -37,6 +42,7 @@ class ExchangeSession {
     required this.participants,
     required this.skill,
     required this.credits,
+    this.mutual,
     this.funded = false,
     this.refundVotes = const [],
     this.status = ExchangeSessionStatus.requested,
@@ -63,6 +69,7 @@ class ExchangeSession {
           map['skillId'] as String? ??
           '',
       credits: _readInt(map['credits']),
+      mutual: map['schemaVersion'] == 2 ? MutualExchange.fromMap(map) : null,
       funded: map['funded'] == true,
       refundVotes: _readStringList(map['refundVotes']),
       status: ExchangeSessionStatus.fromValue(map['status'] as String?),
@@ -91,6 +98,7 @@ class ExchangeSession {
       participants: participants ?? this.participants,
       skill: skill ?? this.skill,
       credits: credits ?? this.credits,
+      mutual: mutual,
       funded: funded,
       refundVotes: refundVotes,
       status: status ?? this.status,
@@ -108,6 +116,19 @@ class ExchangeSession {
       'participants': participants,
       'skill': skill,
       'credits': credits,
+      if (mutual != null) ...{
+        'schemaVersion': 2,
+        'deposits': mutual!.deposits,
+        'completionVotes': mutual!.completionVotes,
+        'cancellationVotes': mutual!.cancellationVotes,
+        'completionRequestedAt': mutual!.completionRequestedAt == null
+            ? null
+            : Timestamp.fromDate(mutual!.completionRequestedAt!),
+        'remindedAt': mutual!.remindedAt == null
+            ? null
+            : Timestamp.fromDate(mutual!.remindedAt!),
+        'disputedBy': mutual!.disputedBy,
+      },
       'funded': funded,
       'refundVotes': refundVotes,
       'status': status.name,
