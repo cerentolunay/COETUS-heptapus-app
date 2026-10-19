@@ -614,3 +614,53 @@ emulatorTest('welcome tokens fund the first learning session without requiring a
   assert.equal(student.credits,20);assert.equal(student.lockedCredits,30);
   assert.equal((await db.doc('sessions/first-funded').get()).data().funded,true);
 });
+
+emulatorTest('new reward version grants exactly 200 once across concurrent logins and rejects extra match rewards',async()=>{
+  const {serverTimestamp,runTransaction}=require('firebase/firestore');
+  const client=env.authenticatedContext('new-200').firestore();
+  const user=doc(client,'users/new-200'),receipt=doc(client,'users/new-200/rewards/welcome');
+  await assertSucceeds(setDoc(user,{id:'new-200',email:'new@example.test',credits:0,signupRewardVersion:2}));
+  const grant=()=>runTransaction(client,async tx=>{
+    if((await tx.get(receipt)).exists())return false;
+    const profile=await tx.get(user);
+    tx.set(receipt,{amount:200,createdAt:serverTimestamp()});
+    tx.update(user,{credits:profile.data().credits+200});return true;
+  }).catch(async error=>{
+    if(error.code==='permission-denied'&&(await getDoc(receipt)).exists())return false;
+    throw error;
+  });
+  const results=await Promise.all([grant(),grant(),grant()]);
+  assert.equal(results.filter(Boolean).length,1);
+  assert.equal((await getDoc(user)).data().credits,200);
+  assert.equal(await grant(),false);
+  await assertFails(updateDoc(user,{signupRewardVersion:0}));
+  await assertFails(updateDoc(user,{credits:400}));
+  await db.doc('matches/new-200-match').set({status:'accepted',requesterId:'new-200',receiverId:'teacher',participants:['new-200','teacher']});
+  const bonus=writeBatch(client);
+  bonus.set(doc(client,'users/new-200/rewards/first_match'),{amount:20,matchId:'new-200-match',createdAt:serverTimestamp()});
+  bonus.update(user,{credits:220});await assertFails(bonus.commit());
+  assert.equal((await getDoc(user)).data().credits,200);
+});
+
+emulatorTest('reward migration preserves old grants and prevents version switching or incorrect amounts',async()=>{
+  const {serverTimestamp}=require('firebase/firestore');
+  await db.doc('users/old-50').set({id:'old-50',email:'old@example.test',credits:37});
+  await db.doc('users/old-50/rewards/welcome').set({amount:50,createdAt:new Date()});
+  const old=env.authenticatedContext('old-50').firestore();
+  await assertFails(updateDoc(doc(old,'users/old-50'),{signupRewardVersion:2}));
+  const topup=writeBatch(old);
+  topup.set(doc(old,'users/old-50/rewards/welcome'),{amount:200,createdAt:serverTimestamp()});
+  topup.update(doc(old,'users/old-50'),{credits:237});await assertFails(topup.commit());
+  assert.equal((await db.doc('users/old-50').get()).data().credits,37);
+  const fresh=env.authenticatedContext('fresh-200').firestore();
+  const user=doc(fresh,'users/fresh-200'),receipt=doc(fresh,'users/fresh-200/rewards/welcome');
+  await setDoc(user,{id:'fresh-200',email:'fresh@example.test',credits:0,signupRewardVersion:2});
+  for(const amount of [20,50,70,199,201,400]) {
+    const batch=writeBatch(fresh);batch.set(receipt,{amount,createdAt:serverTimestamp()});
+    batch.update(user,{credits:amount});await assertFails(batch.commit());
+  }
+  const foreign=writeBatch(fresh);
+  foreign.set(doc(fresh,'users/old-50/rewards/welcome'),{amount:200,createdAt:serverTimestamp()});
+  foreign.update(doc(fresh,'users/old-50'),{credits:237});await assertFails(foreign.commit());
+  const good=writeBatch(fresh);good.set(receipt,{amount:200,createdAt:serverTimestamp()});good.update(user,{credits:200});await assertSucceeds(good.commit());
+});

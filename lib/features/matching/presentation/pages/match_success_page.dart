@@ -32,7 +32,7 @@ class _MatchSuccessPageState extends State<MatchSuccessPage> {
     super.initState();
     if (!widget.claimGift) return;
     if (PreviewMode.enabled) {
-      _gift = true;
+      return;
     } else {
       _claimGift();
     }

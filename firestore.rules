@@ -20,7 +20,7 @@ service cloud.firestore {
 
     function immutableProfileFieldsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'username', 'usernameChangedAt', 'accountDeletionPending', 'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
+        'signupRewardVersion', 'username', 'usernameChangedAt', 'accountDeletionPending', 'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
       ]);
     }
     function fixedGift(userId, rewardId, amount) {
@@ -121,6 +121,7 @@ service cloud.firestore {
 
       allow create: if isOwner(userId) &&
         request.resource.data.id == userId &&
+        request.resource.data.get('signupRewardVersion', 0) in [0, 2] &&
         request.resource.data.email is string &&
         request.resource.data.get('username', '') == '' && !request.resource.data.keys().hasAny(['usernameChangedAt']) &&
         request.resource.data.get('credits', 0) == 0 &&
@@ -131,12 +132,17 @@ service cloud.firestore {
         request.resource.data.get('peerApprovalCount', 0) == 0 && request.resource.data.get('portfolioTrust', 0) == 0 &&
         request.resource.data.get('portfolioSkillCounts', {}) == {};
 
-      allow update: if isOwner(userId) && (immutableProfileFieldsUnchanged() || usernameChange(userId) || fixedGift(userId, 'first_match', 20) || fixedGift(userId, 'welcome', 50));
+      allow update: if isOwner(userId) && (immutableProfileFieldsUnchanged() || usernameChange(userId) ||
+        (resource.data.get('signupRewardVersion', 0) != 2 && fixedGift(userId, 'first_match', 20)) ||
+        fixedGift(userId, 'welcome', resource.data.get('signupRewardVersion', 0) == 2 ? 200 : 50));
 
       allow delete: if false;
 
       match /rewards/{rewardId} {
         allow read: if isOwner(userId);
+        function welcomeAmount() {
+          return get(/databases/$(database)/documents/users/$(userId)).data.get('signupRewardVersion', 0) == 2 ? 200 : 50;
+        }
         function walletIncreasedBy(amount) {
           return getAfter(/databases/$(database)/documents/users/$(userId)).data.credits ==
             get(/databases/$(database)/documents/users/$(userId)).data.get('credits', 0) + amount;
@@ -145,8 +151,9 @@ service cloud.firestore {
           request.resource.data.createdAt == request.time && (
             (rewardId == 'welcome' &&
               request.resource.data.keys().hasOnly(['amount', 'createdAt']) &&
-              request.resource.data.amount == 50 && walletIncreasedBy(50)) ||
+              request.resource.data.amount == welcomeAmount() && walletIncreasedBy(welcomeAmount())) ||
             (rewardId == 'first_match' &&
+              get(/databases/$(database)/documents/users/$(userId)).data.get('signupRewardVersion', 0) != 2 &&
               request.resource.data.keys().hasOnly(['amount', 'matchId', 'createdAt']) &&
               request.resource.data.amount == 20 && request.resource.data.matchId is string &&
               get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.status == 'accepted' &&

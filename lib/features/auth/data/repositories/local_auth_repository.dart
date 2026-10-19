@@ -32,7 +32,7 @@ class LocalAuthRepository implements AuthRepository {
       email: normalizedEmail,
       bio: 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
       trustScore: 12,
-      credits: 50,
+      credits: 200,
       verified: false,
       profileCompleted: true,
     );
@@ -55,7 +55,7 @@ class LocalAuthRepository implements AuthRepository {
       email: normalizedEmail,
       bio: 'Birlikte öğrenmeye hazır',
       trustScore: 0,
-      credits: 50,
+      credits: 200,
       verified: false,
       profileCompleted: true,
     );
@@ -73,7 +73,7 @@ class LocalAuthRepository implements AuthRepository {
       email: 'google.user@example.com',
       bio: 'Yeteneklerini paylaşmayı seven bir topluluk üyesi',
       trustScore: 12,
-      credits: 50,
+      credits: 200,
       verified: true,
       profileCompleted: true,
     );
