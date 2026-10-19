@@ -81,7 +81,7 @@ class MutualSessionCard extends StatelessWidget {
                     : 'Karşı tarafın tamamlanma onayı var. Yanıtın bekleniyor.',
               ),
               const Text(
-                'İlk onaydan 24 saat sonra hatırlatma, 72 saat içinde itiraz yoksa süre sonunda iade. Süre kontrolleri Takaslarım açıkken veya yeniden açıldığında yapılır.',
+                  'İlk onaydan 24 saat sonra hatırlatma, 72 saat içinde itiraz yoksa kendi tokenlarınız iade edilir. Sunucu 15 dakikada bir kontrol eder; uygulamanın açık olması gerekmez.',
               ),
               if (deadline != null)
                 Text(

@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:coetus/features/profile/domain/models/skill_model.dart';
 import '../domain/mutual_exchange.dart';
 
-/// No callable, scheduler, polling query or automatic endorsement is used here.
+/// Direct transactions remain a fallback beside the server timeout scheduler.
+/// Neither path grants automatic endorsements or creates token rewards.
 class MutualExchangeService {
   MutualExchangeService({FirebaseFirestore? firestore, String? userId})
     : _db = firestore ?? FirebaseFirestore.instance,

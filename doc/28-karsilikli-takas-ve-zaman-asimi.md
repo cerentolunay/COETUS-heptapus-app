@@ -1,5 +1,7 @@
 # Karşılıklı takas ve yanıt süresi
 
+> Güncelleme: Sunucu zamanlayıcısı ve yeni Functions izni için [29 numaralı belge](29-sunucuda-takas-sureleri.md) bu belgedeki ekran açıkken kontrol ve Functions kullanmama kısıtını geçersiz kılar.
+
 İki kişi de öğretir ve öğrenir. Yeni teklifler iki yöndeki becerilerin eşleşmesini gerektirir. Öğrenilen becerinin seviyesi 1–7 için kişinin katkısı 10–70 tokendır; iki katkının eşit olması gerekmez. Teklifteki beceriler ve tutarlar sabitlenir. Kabul sırasında iki kişinin katkısı tek atomik işlemle kilitlenir; yetersiz bakiye varsa ikisinden de kesilmez.
 
 ## Tamamlanma, iptal ve itiraz

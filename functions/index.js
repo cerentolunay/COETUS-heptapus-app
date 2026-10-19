@@ -80,3 +80,16 @@ Object.assign(exports, require('./community'));
 Object.assign(exports, require('./learning'));
 
 Object.assign(exports,require('./account_deletion'));
+
+const {onDocumentWritten} = require('firebase-functions/v2/firestore');
+const {onSchedule} = require('firebase-functions/v2/scheduler');
+const {syncTimeout, sweepTimeouts} = require('./mutual_timeout');
+exports.syncMutualExchangeTimeout = onDocumentWritten({
+  document: 'sessions/{sessionId}', region: 'europe-west1',
+  minInstances: 0, maxInstances: 1, memory: '256MiB', retry: true,
+}, event => syncTimeout(db, event.params.sessionId));
+exports.processMutualExchangeTimeouts = onSchedule({
+  schedule: 'every 15 minutes', timeZone: 'Etc/UTC', region: 'europe-west1',
+  minInstances: 0, maxInstances: 1, memory: '256MiB', timeoutSeconds: 300,
+  retryCount: 3,
+}, () => sweepTimeouts(db));

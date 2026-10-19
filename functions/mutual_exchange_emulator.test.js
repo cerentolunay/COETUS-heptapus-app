@@ -16,6 +16,7 @@ beforeEach(async()=>{if(enabled)await env.clearFirestore();});
 after(async()=>{if(enabled){await env.cleanup();await require('firebase-admin/app').deleteApp(require('firebase-admin/app').getApp());}});
 const check=(name,fn)=>test(name,{skip:!enabled},fn);
 const client=uid=>env.authenticatedContext(uid).firestore();
+const timeout=require('./mutual_timeout');
 async function seed(){
   for(const uid of ['a','b','outsider'])await db.doc('users/'+uid).set({id:uid,email:uid+'@example.test',credits:200,lockedCredits:0,signupRewardVersion:2});
   for(const [uid,kind,id,name,level] of [['a','teachSkills','python','Python',4],['a','learnSkills','guitar','Gitar',1],['b','teachSkills','guitar','Gitar',6],['b','learnSkills','python','Python',1]])
@@ -135,4 +136,51 @@ check('legacy one-way callables cannot accept or settle a mutual exchange',async
   await assert.rejects(api.completeLearningSession.run({auth:{uid:'a',token:{}},data:{sessionId:'mutual'}}));
   await assert.rejects(api.cancelLearningSession.run({auth:{uid:'b',token:{}},data:{sessionId:'mutual'}}));
   await balances(140,160,60,40);
+});
+
+check('server queues first confirmation, reminds once and expires without an open app',async()=>{
+  await seed();await propose();await accept();await action('a','complete');
+  const start=(await db.doc('sessions/mutual').get()).data().completionRequestedAt.toMillis();
+  await timeout.syncTimeout(db,'mutual');
+  assert.equal((await db.doc('exchangeTimeoutJobs/mutual').get()).data().dueAt.toMillis(),start+24*3600000);
+  assert.equal(await timeout.sweepTimeouts(db,start+24*3600000-1),0);
+  assert.equal(await timeout.sweepTimeouts(db,start+24*3600000),1);
+  assert.equal(await timeout.processTimeout(db,'mutual',start+25*3600000),'waiting');
+  await balances(140,160,60,40);
+  assert.equal(await timeout.sweepTimeouts(db,start+72*3600000),1);
+  await balances(200,200,0,0);
+  assert.equal((await db.doc('sessions/mutual').get()).data().status,'expired');
+  assert.equal((await db.collection('notifications').get()).size,3);
+  assert.equal((await db.doc('exchangeTimeoutJobs/mutual').get()).exists,false);
+});
+check('server duplicate concurrent expiry refunds both deposits only once',async()=>{
+  await seed();await propose();await accept();await action('a','complete');await backdate(73);
+  await Promise.all([timeout.processTimeout(db,'mutual'),timeout.processTimeout(db,'mutual')]);
+  await balances(200,200,0,0);
+  await timeout.syncTimeout(db,'mutual');
+  assert.equal((await db.doc('exchangeTimeoutJobs/mutual').get()).exists,false);
+});
+check('server rechecks objection and cancellation even with a stale due job',async()=>{
+  for(const kind of ['dispute','cancel']){
+    await env.clearFirestore();await seed();await propose();await accept();await action('a','complete');
+    await timeout.syncTimeout(db,'mutual');await action('b',kind);await backdate(73);
+    assert.equal(await timeout.processTimeout(db,'mutual'),'ignored');
+    await balances(140,160,60,40);
+    assert.equal((await db.doc('sessions/mutual').get()).data().status,'disputed');
+  }
+});
+check('server refuses a damaged wallet atomically and retains its job for investigation',async()=>{
+  await seed();await propose();await accept();await action('a','complete');await backdate(73);
+  await timeout.syncTimeout(db,'mutual');await db.doc('users/b').update({lockedCredits:0});
+  await assert.rejects(timeout.processTimeout(db,'mutual'),/Invalid mutual wallet/);
+  assert.equal((await db.doc('users/a').get()).data().credits,140);
+  assert.equal((await db.doc('sessions/mutual').get()).data().status,'active');
+  assert.equal((await db.doc('exchangeTimeoutJobs/mutual').get()).exists,true);
+});
+check('server ignores legacy and unfunded sessions; clients cannot forge timeout jobs',async()=>{
+  await seed();await propose();await timeout.syncTimeout(db,'mutual');
+  assert.equal((await db.doc('exchangeTimeoutJobs/mutual').get()).exists,false);
+  await db.doc('sessions/legacy').set({schemaVersion:1,status:'active'});
+  assert.equal(await timeout.processTimeout(db,'legacy'),'ignored');
+  await assertFails(setDoc(doc(client('a'),'exchangeTimeoutJobs/mutual'),{dueAt:Timestamp.now()}));
 });
