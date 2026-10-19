@@ -1,4 +1,4 @@
-# Bu geliştirme dalının doğrulama kaydı
+# Yayına hazırlık ve telefon sürümü doğrulama kaydı
 
 **Tarih: 19 Ekim 2026, Türkiye saati.**
 
@@ -12,7 +12,7 @@ ve paylaştığı karşılıklı takastır. Çift taraflı escrow ve ortak tamam
 uygulanmadı; bu testler onun hazır olduğunu kanıtlamaz. Güncel hedef ve yapılacaklar
 ana yol haritasının bölüm 7'sinde ve cihaz matrisinin E bölümündedir.
 
-## Son çalıştırılan kontroller
+## İlk doğrulama turu (`e7634a1`)
 
 | Kontrol | Sonuç | Kapsam |
 |---|---|---|
@@ -93,8 +93,8 @@ Kaynaklar `c80d250` birleştirme commit'iyle `main`e alınıp GitHub'a gönderil
 Sonraki belge güncellemesi normal APK kurulumu ve sohbet zaman önerisinin henüz
 placeholder olmasını da kapsar; uygulama kaynakları test edilen sürümle aynıdır.
 
-Telefon paketleri normal giriş noktası (`lib/main.dart`) ve çevrimdışı önizleme
-(`lib/main_preview.dart`) için ayrı **debug APK** dosyalarıdır. Paket dalındaki
+Telefon paketleri normal giriş noktası (`lib/main.dart`, **profile**) ve çevrimdışı
+önizleme (`lib/main_preview.dart`, **debug**) için ayrı test APK dosyalarıdır. Paket dalındaki
 [`SURUM.md`](https://github.com/cerentolunay/COETUS-heptapus-app/blob/builds/android-preview/SURUM.md)
 başarılı derleme kaydını, kesin kaynak commit'ini, sertifika ve checksum'u taşır.
 Paketin varlığı/sonucu bu kayıttan kontrol edilir. Android SDK 36, eklentiler için
@@ -102,3 +102,29 @@ SDK 34/35, build-tools 35.0.0 ve **tam JDK 21 (javac dahil)** gerekir;
 ilk denemede ortamdaki yalnızca
 JRE kurulumu derlemeyi durdurdu, tam JDK eklendi. Mağaza release imzası ve gerçek
 cihaz/servis doğrulaması ayrıca tamamlanmalıdır.
+
+## Hazır Android test paketleri
+
+Uygulama kaynak commit'i: `4186229a47a1467dfa33123b0c7f9ea4a7c4745f`.
+Sonraki main değişiklikleri dokümantasyondur; uygulama kaynakları aynı kalmıştır.
+
+| Paket | Mod | Boyut | Derleme |
+|---|---|---|---|
+| `coetus-test-arm64.apk` | profile, `main.dart` | 39.5 MB / 37.70 MiB | Geçti |
+| `coetus-preview-arm64.apk` | debug, `main_preview.dart` | 100.6 MB / 95.94 MiB | Geçti |
+
+İki APK için `apksigner verify` geçti; aynı test sertifikasıyla APK Signature v2
+imzası doğrulandı. `aapt dump badging`: `com.heptapus.coetus`, sürüm 1.0.0,
+versionCode 2001 (ABI bölme nedeniyle), arm64-v8a, minimum API 24, hedef/derleme
+SDK 36. ZIP hizalama (`zipalign -c -P 16 4`) ve SHA-256 kontrolleri de geçti.
+Profile paketinde AOT `libapp.so`, önizlemede debug `kernel_blob.bin` bulundu.
+
+Normal debug APK da derlendi; 123.83 MiB olduğu için GitHub'ın 100 MiB dosya sınırını
+aşıyordu. İndirilen normal paket bu nedenle daha küçük profile sürümüdür.
+Büyük APK dosyaları kaynak main dalına eklenmez;
+[`builds/android-preview` indirme dalında](https://github.com/cerentolunay/COETUS-heptapus-app/tree/builds/android-preview)
+saklanır. Dosya hash'leri ve Google için sertifika parmak izleri o dalın `SURUM.md`
+ve `SHA256SUMS` dosyalarındadır.
+
+Bu statik paket kontrolleri fiziksel Android'de açılış, Google/e-posta teslimi,
+canlı token veya çift taraflı escrow için başarı belgesi değildir.

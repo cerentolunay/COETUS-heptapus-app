@@ -4,6 +4,10 @@
 üretim işlerini gerçekleştir. **23 (iOS)** ve **24 (ödeme)** sonraki aşamadır.
 Numara tek başına bağımlılığı ortadan kaldırmaz; her dosyadaki ön koşulu kontrol et.
 
+**Zaman kazandıran paralel iş:** 21'deki Play hesabı araştırması/doğrulamasını
+02'de bütçe kararı verildikten sonra erkenden başlatabilirsin. AAB yükleme ve
+mağaza testi için 18–20 tamamlanır; hesap doğrulamasını son güne bırakma.
+
 Her görev ayrı dosyada yapılacak adımlar, sorumlu, ön koşullar, kabul ölçütleri ve
 kanıt alanı içerir. Kutuları kanıt olmadan kapatma. Kodda bulunan ama gerçek cihazda
 ve canlıda denenmemiş işler tamamlanmış değildir. 50/20 hediyeler ve tek yönlü
@@ -45,7 +49,7 @@ tek tek Issue oluşturabilirsin veya dosyaları GitHub düzenleyicisinden takip 
 | 18 | [ ] | [Gizlilik, kullanım, topluluk ve silme sayfalarını yayınla](gorevler/18.md) | 01, 13, 14, 15 | Ürün sahibi |
 | 19 | [ ] | [Android release imzasını ve uygulama kimliğini hazırla](gorevler/19.md) | 03, 10 | Hesap sahibi + geliştirici |
 | 20 | [ ] | [Üretim AAB’sini aynı commit’ten üret ve doğrula](gorevler/20.md) | 09, 17, 18, 19 | Geliştirici + testçi |
-| 21 | [ ] | [Play Console hesabı, mağaza sayfası ve zorunlu testi tamamla](gorevler/21.md) | 18, 19, 20 | Play hesabı sahibi |
+| 21 | [ ] | [Play Console hesabı, mağaza sayfası ve zorunlu testi tamamla](gorevler/21.md) | Hesap işleri: 02 sonrası; kapanış: 18, 19, 20 | Play hesabı sahibi |
 | 22 | [ ] | [Onaylı backend ve mağaza yayınını kontrollü gerçekleştir](gorevler/22.md) | 02, 09, 12, 14, 17, 18, 20, 21 | Ürün sahibi + yetkili geliştirici |
 | 23 | [ ] | [iOS Google/Apple kurulumu ve TestFlight hazırlığı](gorevler/23.md) | 02, 17, 18; Android ilk yayınına göre sonraki aşama | Apple hesabı sahibi + geliştirici |
 | 24 | [ ] | [Premium ve 250 token satışını ayrı sürümde geliştir](gorevler/24.md) | 01, 02, 07, 18, 22 | Ürün sahibi + ödeme geliştiricisi |

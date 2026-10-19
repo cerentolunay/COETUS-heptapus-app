@@ -7,7 +7,8 @@
 | Normal test sürümü | Gerçek giriş/kayıt ve uygulama akışını kendi test hesabınla kontrol etmek; depodaki Firebase projesine bağlanır | [coetus-test-arm64.apk](https://github.com/cerentolunay/COETUS-heptapus-app/raw/refs/heads/builds/android-preview/coetus-test-arm64.apk) |
 | Çevrimdışı önizleme | Hesap açmadan 28 ekranı örnek Deniz hesabıyla incelemek; Firebase'e bağlanmaz | [coetus-preview-arm64.apk](https://github.com/cerentolunay/COETUS-heptapus-app/raw/refs/heads/builds/android-preview/coetus-preview-arm64.apk) |
 
-İkisi de debug imzalıdır; mağaza sürümü değildir. Premium satın alma kapalıdır.
+Normal paket **profile**, önizleme **debug** modundadır; ikisi de aynı test
+sertifikasıyla imzalanır. Premium satın alma kapalıdır.
 Google girişi, e-posta teslimi, canlı kurallar ve backend henüz gerçek cihazda
 doğrulanmadı. Normal APK'nın derlenmesi bu servislerin tamamlandığını göstermez.
 Önce çevrimdışı pakette tasarımı inceleyebilir, sonra normal paketi kurabilirsin.
@@ -97,10 +98,13 @@ flutter analyze --no-pub
 flutter test --no-pub
 flutter build apk --debug --target-platform android-arm64 --split-per-abi -t lib/main_preview.dart
 # Önizleme çıktısını ayrı yere kopyaladıktan sonra normal test paketi:
-flutter build apk --debug --target-platform android-arm64 --split-per-abi -t lib/main.dart
+flutter build apk --profile --target-platform android-arm64 --split-per-abi --no-tree-shake-icons -t lib/main.dart
 ```
 
-Her komut aynı çıktıyı yazar: `build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk`.
+Çıktılar `build/app/outputs/flutter-apk/` altındadır: önizleme için
+`app-arm64-v8a-debug.apk`, normal paket için `app-arm64-v8a-profile.apk`.
+Normal debug çıktısı GitHub'ın 100 MiB tek dosya sınırını aştığı için dağıtımda
+daha küçük, performans incelemesine uygun profile paketi kullanılır.
 `main_preview.dart` yalnızca debug modunda çalışır. Mağaza AAB'si gerçek `main.dart`,
 release imzası ve tamamlanmış yayın kapıları gerektirir; [görev 19–22](YAYIN_GOREVLERI.md).
 
