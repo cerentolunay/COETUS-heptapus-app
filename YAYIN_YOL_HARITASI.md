@@ -69,6 +69,7 @@ hâle gelmez. İki yönlü eşleşme ve escrow dönüşümü üretim öncesi P0 
 | Beceri seviyesi | Ekle/düzenle/paylaş için ortak mor/lime pencere | Fiziksel cihazda klavye ve büyük yazı kontrolü |
 | Eşleşme/emanet token | Mevcut kod/testler tek yönlü ders modelinde | P0: iki kişinin de öğrenip paylaştığı takasa, iki taraflı escrow ve mutabakata dönüşüm; backend kararı ve canlı test |
 | Sohbet | Firestore katılımcı erişim kuralları var | Engelleme, spam politikası, iki cihaz ve çevrimdışı test |
+| Sohbette zaman önerisi | Onayla/Değiştir düğmeleri yalnızca "yakında" mesajı gösteriyor | Repository, katılımcı yetkisi ve iki kişinin zaman mutabakatı; görev 06 |
 | Portföy şikâyeti | UI + `reportPortfolioEntry` + `contentReports` var | Gerçek moderasyon takibi ve işlem akışı |
 | Genel moderasyon | İlgi önerisi yönetimi var | Kullanıcı engelleme ve genel sohbet/topluluk şikâyet yönetimi bulunmadı |
 | Hesap silme | İstemci, sunucu, temizlik ve testler var | Canlı `deleteAccount` kullanılabilirliği ve gerçek silme testi |

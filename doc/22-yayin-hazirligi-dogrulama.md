@@ -89,6 +89,15 @@ klavyeli akışın fiziksel cihaz testi değildir.
 GitHub Issues API ağ erişimi engelli olduğundan gerçek Issue nesneleri oluşturulmadı;
 her görevde önceden doldurulan Issue açma bağlantısı vardır.
 
-Android paketi çevrimdışı **debug önizlemesidir**. Paket dalındaki `SURUM.md`
-başarılı derleme çıktısını, kaynak commit'ini, sertifika ve checksum kaydını taşır.
-Mağaza release imzası ve gerçek cihaz/servis doğrulaması ayrıca tamamlanmalıdır.
+Kaynaklar `c80d250` birleştirme commit'iyle `main`e alınıp GitHub'a gönderildi.
+Sonraki belge güncellemesi normal APK kurulumu ve sohbet zaman önerisinin henüz
+placeholder olmasını da kapsar; uygulama kaynakları test edilen sürümle aynıdır.
+
+Telefon paketleri normal giriş noktası (`lib/main.dart`) ve çevrimdışı önizleme
+(`lib/main_preview.dart`) için ayrı **debug APK** dosyalarıdır. Paket dalındaki
+[`SURUM.md`](https://github.com/cerentolunay/COETUS-heptapus-app/blob/builds/android-preview/SURUM.md)
+başarılı derleme kaydını, kesin kaynak commit'ini, sertifika ve checksum'u taşır.
+Paketin varlığı/sonucu bu kayıttan kontrol edilir. Android SDK 36 / build-tools
+36.0.0 ve **tam JDK 21 (javac dahil)** gerekir; ilk denemede ortamdaki yalnızca
+JRE kurulumu derlemeyi durdurdu, tam JDK eklendi. Mağaza release imzası ve gerçek
+cihaz/servis doğrulaması ayrıca tamamlanmalıdır.
