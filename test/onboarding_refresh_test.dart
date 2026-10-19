@@ -20,6 +20,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(app(const DiscoveryTestPage()));
+    await tester.pumpAndSettle();
     expect(find.byType(InterestTree), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Gitar'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('interest-branch-music')));

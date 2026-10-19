@@ -87,7 +87,7 @@ class ProfileCompletionService {
       'bio': bio.trim(),
       'location': location.trim(),
       if (photoUrl?.trim().isNotEmpty == true) 'photoUrl': photoUrl!.trim(),
-      'interests': interests.toSet().toList(),
+      'interests': FieldValue.arrayUnion(interests.toSet().toList()),
       'teachSkillNames': teachNames.where((n) => n.isNotEmpty).toList(),
       'learnSkillNames': learnNames.where((n) => n.isNotEmpty).toList(),
       'profileCompleted': true,

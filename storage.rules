@@ -23,8 +23,7 @@ service firebase.storage {
         firestore.get(/databases/(default)/documents/communityPosts/$(postId)).data.authorId == uid);
       allow create: if resource == null && owner(uid) &&
         !firestore.exists(/databases/(default)/documents/communityPosts/$(postId)) && request.resource.size > 0 && (
-        (request.resource.contentType.matches('image/(jpeg|png|webp)') && request.resource.size <= 10 * 1024 * 1024) ||
-        (request.resource.contentType.matches('video/(mp4|quicktime|webm)') && request.resource.size <= 50 * 1024 * 1024));
+        request.resource.contentType.matches('image/(jpeg|png|webp)') && request.resource.size <= 10 * 1024 * 1024);
       allow update: if false;
       allow delete: if owner(uid) && (!firestore.exists(/databases/(default)/documents/communityPosts/$(postId)) ||
         firestore.get(/databases/(default)/documents/communityPosts/$(postId)).data.status == 'deleted');
@@ -36,8 +35,7 @@ service firebase.storage {
         firestore.get(/databases/(default)/documents/skillVerifications/$(entryId)).data.status == 'published');
       allow create: if resource == null && owner(uid) &&
         !firestore.exists(/databases/(default)/documents/skillVerifications/$(entryId)) && request.resource.size > 0 && (
-        (request.resource.contentType.matches('image/(jpeg|png|webp)') && request.resource.size <= 10 * 1024 * 1024) ||
-        (request.resource.contentType.matches('video/(mp4|quicktime|webm)') && request.resource.size <= 50 * 1024 * 1024));
+        request.resource.contentType.matches('image/(jpeg|png|webp)') && request.resource.size <= 10 * 1024 * 1024);
       allow update: if false;
       allow delete: if owner(uid) && (!firestore.exists(/databases/(default)/documents/skillVerifications/$(entryId)) ||
         firestore.get(/databases/(default)/documents/skillVerifications/$(entryId)).data.status == 'deleted');
@@ -45,8 +43,7 @@ service firebase.storage {
     match /verificationEvidence/{uid}/{requestId}/{filename} {
       allow read: if owner(uid) || reviewer() || (activeAccount() && approved(requestId));
       allow create: if resource == null && owner(uid) && request.resource.size > 0 && (
-        (request.resource.contentType.matches('image/(jpeg|png|webp)') && request.resource.size <= 10 * 1024 * 1024) ||
-        (request.resource.contentType.matches('video/(mp4|quicktime|webm)') && request.resource.size <= 50 * 1024 * 1024));
+        request.resource.contentType.matches('image/(jpeg|png|webp)') && request.resource.size <= 10 * 1024 * 1024);
       allow update: if false;
       allow delete: if owner(uid) && (
         !firestore.exists(/databases/(default)/documents/skillVerifications/$(requestId)) ||

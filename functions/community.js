@@ -49,7 +49,7 @@ exports.publishCommunityPost = onCall(options, async r => {
     try { [meta] = await getStorage().bucket().file(path).getMetadata(); }
     catch { throw new HttpsError('not-found', 'Paylaşım dosyası bulunamadı.'); }
     if (!validMedia(meta.contentType, Number(meta.size)))
-      throw new HttpsError('invalid-argument', 'Fotoğraf en fazla 10 MB, video 50 MB olabilir.');
+      throw new HttpsError('invalid-argument', 'Fotoğraf en fazla 10 MB olabilir.');
     media = { path, contentType: meta.contentType, size: Number(meta.size) };
   }
   return db.runTransaction(async tx => {

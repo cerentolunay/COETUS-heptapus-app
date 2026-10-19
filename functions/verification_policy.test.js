@@ -8,7 +8,7 @@ test('optional portfolio contribution is capped at six and ignores empty skills'
 });
 test('media limits reject oversized, unsupported, and empty uploads', () => {
   assert.equal(validMedia('image/jpeg', 10 * 1024 * 1024), true);
-  assert.equal(validMedia('video/mp4', 50 * 1024 * 1024), true);
+  assert.equal(validMedia('video/mp4', 50 * 1024 * 1024), false);
   assert.equal(validMedia('image/jpeg', 11 * 1024 * 1024), false);
   assert.equal(validMedia('video/mp4', 51 * 1024 * 1024), false);
   assert.equal(validMedia('application/pdf', 10), false);

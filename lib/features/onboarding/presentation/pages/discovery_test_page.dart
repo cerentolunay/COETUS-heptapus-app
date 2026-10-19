@@ -19,9 +19,30 @@ class DiscoveryTestPage extends StatefulWidget {
 class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
   final _selection = InterestSelection();
   bool _isSaving = false;
+  bool _loadingSelection = true;
+  @override
+  void initState() {
+    super.initState();
+    _restoreSelection();
+  }
+
+  Future<void> _restoreSelection() async {
+    try {
+      final profile = await ProfileRepositoryFactory.create().loadProfile();
+      if (!mounted) return;
+      _selection.restoreSkills(
+        teach: profile.teachSkills,
+        learn: profile.learnSkills,
+      );
+    } catch (_) {
+      /* New or signed-out profiles can start with an empty selection. */
+    } finally {
+      if (mounted) setState(() => _loadingSelection = false);
+    }
+  }
 
   Future<void> _handleContinue() async {
-    if (_isSaving) return;
+    if (_isSaving || _loadingSelection) return;
     if (_selection.skills.values.any((skill) => !skill.learn && !skill.teach)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -68,7 +89,11 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
       }
 
       if (!mounted) return;
-      context.go('/home');
+      if (context.canPop()) {
+        context.pop(true);
+      } else {
+        context.go('/home');
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -149,7 +174,7 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
                 child: SingleChildScrollView(
                   child: InterestTree(
                     selection: _selection,
-                    enabled: !_isSaving,
+                    enabled: !_isSaving && !_loadingSelection,
                     onChanged: () => setState(() {}),
                   ),
                 ),
@@ -164,7 +189,9 @@ class _DiscoveryTestPageState extends State<DiscoveryTestPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isSaving ? null : _handleContinue,
+                  onPressed: _isSaving || _loadingSelection
+                      ? null
+                      : _handleContinue,
                   child: _isSaving
                       ? const SizedBox(
                           width: 20,

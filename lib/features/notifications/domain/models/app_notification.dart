@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AppNotificationType {
+  profileConnection,
   offerReceived,
   offerAccepted,
   offerRejected,
@@ -14,6 +15,8 @@ enum AppNotificationType {
 
   String get value {
     switch (this) {
+      case AppNotificationType.profileConnection:
+        return 'profile_connection';
       case AppNotificationType.communityActivity:
         return 'community_activity';
       case AppNotificationType.tokenSupport:

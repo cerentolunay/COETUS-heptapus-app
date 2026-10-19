@@ -355,6 +355,7 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
   void _showProfileDetails(MatchCandidate candidate) {
     final profileData = OtherUserProfileData(
       id: candidate.user.id,
+      username: candidate.user.username,
       name: candidate.user.name.isEmpty
           ? 'İsimsiz Kullanıcı'
           : candidate.user.name,

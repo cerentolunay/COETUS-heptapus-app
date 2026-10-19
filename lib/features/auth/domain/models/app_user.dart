@@ -1,6 +1,7 @@
 class AppUser {
   final String id;
   final String name;
+  final String username;
   final String email;
   final String bio;
   final String? location;
@@ -13,6 +14,7 @@ class AppUser {
   const AppUser({
     required this.id,
     required this.name,
+    this.username = '',
     required this.email,
     required this.bio,
     this.location,
@@ -26,6 +28,7 @@ class AppUser {
   AppUser copyWith({
     String? id,
     String? name,
+    String? username,
     String? email,
     String? bio,
     String? location,
@@ -38,6 +41,7 @@ class AppUser {
     return AppUser(
       id: id ?? this.id,
       name: name ?? this.name,
+      username: username ?? this.username,
       email: email ?? this.email,
       bio: bio ?? this.bio,
       location: location ?? this.location,
@@ -53,6 +57,7 @@ class AppUser {
     final Map<String, dynamic> map = {
       'id': id,
       'name': name,
+      if (username.isNotEmpty) 'username': username,
       'displayName': name,
       'email': email,
       'bio': bio,
@@ -83,6 +88,7 @@ class AppUser {
     return AppUser(
       id: map['id'] as String? ?? '',
       name: name,
+      username: map['username'] as String? ?? '',
       email: map['email'] as String? ?? '',
       bio: bio,
       location: map['location'] as String?,

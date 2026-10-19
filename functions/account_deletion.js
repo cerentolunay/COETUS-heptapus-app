@@ -74,6 +74,8 @@ async function cleanupAccount(uid) {
   await deleteQuery(db.collection('interestSuggestions').where('ownerId','==',uid));
   for(const field of ['userId','senderId'])await deleteQuery(db.collection('notifications').where(field,'==',uid));
   for(const field of ['reporterId','ownerId'])await deleteQuery(db.collection('contentReports').where(field,'==',uid));
+  await deleteQuery(db.collection('usernames').where('userId','==',uid));
+  await deleteQuery(db.collection('profileConnections').where('participants','array-contains',uid));
   for(const collection of ['matches','sessions','chats'])await anonymizeShared(collection,uid);
   const bucket=getStorage().bucket();
     for(const folder of ['communityMedia','portfolioMedia','verificationEvidence','profilePhotos'])await bucket.deleteFiles({prefix:`${folder}/${uid}/`});

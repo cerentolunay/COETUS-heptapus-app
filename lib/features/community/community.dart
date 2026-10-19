@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:video_player/video_player.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 
 Future<void> communityCall(String name, Map<String, dynamic> data) async {
@@ -90,9 +89,7 @@ class _CommunityFeedState extends State<CommunityFeed> {
                     'commentCount': 2,
                     'media': {
                       'path': 'preview-media',
-                      'contentType': name == 'Deniz'
-                          ? 'video/mp4'
-                          : 'image/jpeg',
+                      'contentType': 'image/jpeg',
                     },
                   },
                   score: 94,
@@ -272,12 +269,10 @@ class _CommunityPostState extends State<CommunityPost> {
           ),
           const SizedBox(height: 12),
           Text(p['caption'] as String? ?? ''),
-          if (media != null) ...[
+          if (media != null &&
+              (media['contentType'] as String? ?? '').startsWith('image/')) ...[
             const SizedBox(height: 12),
-            CommunityMedia(
-              path: media['path'] as String,
-              video: (media['contentType'] as String).startsWith('video/'),
-            ),
+            CommunityMedia(path: media['path'] as String),
           ],
           const SizedBox(height: 12),
           Wrap(
@@ -404,122 +399,38 @@ class _CommunityPostState extends State<CommunityPost> {
 }
 
 class CommunityMedia extends StatefulWidget {
-  const CommunityMedia({super.key, required this.path, required this.video});
+  const CommunityMedia({super.key, required this.path});
   final String path;
-  final bool video;
   @override
   State<CommunityMedia> createState() => _CommunityMediaState();
 }
 
-class _CommunityMediaState extends State<CommunityMedia>
-    with WidgetsBindingObserver {
-  late Future<String> _url;
-  VideoPlayerController? _controller;
-  bool _loading = false;
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    if (!PreviewMode.enabled) {
-      _url = FirebaseStorage.instance.ref(widget.path).getDownloadURL();
-    }
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) _controller?.pause();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
-    super.dispose();
-  }
-
+class _CommunityMediaState extends State<CommunityMedia> {
+  late final Future<String>? _url = PreviewMode.enabled
+      ? null
+      : FirebaseStorage.instance.ref(widget.path).getDownloadURL();
   @override
   Widget build(BuildContext context) => PreviewMode.enabled
-      ? PreviewMedia(video: widget.video)
+      ? const PreviewMedia()
       : ClipRRect(
           borderRadius: BorderRadius.circular(18),
           child: FutureBuilder<String>(
             future: _url,
-            builder: (context, s) {
-              if (s.hasError) {
-                return const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('Medya yüklenemedi.'),
-                );
-              }
-              if (!s.hasData) {
+            builder: (context, snapshot) {
+              if (snapshot.hasError) return const Text('Fotoğraf yüklenemedi.');
+              if (!snapshot.hasData) {
                 return const SizedBox(
                   height: 180,
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
-              if (!widget.video) {
-                return Image.network(
-                  s.data!,
-                  width: double.infinity,
-                  height: 280,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      const Text('Fotoğraf yüklenemedi.'),
-                );
-              }
-              final c = _controller;
-              return Column(
-                children: [
-                  if (c?.value.isInitialized == true)
-                    AspectRatio(
-                      aspectRatio: c!.value.aspectRatio,
-                      child: VideoPlayer(c),
-                    ),
-                  TextButton.icon(
-                    onPressed: _loading
-                        ? null
-                        : () async {
-                            setState(() => _loading = true);
-                            try {
-                              if (_controller == null) {
-                                final controller =
-                                    VideoPlayerController.networkUrl(
-                                      Uri.parse(s.data!),
-                                    );
-                                _controller = controller;
-                                await controller.initialize();
-                              }
-                              if (!mounted) return;
-                              final controller = _controller!;
-                              controller.value.isPlaying
-                                  ? await controller.pause()
-                                  : await controller.play();
-                            } catch (_) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Video oynatılamadı.'),
-                                  ),
-                                );
-                              }
-                            } finally {
-                              if (mounted) setState(() => _loading = false);
-                            }
-                          },
-                    icon: Icon(
-                      c?.value.isPlaying == true
-                          ? Icons.pause_circle
-                          : Icons.play_circle,
-                    ),
-                    label: Text(
-                      _loading
-                          ? 'Video yükleniyor…'
-                          : c?.value.isPlaying == true
-                          ? 'Duraklat'
-                          : 'Videoyu izle',
-                    ),
-                  ),
-                ],
+              return Image.network(
+                snapshot.data!,
+                width: double.infinity,
+                height: 280,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, stack) =>
+                    const Text('Fotoğraf yüklenemedi.'),
               );
             },
           ),
@@ -769,23 +680,20 @@ class _CommunityComposerState extends State<CommunityComposer> {
       .get();
   String? _skillId, _path, _error;
   XFile? _file;
-  bool _video = false, _busy = false, _attempted = false;
+  bool _busy = false, _attempted = false;
   @override
   void dispose() {
     _caption.dispose();
     super.dispose();
   }
 
-  Future<void> _pick(bool video) async {
+  Future<void> _pick() async {
     try {
       final picker = ImagePicker();
-      final file = video
-          ? await picker.pickVideo(source: ImageSource.gallery)
-          : await picker.pickImage(source: ImageSource.gallery);
+      final file = await picker.pickImage(source: ImageSource.gallery);
       if (file != null && mounted) {
         setState(() {
           _file = file;
-          _video = video;
           _path = null;
         });
       }
@@ -817,10 +725,10 @@ class _CommunityComposerState extends State<CommunityComposer> {
       final file = _file;
       if (file != null && _path == null) {
         final bytes = await file.readAsBytes();
-        if (bytes.length > (_video ? 50 : 10) * 1024 * 1024) {
+        if (bytes.length > 10 * 1024 * 1024) {
           throw FirebaseFunctionsException(
             code: 'invalid-argument',
-            message: 'Fotoğraf en fazla 10 MB, video 50 MB olabilir.',
+            message: 'Fotoğraf en fazla 10 MB olabilir.',
           );
         }
         final ext = file.name.split('.').last.toLowerCase();
@@ -829,15 +737,12 @@ class _CommunityComposerState extends State<CommunityComposer> {
           'jpeg': 'image/jpeg',
           'png': 'image/png',
           'webp': 'image/webp',
-          'mp4': 'video/mp4',
-          'mov': 'video/quicktime',
-          'webm': 'video/webm',
         };
         final type = types[ext];
         if (type == null) {
           throw FirebaseFunctionsException(
             code: 'invalid-argument',
-            message: 'JPG, PNG, WebP, MP4, MOV veya WebM seç.',
+            message: 'JPG, PNG veya WebP seç.',
           );
         }
         final path =
@@ -934,20 +839,15 @@ class _CommunityComposerState extends State<CommunityComposer> {
             spacing: 8,
             children: [
               OutlinedButton.icon(
-                onPressed: _busy || _attempted ? null : () => _pick(false),
+                onPressed: _busy || _attempted ? null : _pick,
                 icon: const Icon(Icons.photo_outlined),
                 label: const Text('Fotoğraf'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _busy || _attempted ? null : () => _pick(true),
-                icon: const Icon(Icons.videocam_outlined),
-                label: const Text('Video'),
               ),
             ],
           ),
           if (_file != null)
             ListTile(
-              leading: Icon(_video ? Icons.videocam : Icons.photo),
+              leading: const Icon(Icons.photo),
               title: Text(_file!.name),
               trailing: IconButton(
                 onPressed: _busy || _attempted

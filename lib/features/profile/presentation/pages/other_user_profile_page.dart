@@ -209,6 +209,11 @@ class OtherUserProfilePage extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (profile.username.isNotEmpty)
+                      Text(
+                        '@${profile.username}',
+                        style: const TextStyle(color: CoetusPalette.purple),
+                      ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -285,6 +290,7 @@ class OtherUserProfileData {
   final bool verified;
   final int matchScore;
   final String? photoUrl;
+  final String username;
   final bool? hasCompatibilityScore;
   bool get compatibilityAvailable => hasCompatibilityScore ?? matchScore > 0;
   final int creditsRequired;
@@ -293,6 +299,7 @@ class OtherUserProfileData {
   final List<OtherUserSkillData> learnSkills;
 
   const OtherUserProfileData({
+    this.username = '',
     required this.id,
     required this.name,
     required this.location,

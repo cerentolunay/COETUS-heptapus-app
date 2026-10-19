@@ -1,3 +1,5 @@
+import '../../domain/conversation_heart.dart';
+import '../widgets/conversation_heart.dart';
 import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
@@ -107,15 +109,20 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-          children: messages.map((message) {
-            if (message.type == ChatMessageType.schedule) {
-              return _ScheduleProposalCard(message: message);
-            }
-            return _MessageBubble(
-              message: message,
-              isMe: message.senderId == userId,
-            );
-          }).toList(),
+          children: [
+            ConversationHeartBadge(
+              heart: ConversationHeart.fromMessages(messages, userId),
+            ),
+            ...messages.map((message) {
+              if (message.type == ChatMessageType.schedule) {
+                return _ScheduleProposalCard(message: message);
+              }
+              return _MessageBubble(
+                message: message,
+                isMe: message.senderId == userId,
+              );
+            }),
+          ],
         );
       },
     );

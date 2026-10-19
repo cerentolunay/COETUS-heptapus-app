@@ -4,7 +4,6 @@ import 'package:coetus/features/community/community.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:video_player/video_player.dart';
 import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/features/profile/data/repositories/profile_repository_factory.dart';
 import 'package:coetus/features/profile/domain/models/skill_model.dart';
@@ -84,8 +83,6 @@ class _VerificationPageState extends State<VerificationPage> {
             for (final item in [
               (Icons.photo_library_outlined, 'Galeriden fotoğraf'),
               (Icons.photo_camera_outlined, 'Fotoğraf çek'),
-              (Icons.video_library_outlined, 'Galeriden video'),
-              (Icons.videocam_outlined, 'Video çek'),
             ].indexed)
               ListTile(
                 leading: Icon(item.$2.$1),
@@ -100,16 +97,11 @@ class _VerificationPageState extends State<VerificationPage> {
     try {
       final picker = ImagePicker();
       final source = choice.isOdd ? ImageSource.camera : ImageSource.gallery;
-      final file = choice < 2
-          ? await picker.pickImage(
-              source: source,
-              maxWidth: 1800,
-              imageQuality: 90,
-            )
-          : await picker.pickVideo(
-              source: source,
-              maxDuration: const Duration(seconds: 60),
-            );
+      final file = await picker.pickImage(
+        source: source,
+        maxWidth: 1800,
+        imageQuality: 90,
+      );
       if (file != null && mounted) {
         setState(() {
           if (_files.length < 3) _files.add(file);
@@ -194,7 +186,7 @@ class _VerificationPageState extends State<VerificationPage> {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Çalışma örneklerini yeteneğinin altına ekleyebilirsin. Fotoğraf/video tamamen isteğe bağlı; eklemeden de eşleşebilirsin. Yayımladığın çalışmalar giriş yapan kişilerce görülebilir.',
+                      'Çalışma örneklerini yeteneğinin altına ekleyebilirsin. Fotoğraf tamamen isteğe bağlı; eklemeden de eşleşebilirsin. Yayımladığın çalışmalar giriş yapan kişilerce görülebilir.',
                       style: TextStyle(color: CoetusPalette.cream, height: 1.5),
                     ),
                     SizedBox(height: 12),
@@ -220,11 +212,17 @@ class _VerificationPageState extends State<VerificationPage> {
                   ),
                 )
               else ...[
+                const Text('İlgili yetenek'),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: _skillId,
                   isExpanded: true,
                   decoration: const InputDecoration(
-                    labelText: 'İlgili yetenek',
+                    hintText: 'Yetenek seç',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                   ),
                   items: _skills
                       .map(
@@ -273,13 +271,11 @@ class _VerificationPageState extends State<VerificationPage> {
                   OutlinedButton.icon(
                     onPressed: _sending ? null : _pick,
                     icon: const Icon(Icons.add_photo_alternate_outlined),
-                    label: const Text(
-                      'Fotoğraf veya video ekle (isteğe bağlı)',
-                    ),
+                    label: const Text('Fotoğraf ekle (isteğe bağlı)'),
                   ),
                 const SizedBox(height: 8),
                 const Text(
-                  'En fazla 3 dosya · Fotoğraf 10 MB · Video 50 MB',
+                  'En fazla 3 fotoğraf · Fotoğraf başına 10 MB',
                   style: TextStyle(fontSize: 12),
                 ),
                 const SizedBox(height: 16),
@@ -386,78 +382,35 @@ class VerificationCard extends StatelessWidget {
 }
 
 class _EvidenceMedia extends StatefulWidget {
-  const _EvidenceMedia({required this.path, required this.video});
+  const _EvidenceMedia({required this.path});
   final String path;
-  final bool video;
   @override
   State<_EvidenceMedia> createState() => _EvidenceMediaState();
 }
 
 class _EvidenceMediaState extends State<_EvidenceMedia> {
-  VideoPlayerController? _controller;
-  String? _url, _error;
+  late final Future<String>? _url = PreviewMode.enabled
+      ? null
+      : VerificationService().mediaUrl(widget.path);
   @override
-  void initState() {
-    super.initState();
-    if (!PreviewMode.enabled) _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final url = await VerificationService().mediaUrl(widget.path);
-      if (!mounted) return;
-      if (widget.video) {
-        final controller = VideoPlayerController.networkUrl(Uri.parse(url));
-        _controller = controller;
-        await controller.initialize();
-      }
-      if (mounted) setState(() => _url = url);
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Kanıt açılamadı.');
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (PreviewMode.enabled) return PreviewMedia(video: widget.video);
-    if (_error != null) return Text(_error!);
-    if (_url == null) return const Center(child: CircularProgressIndicator());
-    if (!widget.video) {
-      return Image.network(
-        _url!,
-        height: 260,
-        fit: BoxFit.contain,
-        errorBuilder: (_, error, stack) => const Text('Fotoğraf açılamadı.'),
-      );
-    }
-    return Column(
-      children: [
-        AspectRatio(
-          aspectRatio: _controller!.value.aspectRatio,
-          child: VideoPlayer(_controller!),
-        ),
-        IconButton(
-          tooltip: 'Videoyu oynat veya duraklat',
-          icon: Icon(
-            _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
-          ),
-          onPressed: () {
-            setState(() {
-              _controller!.value.isPlaying
-                  ? _controller!.pause()
-                  : _controller!.play();
-            });
+  Widget build(BuildContext context) => PreviewMode.enabled
+      ? const PreviewMedia()
+      : FutureBuilder<String>(
+          future: _url,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) return const Text('Fotoğraf açılamadı.');
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return Image.network(
+              snapshot.data!,
+              height: 260,
+              fit: BoxFit.contain,
+              errorBuilder: (_, error, stack) =>
+                  const Text('Fotoğraf açılamadı.'),
+            );
           },
-        ),
-      ],
-    );
-  }
+        );
 }
 
 class VerifiedSkillsPanel extends StatefulWidget {
@@ -515,13 +468,12 @@ class EvidenceDetailsPage extends StatelessWidget {
         ),
         if (verification.type == 'portfolio')
           PortfolioEntryActions(entry: verification),
-        for (final file in verification.files)
+        for (final file in verification.files.where(
+          (file) => (file['contentType'] as String? ?? '').startsWith('image/'),
+        ))
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: _EvidenceMedia(
-              path: file['path'] as String,
-              video: (file['contentType'] as String).startsWith('video/'),
-            ),
+            child: _EvidenceMedia(path: file['path'] as String),
           ),
       ],
     ),

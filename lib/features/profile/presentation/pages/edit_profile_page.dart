@@ -1,3 +1,6 @@
+import 'dart:math';
+import '../../../social/data/profile_identity_service.dart';
+import '../../../social/domain/profile_identity.dart';
 import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -37,6 +40,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController _displayNameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final _usernameController = TextEditingController();
   ProfilePhoto? _selectedPhoto;
   String? _existingPhotoUrl, _uploadedPhotoUrl;
   bool _isPickingPhoto = false;
@@ -54,6 +58,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _displayNameController.dispose();
     _bioController.dispose();
     _locationController.dispose();
@@ -71,6 +76,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _bioController.text = profile.user.bio;
       _locationController.text = profile.user.location ?? '';
       _existingPhotoUrl = profile.user.photoUrl;
+      _usernameController.text = profile.user.username;
 
       String? photoError;
       if (widget.pickPhoto == null &&
@@ -194,6 +200,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
 
     try {
+      final requestedUsername = normalizeUsername(_usernameController.text);
+      if (requestedUsername.isNotEmpty &&
+          requestedUsername != _profileData!.user.username) {
+        final claimed = await ProfileIdentityService().claimUsername(
+          requestedUsername,
+        );
+        if (!mounted) return;
+        _profileData = _profileData!.copyWith(
+          user: _profileData!.user.copyWith(username: claimed),
+        );
+      }
       if (_selectedPhoto != null && _uploadedPhotoUrl == null) {
         _uploadedPhotoUrl =
             await (widget.uploadPhoto ?? ProfilePhotoService().upload)(
@@ -340,6 +357,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 18),
+                _buildFieldLabel(t, 'Kullanıcı adı'),
+                const SizedBox(height: CoetusSpace.sm),
+                TextFormField(
+                  key: const ValueKey('edit-username'),
+                  controller: _usernameController,
+                  enabled: !_isSaving,
+                  validator: (value) =>
+                      (value?.trim().isEmpty ?? true) &&
+                          (_profileData?.user.username.isEmpty ?? true)
+                      ? null
+                      : usernameError(value),
+                  decoration: const InputDecoration(
+                    prefixText: '@',
+                    hintText: 'Kullanıcı adı seç',
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _isSaving
+                      ? null
+                      : () => setState(
+                          () => _usernameController.text = suggestUsername(
+                            _displayNameController.text,
+                            Random.secure().nextInt(16777216).toRadixString(36),
+                          ),
+                        ),
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('Kullanıcı adı öner'),
+                ),
+                const SizedBox(height: 18),
                 _buildFieldLabel(t, 'Hakkında'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
@@ -404,6 +450,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: const Text('Seçimi iptal et'),
                   ),
                 const SizedBox(height: CoetusSpace.xxl),
+                OutlinedButton.icon(
+                  onPressed: _isSaving || _isPickingPhoto
+                      ? null
+                      : () => context.push('/discovery'),
+                  icon: const Icon(Icons.interests_outlined),
+                  label: const Text('İlgi alanlarını ekle'),
+                ),
+                const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: _isSaving || _isPickingPhoto ? null : _saveProfile,
                   child: _isSaving

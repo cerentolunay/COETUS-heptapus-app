@@ -1,3 +1,5 @@
+import '../features/social/presentation/find_profile_page.dart';
+import '../features/social/presentation/profile_qr.dart';
 import '../features/premium/presentation/pages/premium_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +36,12 @@ import 'preview_mode.dart';
 import 'preview_repositories.dart';
 
 const previewScreens = <({String group, String name, String path})>[
+  (
+    group: 'İletişim',
+    name: 'Kullanıcı adı ve QR ile bul',
+    path: '/find-profile',
+  ),
+  (group: 'İletişim', name: 'Profil QR kodu okut', path: '/scan-profile'),
   (group: 'Profil', name: 'Premium ve token paketleri', path: '/premium'),
   (group: 'Başlangıç', name: 'Açılış', path: '/splash'),
   (group: 'Başlangıç', name: 'Karşılama', path: '/welcome'),
@@ -199,6 +207,8 @@ class _PreviewAppState extends State<PreviewApp> {
   );
 
   Widget _page(String path, BuildContext context) => switch (path) {
+    '/find-profile' => const FindProfilePage(),
+    '/scan-profile' => const ScanProfileQrPage(),
     '/splash' => const SplashPage(),
     '/welcome' => const WelcomePage(),
     '/onboarding' => const OnboardingIntroPage(),
@@ -280,7 +290,6 @@ class _PreviewAppState extends State<PreviewApp> {
         description: 'Akor geçişleri üzerine haftalık çalışmam.',
         files: [
           {'path': 'preview-media', 'contentType': 'image/jpeg'},
-          {'path': 'preview-video', 'contentType': 'video/mp4'},
         ],
       ),
     ),

@@ -32,6 +32,7 @@ class PreviewProfileRepository implements ProfileRepository {
     user: AppUser(
       id: PreviewMode.userId,
       name: 'Deniz',
+      username: 'deniz',
       email: 'deniz@example.invalid',
       bio: 'Birlikte öğrenmeyi ve üretmeyi seviyorum.',
       credits: 50,
@@ -56,6 +57,7 @@ class PreviewProfileRepository implements ProfileRepository {
         user: AppUser(
           id: person.$1,
           name: person.$2,
+          username: {'Ece': 'ece', 'Can': 'can', 'İpek': 'ipek'}[person.$2]!,
           email: '',
           bio:
               'Müziği birlikte keşfedelim. Akorlar ve ritim üzerine çalışabiliriz.',
