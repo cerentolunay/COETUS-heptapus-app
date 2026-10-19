@@ -1,3 +1,10 @@
+import 'dart:async';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:coetus/preview/preview_mode.dart';
+import 'package:flutter/services.dart';
+import '../../data/services/profile_photo_service.dart';
+import '../widgets/profile_photo_avatar.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,21 +15,31 @@ import '../../domain/models/profile_data.dart';
 import '../../domain/repositories/profile_repository.dart';
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({super.key});
+  const EditProfilePage({
+    super.key,
+    this.repository,
+    this.pickPhoto,
+    this.uploadPhoto,
+  });
+  final ProfileRepository? repository;
+  final Future<XFile?> Function(ImageSource source)? pickPhoto;
+  final Future<String> Function(ProfilePhoto photo)? uploadPhoto;
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  final ProfileRepository _profileRepository =
-      ProfileRepositoryFactory.create();
+  late final ProfileRepository _profileRepository =
+      widget.repository ?? ProfileRepositoryFactory.create();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final TextEditingController _displayNameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _photoUrlController = TextEditingController();
+  ProfilePhoto? _selectedPhoto;
+  String? _existingPhotoUrl, _uploadedPhotoUrl;
+  bool _isPickingPhoto = false;
 
   ProfileData? _profileData;
   bool _isLoading = true;
@@ -40,7 +57,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _displayNameController.dispose();
     _bioController.dispose();
     _locationController.dispose();
-    _photoUrlController.dispose();
     super.dispose();
   }
 
@@ -54,11 +70,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _displayNameController.text = profile.user.name;
       _bioController.text = profile.user.bio;
       _locationController.text = profile.user.location ?? '';
-      _photoUrlController.text = profile.user.photoUrl ?? '';
+      _existingPhotoUrl = profile.user.photoUrl;
+
+      String? photoError;
+      if (widget.pickPhoto == null &&
+          !PreviewMode.enabled &&
+          !kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          final lost = await ImagePicker().retrieveLostData();
+          final file = lost.files?.firstOrNull;
+          if (file != null) _selectedPhoto = await ProfilePhoto.read(file);
+          if (lost.exception != null) {
+            photoError =
+                'Önceki fotoğraf seçimi kurtarılamadı. Yeniden seçebilirsin.';
+          }
+        } catch (_) {
+          photoError =
+              'Önceki fotoğraf seçimi kurtarılamadı. Yeniden seçebilirsin.';
+        }
+      }
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
-        _errorMessage = null;
+        _errorMessage = photoError;
       });
     } catch (e) {
       if (!mounted) return;
@@ -67,6 +103,62 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _isLoading = false;
         _errorMessage = 'Profil yüklenemedi: $e';
       });
+    }
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    if (_isPickingPhoto || _isSaving) return;
+    setState(() => _isPickingPhoto = true);
+    try {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (sheetContext) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Galeriden fotoğraf seç'),
+                onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Fotoğraf çek'),
+                onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (source == null || !mounted) return;
+      final file =
+          await (widget.pickPhoto?.call(source) ??
+              ImagePicker().pickImage(
+                source: source,
+                maxWidth: 1024,
+                maxHeight: 1024,
+                imageQuality: 80,
+              ));
+      if (file == null) return;
+      final photo = await ProfilePhoto.read(file);
+      if (!mounted) return;
+      setState(() {
+        _selectedPhoto = photo;
+        _uploadedPhotoUrl = null;
+        _errorMessage = null;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = error is FormatException
+              ? error.message
+              : error is PlatformException
+              ? 'Fotoğraf seçilemedi. Kamera veya galeri iznini kontrol edip yeniden dene.'
+              : 'Fotoğraf açılamadı. Yeniden dene.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingPhoto = false);
     }
   }
 
@@ -94,7 +186,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_profileData == null) return;
+    if (_profileData == null || _isSaving || _isPickingPhoto) return;
 
     setState(() {
       _isSaving = true;
@@ -102,14 +194,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
 
     try {
+      if (_selectedPhoto != null && _uploadedPhotoUrl == null) {
+        _uploadedPhotoUrl =
+            await (widget.uploadPhoto ?? ProfilePhotoService().upload)(
+              _selectedPhoto!,
+            );
+      }
+      if (!mounted) return;
       final updatedUser = _profileData!.user.copyWith(
         name: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
         location: _locationController.text.trim(),
-        photoUrl: _photoUrlController.text.trim(),
+        photoUrl: _uploadedPhotoUrl ?? _existingPhotoUrl,
       );
 
       await _profileRepository.updateProfile(updatedUser);
+      if (_uploadedPhotoUrl != null && widget.uploadPhoto == null) {
+        unawaited(
+          ProfilePhotoService().removePrevious(
+            _existingPhotoUrl,
+            _uploadedPhotoUrl!,
+          ),
+        );
+      }
 
       if (!mounted) return;
 
@@ -126,7 +233,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (!mounted) return;
 
       setState(() {
-        _errorMessage = 'Profil güncellenemedi: $e';
+        _errorMessage = e is StateError
+            ? e.message
+            : e is FormatException
+            ? e.message
+            : 'Profil güncellenemedi. Bağlantını kontrol edip yeniden dene.';
       });
     } finally {
       if (mounted) {
@@ -220,6 +331,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 _buildFieldLabel(t, 'Görünen ad *'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
+                  enabled: !_isSaving,
                   controller: _displayNameController,
                   validator: _validateDisplayName,
                   decoration: const InputDecoration(
@@ -231,6 +343,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 _buildFieldLabel(t, 'Hakkında'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
+                  enabled: !_isSaving,
                   controller: _bioController,
                   validator: _validateBio,
                   minLines: 3,
@@ -244,6 +357,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 _buildFieldLabel(t, 'Konum'),
                 const SizedBox(height: CoetusSpace.sm),
                 TextFormField(
+                  enabled: !_isSaving,
                   controller: _locationController,
                   validator: _validateLocation,
                   decoration: const InputDecoration(
@@ -252,18 +366,46 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                _buildFieldLabel(t, 'Profil fotoğrafı bağlantısı'),
+                _buildFieldLabel(t, 'Profil fotoğrafı ekle'),
                 const SizedBox(height: CoetusSpace.sm),
-                TextFormField(
-                  controller: _photoUrlController,
-                  decoration: const InputDecoration(
-                    hintText: 'https://...',
-                    prefixIcon: Icon(Icons.image_outlined),
+                Center(
+                  child: ProfilePhotoAvatar(
+                    photoUrl: _existingPhotoUrl,
+                    bytes: _selectedPhoto?.bytes,
+                    size: 104,
                   ),
                 ),
+                const SizedBox(height: CoetusSpace.sm),
+                OutlinedButton.icon(
+                  onPressed: _isSaving || _isPickingPhoto
+                      ? null
+                      : _pickProfilePhoto,
+                  icon: const Icon(Icons.add_a_photo_outlined),
+                  label: Text(
+                    _isPickingPhoto
+                        ? 'Fotoğraf seçiliyor…'
+                        : 'Galeriden seç veya fotoğraf çek',
+                  ),
+                ),
+                if (_selectedPhoto != null)
+                  const Text(
+                    'Yeni fotoğraf seçildi. Kaydetmek için Profili Güncelle düğmesine dokun.',
+                    textAlign: TextAlign.center,
+                  ),
+                if (_selectedPhoto != null)
+                  TextButton(
+                    onPressed: _isSaving || _isPickingPhoto
+                        ? null
+                        : () => setState(() {
+                            _selectedPhoto = null;
+                            _uploadedPhotoUrl = null;
+                            _errorMessage = null;
+                          }),
+                    child: const Text('Seçimi iptal et'),
+                  ),
                 const SizedBox(height: CoetusSpace.xxl),
                 ElevatedButton(
-                  onPressed: _isSaving ? null : _saveProfile,
+                  onPressed: _isSaving || _isPickingPhoto ? null : _saveProfile,
                   child: _isSaving
                       ? const SizedBox(
                           width: 20,

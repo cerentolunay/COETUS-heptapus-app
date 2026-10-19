@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const { doc, setDoc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } = require('firebase/firestore');
-const { ref, uploadBytes, getBytes } = require('firebase/storage');
+const { ref, uploadBytes, getBytes, deleteObject } = require('firebase/storage');
 const enabled = !!process.env.FIRESTORE_EMULATOR_HOST;
 let env, db, api, bucket;
 before(async () => {
@@ -37,6 +37,25 @@ async function seed() {
   }
 }
 const request = (uid, data, reviewer = false) => ({ auth: { uid, token: { verificationReviewer: reviewer } }, data });
+emulatorTest('profile photos allow only owner image creation and authenticated reads; reject unsafe files and replacements', async () => {
+  const owner = env.authenticatedContext('photo-owner').storage('gs://demo-coetus.appspot.com');
+  const other = env.authenticatedContext('other').storage('gs://demo-coetus.appspot.com');
+  const anonymous = env.unauthenticatedContext().storage('gs://demo-coetus.appspot.com');
+  const path = 'profilePhotos/photo-owner/avatar.png';
+  await assertSucceeds(uploadBytes(ref(owner, path), Buffer.from('image'), {contentType: 'image/png'}));
+  await assertSucceeds(getBytes(ref(other, path)));
+  await assertFails(getBytes(ref(anonymous, path)));
+  await assertFails(uploadBytes(ref(other, 'profilePhotos/photo-owner/other.png'), Buffer.from('image'), {contentType: 'image/png'}));
+  await assertFails(uploadBytes(ref(owner, path), Buffer.from('replacement'), {contentType: 'image/png'}));
+  await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/script.svg'), Buffer.from('<svg/>'), {contentType: 'image/svg+xml'}));
+  await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/large.jpg'), Buffer.alloc(5 * 1024 * 1024 + 1), {contentType: 'image/jpeg'}));
+  await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/empty.jpg'), Buffer.alloc(0), {contentType: 'image/jpeg'}));
+  await assertFails(deleteObject(ref(other, path)));
+  await db.doc('accountDeletions/photo-owner').set({status: 'pending'});
+  await assertFails(getBytes(ref(owner, path)));
+  await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/deleted.jpg'), Buffer.from('image'), {contentType: 'image/jpeg'}));
+  await assertFails(deleteObject(ref(owner, path)));
+});
 emulatorTest('removed endorsement endpoint cannot grant trust or tokens even for a completed match',async()=>{
   await seed();
   for (const uid of ['student','student2','teacher','stranger']) {
@@ -296,6 +315,8 @@ deletionTest('deletion removes Auth, profile, authored content and media while r
   await db.doc('chats/shared/messages/mine').set({senderId:'student',text:'Özel metnim'});
   await db.doc('chats/shared/messages/other').set({senderId:'teacher',text:'Karşı tarafın mesajı'});
   const path='portfolioMedia/student/work/file.png';await bucket.file(path).save(Buffer.from('private'),{metadata:{contentType:'image/png'}});
+  await bucket.file('profilePhotos/student/avatar.png').save(Buffer.from('private'),{metadata:{contentType:'image/png'}});
+  await bucket.file('profilePhotos/teacher/avatar.png').save(Buffer.from('other'),{metadata:{contentType:'image/png'}});
   const result=await api.deleteAccount.run(deletionRequest('student',{uid:'teacher'}));
   assert.equal(result.deleted,true);assert.equal(result.pendingCleanup,false);
   await assert.rejects(auth.getUser('student'),e=>e.code==='auth/user-not-found');
@@ -311,6 +332,8 @@ deletionTest('deletion removes Auth, profile, authored content and media while r
   assert.equal((await db.doc('chats/shared').get()).data().participantNames.student,'Silinmiş hesap');
   assert.equal((await db.collection('transactions').get()).size,1);
   assert.equal((await bucket.file(path).exists())[0],false);
+  assert.equal((await bucket.file('profilePhotos/student/avatar.png').exists())[0],false);
+  assert.equal((await bucket.file('profilePhotos/teacher/avatar.png').exists())[0],true);
   assert.equal((await db.doc('users/teacher').get()).exists,true);
   assert.equal((await db.doc('accountDeletions/student').get()).data().status,'completed');
   await api.cleanupDeletedAccount.run({uid:'student'});

@@ -8,6 +8,14 @@ service firebase.storage {
       return firestore.exists(/databases/(default)/documents/skillVerifications/$(requestId)) &&
         firestore.get(/databases/(default)/documents/skillVerifications/$(requestId)).data.status == 'approved';
     }
+    match /profilePhotos/{uid}/{filename} {
+      allow read: if activeAccount();
+      allow create: if resource == null && owner(uid) &&
+        request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update: if false;
+      allow delete: if owner(uid);
+    }
     match /communityMedia/{uid}/{postId}/{filename} {
       allow read: if owner(uid) || (activeAccount() &&
         firestore.exists(/databases/(default)/documents/communityPosts/$(postId)) &&

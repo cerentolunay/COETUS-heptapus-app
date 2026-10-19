@@ -76,7 +76,7 @@ async function cleanupAccount(uid) {
   for(const field of ['reporterId','ownerId'])await deleteQuery(db.collection('contentReports').where(field,'==',uid));
   for(const collection of ['matches','sessions','chats'])await anonymizeShared(collection,uid);
   const bucket=getStorage().bucket();
-  for(const folder of ['communityMedia','portfolioMedia','verificationEvidence'])await bucket.deleteFiles({prefix:`${folder}/${uid}/`});
+    for(const folder of ['communityMedia','portfolioMedia','verificationEvidence','profilePhotos'])await bucket.deleteFiles({prefix:`${folder}/${uid}/`});
   await db.recursiveDelete(db.doc(`users/${uid}`));
   // Retain the opaque deletion marker: old ID tokens cannot recreate this user.
   await job.set({status:'completed',completedAt:FieldValue.serverTimestamp()},{merge:true});
