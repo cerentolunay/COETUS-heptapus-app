@@ -3,6 +3,8 @@
 Görev: [Issue #24](https://github.com/cerentolunay/COETUS-heptapus-app/issues/24).
 Tarih: 19 Ekim 2026. Testi yürüten: Codex; görsel ürün onayı: ürün sahibi.
 
+**Güncel durum:** Ürün sahibi 19 Ekim 2026’da “telefon testi bitti” bildirimiyle manuel telefon testini tamamladığını onayladı. YAYIN-00 bu bildirimle tamamlandı; sıradaki görev 01. Aşağıdaki fiziksel otomasyon tablosu ve kanıt kutuları önceki Codex denemesinin sonuçlarıdır; tamamlanmamış otomasyon veya paylaşılmamış görüntüler geçmiş gibi değiştirilmedi.
+
 ## Sürüm ve cihaz
 
 - Kaynak başlangıcı: `d17ff071d039b6a00f8c0c03fc9ec201a7988a85` (PR #30). Bu inceleme dalı: `test/yayin-00-phone-review`; henüz main ile birleştirilmedi.
@@ -84,12 +86,12 @@ adb -s TELEFON_KIMLIGI shell am start -n com.heptapus.coetus/.MainActivity
 - [ ] Gerçek Android klavye/geri düğmesi ve ürün sahibinin görsel incelemesi tamamlandı.
 - [ ] Ürün sahibi önizleme bakiyesinin gerçek bakiyesi olmadığını okuduğunu onayladı.
 
-Issue, fiziksel cihaz kanıtları ve ürün onayı beklediği için açık bırakılır. Ücretli hizmet, plan değişikliği veya canlı Firebase yayını yapılmaz.
+İlk inceleme sırasında Issue fiziksel cihaz kanıtları ve ürün onayı beklediği için açık bırakılmıştı. Daha sonra ürün sahibi manuel telefon testinin tamamlandığını bildirdi; bu genel onay kaydı, eksik otomatik görüntü kanıtından ayrı tutulur. Sonraki sınırlı Firestore yayını [ayrı kayıttadır](26-dusuk-yuklu-canli-yayin.md); plan değiştirilmedi, Storage/Functions yayımlanmadı.
 
 ## Derlenen son APK
 
 - Yol: `build/app/outputs/flutter-apk/app-debug.apk`
-- Mod/giri?: debug / `lib/main_preview.dart`
+- Mod/giriş: debug / `lib/main_preview.dart`
 - Boyut: 150035053 bayt
 - SHA-256: `d22c1f699b2a2bc22df83afc71157a1c359d85c14d30728e9da10ad45dcb9c63`
-- Durum: derlendi; USB ba?lant?s? kesildi?i i?in son paket kurulamad?.
+- İlk derleme durumu: derlendi; USB bağlantısı kesildiği için o önizleme paketi kurulamadı. Normal uygulamanın daha sonraki yeniden kurulumu bu tarihsel APK kaydından ayrıdır.
