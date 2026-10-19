@@ -1,3 +1,4 @@
+import '../widgets/learning_history_stats.dart';
 import '../widgets/skill_editor_dialog.dart';
 import 'package:coetus/features/auth/presentation/widgets/delete_account_button.dart';
 import 'package:coetus/features/verification/presentation/verification_page.dart';
@@ -544,16 +545,11 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     ),
                     _statDivider(),
                     Expanded(
-                      child: _ProfileStat(
-                        value: '${_skills.length}',
-                        label: 'ÖĞRETTİM',
-                      ),
-                    ),
-                    _statDivider(),
-                    Expanded(
-                      child: _ProfileStat(
-                        value: '${_learningGoals.length}',
-                        label: 'ÖĞRENDİM',
+                      flex: 2,
+                      child: LearningHistoryStats(
+                        userId: _user.id,
+                        onOpenSession: (id) =>
+                            context.push('/exchange-detail/$id'),
                       ),
                     ),
                   ],
