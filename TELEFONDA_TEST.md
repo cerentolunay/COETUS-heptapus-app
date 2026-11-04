@@ -1,5 +1,11 @@
 # COETUS — telefonda son sürümü kontrol et
 
+**YAYIN-00 incelemesi:** `test/yayin-00-phone-review` dalında kullanıcı adı/QR dahil
+30 ekran vardır. Aşağıdaki eski main tabanlı indirilebilir paketler bu dalı içermez.
+Güncel cihaz bilgileri, ekran listesi, bulgular ve yeniden çalıştırma komutları
+[telefon inceleme kaydındadır](doc/25-yayin-00-telefon-inceleme.md).
+Önizlemedeki token bakiyesi örnektir; gerçek hesabının bakiyesi değildir.
+
 İki **Android test paketi** vardır:
 
 | Paket | Ne için? | İndir |

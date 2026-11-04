@@ -336,7 +336,7 @@ class _GalleryState extends State<_Gallery> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Örnek kişiler ve içerikler. Firebase bağlantısı, gerçek ödeme veya hesap silme yapılmaz. Değişiklikler uygulama kapanınca sıfırlanır.',
+              'Örnek kişiler ve içerikler. Gösterilen token bakiyesi örnektir; gerçek bakiyen değildir. Firebase bağlantısı, gerçek ödeme veya hesap silme yapılmaz. Değişiklikler uygulama kapanınca sıfırlanır.',
             ),
             const SizedBox(height: 16),
             TextField(

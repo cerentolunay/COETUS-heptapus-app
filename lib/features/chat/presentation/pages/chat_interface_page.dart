@@ -133,6 +133,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
     String chatId,
     String currentUserId,
   ) {
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return StreamBuilder<List<ChatThread>>(
       stream: _repository.streamUserChats(currentUserId),
       builder: (context, snapshot) {
@@ -216,7 +217,7 @@ class _ChatInterfacePageState extends State<ChatInterfacePage> {
                 ),
               ),
             ),
-            if (skillName.isNotEmpty)
+            if (skillName.isNotEmpty && !keyboardVisible)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: WarmNotice(
