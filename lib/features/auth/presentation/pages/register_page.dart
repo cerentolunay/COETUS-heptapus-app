@@ -329,7 +329,8 @@ class _RegisterPageState extends State<RegisterPage>
                   children: [
                     const _AuthHeaderSection(
                       headline: "Coetus'a katıl",
-                      subtitle: 'Yeteneklerini paylaşmaya başla.',
+                      subtitle:
+                          'Yeteneklerini paylaşmaya başla. Yeni hesabına bir defaya mahsus 200 token!',
                     ),
                     const SizedBox(height: 24),
                     _AuthModeTabs(

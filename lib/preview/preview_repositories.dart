@@ -35,7 +35,7 @@ class PreviewProfileRepository implements ProfileRepository {
       username: 'deniz',
       email: 'deniz@example.invalid',
       bio: 'Birlikte öğrenmeyi ve üretmeyi seviyorum.',
-      credits: 50,
+      credits: 200,
       trustScore: 82,
       profileCompleted: true,
       location: 'İstanbul, Türkiye',

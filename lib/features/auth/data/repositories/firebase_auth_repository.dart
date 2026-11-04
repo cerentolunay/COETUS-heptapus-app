@@ -144,6 +144,7 @@ class FirebaseAuthRepository implements AuthRepository {
           if (!existing.exists) {
             tx.set(userDoc, {
               ...profile.toMap(),
+              'signupRewardVersion': WelcomeGiftService.rewardVersion,
               'createdAt': FieldValue.serverTimestamp(),
               'updatedAt': FieldValue.serverTimestamp(),
             });

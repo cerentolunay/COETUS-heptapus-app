@@ -605,7 +605,7 @@ class _CommunitySupportState extends State<CommunitySupport> {
                     .doc(FirebaseAuth.instance.currentUser!.uid)
                     .snapshots(),
           builder: (_, s) => Text(
-            'Kullanılabilir: ${PreviewMode.enabled ? 50 : s.data?.data()?['credits'] ?? '…'} token',
+            'Kullanılabilir: ${PreviewMode.enabled ? 200 : s.data?.data()?['credits'] ?? '…'} token',
           ),
         ),
         Wrap(

@@ -27,25 +27,26 @@ void main() {
     expect(find.byIcon(Icons.auto_awesome), findsNothing);
     expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
   });
-  testWidgets('preview explains that gift does not credit a real wallet', (
-    tester,
-  ) async {
-    PreviewMode.enable();
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: MatchSuccessPage(
-          user: MatchedUser(name: 'Ece', skills: [], learningGoals: []),
+  testWidgets(
+    'new-account preview celebrates without an additional match gift',
+    (tester) async {
+      PreviewMode.enable();
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: MatchSuccessPage(
+            user: MatchedUser(name: 'Ece', skills: [], learningGoals: []),
+          ),
         ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('İlk eşleşmeni kutluyoruz!'), findsOneWidget);
-    expect(find.text('COETUS’tan sana hediye 20 token!'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-  });
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byKey(const ValueKey('first-match-gift')), findsNothing);
+      expect(find.text('COETUS’tan sana hediye 20 token!'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 }
