@@ -112,6 +112,14 @@ class _ChatListPageState extends State<ChatListPage> {
                   context,
                 ).textTheme.headlineSmall?.copyWith(color: CoetusColors.oat),
               ),
+              TextButton.icon(
+                onPressed: () => context.push('/find-profile'),
+                icon: const Icon(Icons.person_search_outlined),
+                label: const Text('Kullanıcı adı veya QR ile bul'),
+                style: TextButton.styleFrom(
+                  foregroundColor: CoetusPalette.lime,
+                ),
+              ),
               const SizedBox(height: 14),
               _buildSearchBar(),
             ],

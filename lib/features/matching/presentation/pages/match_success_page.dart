@@ -9,7 +9,14 @@ import 'package:coetus/app/theme/coetus_tokens.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 
 class MatchSuccessPage extends StatefulWidget {
-  const MatchSuccessPage({super.key, required this.user});
+  const MatchSuccessPage({
+    super.key,
+    required this.user,
+    this.claimGift = true,
+    this.chatId,
+  });
+  final bool claimGift;
+  final String? chatId;
   final MatchedUser user;
 
   @override
@@ -23,6 +30,7 @@ class _MatchSuccessPageState extends State<MatchSuccessPage> {
   @override
   void initState() {
     super.initState();
+    if (!widget.claimGift) return;
     if (PreviewMode.enabled) {
       _gift = true;
     } else {
@@ -189,7 +197,11 @@ class _MatchSuccessPageState extends State<MatchSuccessPage> {
                   ),
                   const SizedBox(height: 26),
                   ElevatedButton.icon(
-                    onPressed: () => context.go('/chat'),
+                    onPressed: () => context.go(
+                      widget.chatId == null
+                          ? '/chat'
+                          : '/chat-detail/${widget.chatId}',
+                    ),
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
                     label: const Text('Sohbete başla'),
                   ),

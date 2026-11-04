@@ -37,6 +37,92 @@ async function seed() {
   }
 }
 const request = (uid, data, reviewer = false) => ({ auth: { uid, token: { verificationReviewer: reviewer } }, data });
+async function directClaim(uid, name) {
+  const {runTransaction,serverTimestamp}=require('firebase/firestore');
+  const client=env.authenticatedContext(uid).firestore();
+  return runTransaction(client,async tx=>{
+    const user=doc(client,`users/${uid}`),target=doc(client,`usernames/${name}`);
+    const profile=await tx.get(user),claimed=await tx.get(target);
+    if(claimed.exists()&&claimed.data().userId!==uid)throw new Error('already-exists');
+    const old=profile.data().username;
+    if(old&&old!==name)tx.update(doc(client,`usernames/${old}`),{active:false,updatedAt:serverTimestamp()});
+    tx.set(target,{userId:uid,active:true,updatedAt:serverTimestamp()});
+    tx.update(user,{username:name,usernameChangedAt:serverTimestamp()});
+  });
+}
+emulatorTest('direct username transactions reserve one owner and reject stolen or unpaired aliases',async()=>{
+  await seed();
+  const results=await Promise.allSettled(['student','teacher'].map(uid=>directClaim(uid,'ipek_01')));
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  const owner=(await db.doc('usernames/ipek_01').get()).data().userId;
+  const other=owner==='student'?'teacher':'student';
+  await directClaim(owner,'yeni_ad');
+  assert.equal((await db.doc('usernames/ipek_01').get()).data().active,false);
+  await assert.rejects(directClaim(other,'ipek_01'));
+  const client=env.authenticatedContext(other).firestore();
+  await assertFails(updateDoc(doc(client,`users/${other}`),{username:'forged'}));
+  await assertFails(setDoc(doc(client,'usernames/forged'),{userId:other,active:true}));
+  await assertFails(directClaim(other,'admin'));
+  await assertFails(directClaim(other,'PYTHON'));
+  await assertFails(directClaim(other,'müzik'));
+  await assertSucceeds(getDoc(doc(client,'usernames/yeni_ad')));
+  await assertFails(getDocs(collection(client,'usernames')));
+  await db.doc('accountDeletions/'+other).set({status:'pending'});
+  await assertFails(directClaim(other,'deleted_name'));
+});
+emulatorTest('direct username changes cannot alter balances, verification or another reservation',async()=>{
+  const {serverTimestamp}=require('firebase/firestore'); await seed();
+  await directClaim('student','deniz');await directClaim('teacher','ece');
+  const client=env.authenticatedContext('student').firestore();
+  const batch=writeBatch(client);
+  batch.set(doc(client,'usernames/stolen'),{userId:'student',active:true,updatedAt:serverTimestamp()});
+  batch.update(doc(client,'users/student'),{username:'stolen',usernameChangedAt:serverTimestamp(),credits:999});
+  await assertFails(batch.commit());
+  await assertFails(updateDoc(doc(client,'usernames/ece'),{active:false,updatedAt:serverTimestamp()}));
+  const orphan=writeBatch(client);
+  orphan.set(doc(client,'usernames/next_name'),{userId:'student',active:true,updatedAt:serverTimestamp()});
+  orphan.update(doc(client,'users/student'),{username:'next_name',usernameChangedAt:serverTimestamp()});
+  await assertFails(orphan.commit());
+});
+async function directConnect(uid,other) {
+  const {serverTimestamp,runTransaction}=require('firebase/firestore');
+  const client=env.authenticatedContext(uid).firestore(),participants=[uid,other].sort();
+  const id='face_'+Buffer.from(JSON.stringify(participants)).toString('base64url');
+  return runTransaction(client,async tx=>{
+    const connection=doc(client,`profileConnections/${id}`),chat=doc(client,`chats/${id}`);
+    const existing=await tx.get(connection),existingChat=await tx.get(chat);
+    const votes=existing.data()?.confirmedBy||[];
+    if(!votes.includes(uid)){
+      votes.push(uid);tx.set(connection,{participants,confirmedBy:votes,status:votes.length===2?'confirmed':'pending',...(!existing.exists()?{createdAt:serverTimestamp()}:{}),updatedAt:serverTimestamp()},{merge:true});
+    }
+    if(votes.length===2&&!existingChat.exists())tx.set(chat,{id,participants,participantNames:{},kind:'in_person',credits:0,status:'active',createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    return id;
+  });
+}
+emulatorTest('direct connection requires two separate approvals and creates no token reward or escrow',async()=>{
+  const {serverTimestamp}=require('firebase/firestore');await communitySeed();
+  const id=await directConnect('student','teacher');
+  const client=env.authenticatedContext('student').firestore();
+  assert.equal((await db.doc(`profileConnections/${id}`).get()).data().status,'pending');
+  await assertFails(updateDoc(doc(client,`profileConnections/${id}`),{confirmedBy:['student','teacher'],status:'confirmed',updatedAt:serverTimestamp()}));
+  await assertFails(setDoc(doc(client,`chats/${id}`),{id,participants:['student','teacher'],participantNames:{},kind:'in_person',credits:0,status:'active',createdAt:serverTimestamp(),updatedAt:serverTimestamp()}));
+  await directConnect('teacher','student');await directConnect('student','teacher');
+  assert.equal((await db.doc(`profileConnections/${id}`).get()).data().status,'confirmed');
+  assert.equal((await db.collection('chats').get()).size,1);
+  assert.equal((await db.collection('transactions').get()).size,0);
+  assert.equal((await db.collection('escrows').get()).size,0);
+  await assertFails(updateDoc(doc(client,'users/student'),{credits:999}));
+});
+emulatorTest('simultaneous direct connections create one chat and reject self or foreign confirmations',async()=>{
+  await communitySeed();
+  const ids=await Promise.all([directConnect('student','teacher'),directConnect('teacher','student')]);
+  assert.equal(ids[0],ids[1]);assert.equal((await db.collection('chats').get()).size,1);
+  await assertFails(directConnect('student','student'));
+  const foreign=env.authenticatedContext('student2').firestore();
+  await assertFails(getDoc(doc(foreign,`profileConnections/${ids[0]}`)));
+  await db.doc('accountDeletions/student').set({status:'pending'});
+  await assertFails(directConnect('teacher','missing-user'));
+});
 emulatorTest('profile photos allow only owner image creation and authenticated reads; reject unsafe files and replacements', async () => {
   const owner = env.authenticatedContext('photo-owner').storage('gs://demo-coetus.appspot.com');
   const other = env.authenticatedContext('other').storage('gs://demo-coetus.appspot.com');
@@ -48,6 +134,9 @@ emulatorTest('profile photos allow only owner image creation and authenticated r
   await assertFails(uploadBytes(ref(other, 'profilePhotos/photo-owner/other.png'), Buffer.from('image'), {contentType: 'image/png'}));
   await assertFails(uploadBytes(ref(owner, path), Buffer.from('replacement'), {contentType: 'image/png'}));
   await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/script.svg'), Buffer.from('<svg/>'), {contentType: 'image/svg+xml'}));
+  for (const folder of ['communityMedia/photo-owner/new', 'portfolioMedia/photo-owner/new', 'verificationEvidence/photo-owner/new']) {
+    await assertFails(uploadBytes(ref(owner, `${folder}/clip.mp4`), Buffer.from('video'), {contentType: 'video/mp4'}));
+  }
   await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/large.jpg'), Buffer.alloc(5 * 1024 * 1024 + 1), {contentType: 'image/jpeg'}));
   await assertFails(uploadBytes(ref(owner, 'profilePhotos/photo-owner/empty.jpg'), Buffer.alloc(0), {contentType: 'image/jpeg'}));
   await assertFails(deleteObject(ref(other, path)));
@@ -311,6 +400,8 @@ deletionTest('deletion removes Auth, profile, authored content and media while r
   await db.doc('communityPosts/my-post/comments/other').set({authorId:'teacher',text:'Başkasının yorumu'});
   await db.doc('skillVerifications/work').set({ownerId:'student',type:'portfolio',status:'published'});
   await db.doc('interestSuggestions/mine').set({ownerId:'student',name:'Astronomi',status:'pending'});
+  await directClaim('student','delete_me');
+  await db.doc('profileConnections/mine').set({participants:['student','teacher'],status:'pending'});
   await db.doc('chats/shared').set({participants:['student','teacher'],participantNames:{student:'Deniz',teacher:'Ece'},lastMessage:'Özel metnim',lastSenderId:'student'});
   await db.doc('chats/shared/messages/mine').set({senderId:'student',text:'Özel metnim'});
   await db.doc('chats/shared/messages/other').set({senderId:'teacher',text:'Karşı tarafın mesajı'});
@@ -325,6 +416,8 @@ deletionTest('deletion removes Auth, profile, authored content and media while r
   assert.equal((await db.doc('communityPosts/my-post').get()).exists,false);
   assert.equal((await db.doc('skillVerifications/work').get()).exists,false);
   assert.equal((await db.doc('interestSuggestions/mine').get()).exists,false);
+  assert.equal((await db.doc('usernames/delete_me').get()).exists,false);
+  assert.equal((await db.doc('profileConnections/mine').get()).exists,false);
   assert.equal((await db.doc('communityPosts/post').get()).data().likeCount,0);
   assert.equal((await db.doc('communityPosts/post').get()).data().commentCount,0);
   assert.equal((await db.doc('chats/shared/messages/mine').get()).exists,false);

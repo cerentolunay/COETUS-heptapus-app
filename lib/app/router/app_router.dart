@@ -1,3 +1,5 @@
+import 'package:coetus/features/social/presentation/find_profile_page.dart';
+import 'package:coetus/features/social/presentation/profile_qr.dart';
 import 'package:coetus/features/profile/domain/onboarding/interest_catalog.dart';
 import 'package:coetus/features/premium/presentation/pages/premium_page.dart';
 import 'package:coetus/features/community/community.dart';
@@ -95,6 +97,8 @@ class AppRouter {
     '/notifications',
     '/verification',
     '/community-post',
+    '/find-profile',
+    '/scan-profile',
   ];
 
   /// Profile completion route - sadece incomplete profilliler erişebilir
@@ -176,6 +180,15 @@ class AppRouter {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/find-profile',
+        builder: (_, state) =>
+            FindProfilePage(userId: state.uri.queryParameters['user']),
+      ),
+      GoRoute(
+        path: '/scan-profile',
+        builder: (_, state) => const ScanProfileQrPage(),
+      ),
       GoRoute(
         path: '/premium',
         builder: (context, state) => const PremiumPage(),

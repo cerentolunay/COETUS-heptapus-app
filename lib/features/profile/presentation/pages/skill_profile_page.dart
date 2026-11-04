@@ -1,3 +1,4 @@
+import 'package:coetus/features/social/presentation/profile_qr.dart';
 import '../widgets/profile_photo_avatar.dart';
 import '../widgets/learning_history_stats.dart';
 import '../widgets/skill_editor_dialog.dart';
@@ -123,13 +124,11 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
   }
 
   Future<void> _showEditProfileDialog() async {
-    final bool? saved = await context.push<bool>('/profile/edit');
+    await context.push<bool>('/profile/edit');
 
     if (!mounted) return;
 
-    if (saved == true) {
-      await _loadProfile();
-    }
+    await _loadProfile();
   }
 
   Future<void> _showAddSkillDialog() async {
@@ -457,6 +456,17 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     ),
                   ),
                   _HeaderIconButton(
+                    icon: Icons.person_search_outlined,
+                    onTap: () => context.push('/find-profile'),
+                  ),
+                  const SizedBox(width: 8),
+                  _HeaderIconButton(
+                    icon: Icons.qr_code_2,
+                    onTap: () =>
+                        showProfileQr(context, _user.id, _user.username),
+                  ),
+                  const SizedBox(width: 8),
+                  _HeaderIconButton(
                     icon: Icons.edit_outlined,
                     onTap: _showEditProfileDialog,
                   ),
@@ -484,6 +494,21 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                             color: CoetusColors.oat,
                           ),
                         ),
+                        if (_user.username.isNotEmpty)
+                          Text(
+                            '@${_user.username}',
+                            style: t.bodySmall?.copyWith(
+                              color: CoetusPalette.lime,
+                            ),
+                          ),
+                        if (_user.username.isEmpty)
+                          TextButton(
+                            onPressed: _showEditProfileDialog,
+                            child: const Text(
+                              'Kullanıcı adı oluştur',
+                              style: TextStyle(color: CoetusPalette.lime),
+                            ),
+                          ),
                         if (hasLocation) ...[
                           const SizedBox(height: 3),
                           Text(
@@ -683,7 +708,16 @@ class _HeaderIconButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(9),
-          child: Icon(icon, size: 18, color: CoetusColors.oat),
+          child: Icon(
+            icon,
+            size: 18,
+            color: CoetusColors.oat,
+            semanticLabel: icon == Icons.person_search_outlined
+                ? 'Birbirinizi bulun'
+                : icon == Icons.qr_code_2
+                ? 'Profil QR kodum'
+                : null,
+          ),
         ),
       ),
     );

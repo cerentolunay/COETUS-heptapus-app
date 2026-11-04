@@ -5,11 +5,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>İsteğin üzerine şehrini belirlemek için konumunu kullanırız. Profile yalnızca şehir ve ülke kaydedilir.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Profil fotoğrafını ve çalışmalarında paylaşacağın fotoğraf veya videoları seçebilmen için galeri erişimi gerekir.</string>
+	<string>Profil fotoğrafını ve çalışmalarında paylaşacağın fotoğrafları seçebilmen için galeri erişimi gerekir.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Profil fotoğrafını çekebilmen ve çalışmalarını fotoğraf veya videoyla paylaşabilmen için kamera erişimi gerekir.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Yetenek videolarında ses kaydı için mikrofon erişimi gerekir.</string>
+	<string>Profil fotoğrafını çekebilmen ve çalışmalarını fotoğrafla paylaşabilmen için kamera erişimi gerekir.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

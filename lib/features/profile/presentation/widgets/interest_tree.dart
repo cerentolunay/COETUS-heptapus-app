@@ -15,6 +15,19 @@ class InterestTree extends StatelessWidget {
   final InterestSelection selection;
   final VoidCallback onChanged;
   final bool enabled;
+  Future<void> _addSkill(BuildContext context, InterestBranch branch) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _BranchSkillDialog(
+        branch: branch,
+        selectedKeys: selection.skills.keys.toSet(),
+      ),
+    );
+    if (!context.mounted || name == null) return;
+    selection.toggleSkill(name, branch.label, branchId: branch.id);
+    onChanged();
+  }
+
   Future<void> _configureSharing(BuildContext context, String key) async {
     final choice = selection.skills[key];
     if (choice == null) return;
@@ -120,7 +133,12 @@ class InterestTree extends StatelessWidget {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              for (final skill in branch.skills)
+                              for (final skill in {
+                                ...branch.skills,
+                                ...selection.skills.values
+                                    .where((s) => s.category == branch.label)
+                                    .map((s) => s.name),
+                              })
                                 FilterChip(
                                   label: Text(skill),
                                   selected: selection.skills.containsKey(
@@ -138,6 +156,14 @@ class InterestTree extends StatelessWidget {
                                         }
                                       : null,
                                 ),
+                              ActionChip(
+                                key: ValueKey('add-skill-${branch.id}'),
+                                avatar: const Icon(Icons.add, size: 16),
+                                label: const Text('Ekle'),
+                                onPressed: enabled
+                                    ? () => _addSkill(context, branch)
+                                    : null,
+                              ),
                             ],
                           ),
                         ],
@@ -325,5 +351,60 @@ class _InterestBranchCard extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+class _BranchSkillDialog extends StatefulWidget {
+  const _BranchSkillDialog({required this.branch, required this.selectedKeys});
+  final InterestBranch branch;
+  final Set<String> selectedKeys;
+  @override
+  State<_BranchSkillDialog> createState() => _BranchSkillDialogState();
+}
+
+class _BranchSkillDialogState extends State<_BranchSkillDialog> {
+  final _text = TextEditingController();
+  final _form = GlobalKey<FormState>();
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text('${widget.branch.label} alanına ekle'),
+    content: Form(
+      key: _form,
+      child: TextFormField(
+        controller: _text,
+        autofocus: true,
+        maxLength: 60,
+        decoration: const InputDecoration(labelText: 'Beceri veya ilgi alanı'),
+        validator: (value) {
+          final text = value?.trim() ?? '';
+          if (text.length < 2) return 'En az 2 karakter yaz.';
+          if (widget.branch.skills.any((s) => skillKey(s) == skillKey(text)) ||
+              widget.selectedKeys.contains(skillKey(text))) {
+            return 'Bu beceri zaten listede.';
+          }
+          return null;
+        },
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Vazgeç'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (_form.currentState!.validate()) {
+            Navigator.pop(context, _text.text.trim());
+          }
+        },
+        child: const Text('Ekle'),
+      ),
+    ],
   );
 }

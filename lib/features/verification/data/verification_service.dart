@@ -79,9 +79,7 @@ class VerificationService {
       throw const FormatException('Açıklama en az 10 karakter olmalı.');
     }
     if (files.length > 3) {
-      throw const FormatException(
-        'En fazla 3 fotoğraf veya video ekleyebilirsin.',
-      );
+      throw const FormatException('En fazla 3 fotoğraf ekleyebilirsin.');
     }
     final uid = userId;
     final signature =
@@ -99,28 +97,19 @@ class VerificationService {
     if (_pendingPaths == null) {
       for (var i = 0; i < files.length; i++) {
         final file = files[i];
-        if (await file.length() > 50 * 1024 * 1024) {
-          throw const FormatException('Dosya en fazla 50 MB olabilir.');
+        if (await file.length() > 10 * 1024 * 1024) {
+          throw const FormatException('Fotoğraf en fazla 10 MB olabilir.');
         }
         final bytes = await file.readAsBytes();
         final mime =
             lookupMimeType(file.name, headerBytes: bytes.take(32).toList()) ??
             '';
-        final limit = mime.startsWith('video/')
-            ? 50 * 1024 * 1024
-            : 10 * 1024 * 1024;
-        if (![
-              'image/jpeg',
-              'image/png',
-              'image/webp',
-              'video/mp4',
-              'video/quicktime',
-              'video/webm',
-            ].contains(mime) ||
+        const limit = 10 * 1024 * 1024;
+        if (!['image/jpeg', 'image/png', 'image/webp'].contains(mime) ||
             bytes.isEmpty ||
             bytes.length > limit) {
           throw const FormatException(
-            'Fotoğraf en fazla 10 MB, video en fazla 50 MB olmalı. JPG, PNG, WebP, MP4, MOV veya WebM kullan.',
+            'Fotoğraf en fazla 10 MB olmalı. JPG, PNG veya WebP kullan.',
           );
         }
         final ref = _storage.ref(

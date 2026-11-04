@@ -185,6 +185,38 @@ class InterestSelection {
   final Set<String> branches = {};
   final Map<String, SkillChoice> skills = {};
   final Map<String, String> _categoryIds = {};
+  void restoreSkills({
+    required List<SkillModel> teach,
+    required List<SkillModel> learn,
+  }) {
+    for (final group in [(learn, false), (teach, true)]) {
+      for (final skill in group.$1) {
+        final key = skillKey(skill.name);
+        if (key.isEmpty) continue;
+        final branches = interestBranches.where(
+          (b) =>
+              normalizeText(b.label) == normalizeText(skill.category) ||
+              b.skills.any((name) => skillKey(name) == key),
+        );
+        final branch = branches.firstOrNull;
+        final category =
+            branch?.label ??
+            (skill.category.isEmpty ? 'Genel' : skill.category);
+        final choice = skills.putIfAbsent(
+          key,
+          () => SkillChoice(skill.name, category)..learn = false,
+        );
+        if (branch != null) _categoryIds[category] = branch.id;
+        if (group.$2) {
+          choice.teach = true;
+          choice.level = skill.level.clamp(1, 7);
+        } else {
+          choice.learn = true;
+        }
+      }
+    }
+  }
+
   void toggleBranch(String id) {
     // Collapsing a branch preserves chosen skills; no hidden loss of user input.
     branches.contains(id) ? branches.remove(id) : branches.add(id);

@@ -1,3 +1,6 @@
+import 'dart:math';
+import '../../../social/data/profile_identity_service.dart';
+import '../../../social/domain/profile_identity.dart';
 import '../../data/services/google_sign_in_error.dart';
 import 'package:coetus/widgets/coetus_mascot.dart';
 import 'dart:async';
@@ -29,6 +32,12 @@ class _RegisterPageState extends State<RegisterPage>
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
+  final _usernameController = TextEditingController();
+  final _usernameSuffix = Random.secure()
+      .nextInt(16777216)
+      .toRadixString(36)
+      .padLeft(5, '0');
+  bool _usernameEdited = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
   bool _isLoading = false;
@@ -40,6 +49,15 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   void initState() {
     super.initState();
+    _usernameController.text = suggestUsername('', _usernameSuffix);
+    _fullNameController.addListener(() {
+      if (!_usernameEdited) {
+        _usernameController.text = suggestUsername(
+          _fullNameController.text,
+          _usernameSuffix,
+        );
+      }
+    });
 
     _animationController = AnimationController(
       vsync: this,
@@ -61,6 +79,7 @@ class _RegisterPageState extends State<RegisterPage>
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -127,6 +146,35 @@ class _RegisterPageState extends State<RegisterPage>
     return null;
   }
 
+  Future<String> _saveRegistrationUsername(
+    String suggestion, {
+    bool automatic = false,
+  }) async {
+    final service = ProfileIdentityService();
+    try {
+      final username = await service.claimUsername(
+        suggestion,
+        automatic: automatic,
+      );
+      return 'Kayıt başarılı. Kullanıcı adın: @$username';
+    } on FirebaseException catch (error) {
+      if (error.code == 'already-exists') {
+        try {
+          final username = await service.claimUsername(
+            suggestion,
+            automatic: true,
+          );
+          return 'Seçtiğin ad kullanımda. Kullanıcı adın @$username olarak oluşturuldu; profilinden değiştirebilirsin.';
+        } catch (_) {
+          /* Keep the newly created Auth account usable. */
+        }
+      }
+    } catch (_) {
+      /* Never make a completed Auth registration look like it failed. */
+    }
+    return 'Hesabın açıldı. Kullanıcı adı henüz kaydedilemedi; profilinden tamamlayabilirsin.';
+  }
+
   Future<void> _handleRegister() async {
     final isValid = _formKey.currentState?.validate() ?? false;
 
@@ -145,11 +193,13 @@ class _RegisterPageState extends State<RegisterPage>
         password: _passwordController.text,
       );
 
+      final usernameMessage = await _saveRegistrationUsername(
+        _usernameController.text,
+      );
       if (!mounted) return;
-
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Kayıt başarılı')));
+      ).showSnackBar(SnackBar(content: Text(usernameMessage)));
 
       context.go('/discovery');
     } on FirebaseAuthException catch (error) {
@@ -201,13 +251,17 @@ class _RegisterPageState extends State<RegisterPage>
     });
 
     try {
-      await _authRepository.signInWithGoogle();
+      final googleUser = await _authRepository.signInWithGoogle();
+      final usernameMessage = await _saveRegistrationUsername(
+        googleUser.name,
+        automatic: true,
+      );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google ile kayıt başarılı')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(usernameMessage)));
 
       context.go('/discovery');
     } catch (error) {
@@ -293,6 +347,23 @@ class _RegisterPageState extends State<RegisterPage>
                         decoration: const InputDecoration(
                           hintText: 'Adın ve soyadın',
                           prefixIcon: Icon(Icons.person_outline),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _LabeledField(
+                      label: 'Kullanıcı adı',
+                      child: TextFormField(
+                        key: const ValueKey('registration-username'),
+                        controller: _usernameController,
+                        enabled: !_isLoading,
+                        validator: usernameError,
+                        onChanged: (_) => _usernameEdited = true,
+                        decoration: const InputDecoration(
+                          prefixText: '@',
+                          helperText:
+                              'Öneriyi değiştirebilirsin. Müsaitliği kayıt sırasında doğrulanır.',
+                          helperMaxLines: 3,
                         ),
                       ),
                     ),

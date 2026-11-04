@@ -106,6 +106,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
   String _resolveRoute(AppNotification item) {
     final targetId = item.targetId.trim();
     switch (item.targetRoute) {
+      case '/find-profile':
+        return '/find-profile?user=${Uri.encodeComponent(targetId)}';
       case '/community-post':
         return targetId.isEmpty ? '/matching' : '/community-post/$targetId';
       case '/chat-detail':
@@ -462,6 +464,7 @@ _NotificationVisual _visualFor(AppNotificationType type) {
         CoetusPalette.lime,
         CoetusPalette.purple,
       );
+    case AppNotificationType.profileConnection:
     case AppNotificationType.offerReceived:
     case AppNotificationType.offerAccepted:
     case AppNotificationType.offerRejected:
@@ -581,6 +584,8 @@ class _NotificationCard extends StatelessWidget {
 
   String _fallbackTitle(AppNotificationType type) {
     switch (type) {
+      case AppNotificationType.profileConnection:
+        return 'Tanışma isteği';
       case AppNotificationType.communityActivity:
         return 'Paylaşımına yorum geldi';
       case AppNotificationType.tokenSupport:

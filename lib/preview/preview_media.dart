@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import '../app/theme/coetus_tokens.dart';
 import '../widgets/coetus_mascot.dart';
 
-/// A local illustration, explicitly not a downloaded photo or playable video.
+/// A local illustration for offline previews.
 class PreviewMedia extends StatelessWidget {
-  const PreviewMedia({super.key, this.video = false});
-  final bool video;
+  const PreviewMedia({super.key});
   @override
   Widget build(BuildContext context) => Container(
     height: 220,
@@ -20,13 +19,9 @@ class PreviewMedia extends StatelessWidget {
         const CoetusMascot(size: 120),
         const SizedBox(height: 12),
         Text(
-          video
-              ? 'Örnek video alanı · Çevrimdışı'
-              : 'Örnek görsel alanı · Çevrimdışı',
+          'Örnek görsel alanı · Çevrimdışı',
           style: const TextStyle(color: CoetusPalette.lime),
         ),
-        if (video)
-          const Icon(Icons.play_circle_outline, color: CoetusPalette.cream),
       ],
     ),
   );
