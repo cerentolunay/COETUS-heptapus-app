@@ -1,3 +1,5 @@
+import '../widgets/profile_photo_avatar.dart';
+import '../widgets/learning_history_stats.dart';
 import '../widgets/skill_editor_dialog.dart';
 import 'package:coetus/features/auth/presentation/widgets/delete_account_button.dart';
 import 'package:coetus/features/verification/presentation/verification_page.dart';
@@ -464,18 +466,10 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 68,
-                    height: 68,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: CoetusColors.plateWarm,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      initials,
-                      style: t.titleLarge?.copyWith(color: CoetusColors.navy),
-                    ),
+                  ProfilePhotoAvatar(
+                    photoUrl: _user.photoUrl,
+                    initials: initials,
+                    size: 68,
                   ),
                   const SizedBox(width: CoetusSpace.lg),
                   Expanded(
@@ -544,16 +538,11 @@ class _SkillProfilePageState extends State<SkillProfilePage> {
                     ),
                     _statDivider(),
                     Expanded(
-                      child: _ProfileStat(
-                        value: '${_skills.length}',
-                        label: 'ÖĞRETTİM',
-                      ),
-                    ),
-                    _statDivider(),
-                    Expanded(
-                      child: _ProfileStat(
-                        value: '${_learningGoals.length}',
-                        label: 'ÖĞRENDİM',
+                      flex: 2,
+                      child: LearningHistoryStats(
+                        userId: _user.id,
+                        onOpenSession: (id) =>
+                            context.push('/exchange-detail/$id'),
                       ),
                     ),
                   ],
