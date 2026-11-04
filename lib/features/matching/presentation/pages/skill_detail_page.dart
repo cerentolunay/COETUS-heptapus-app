@@ -183,7 +183,7 @@ class SkillDetailPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Oturum bedeli',
+                'Senin token katkın',
                 style: Theme.of(context).textTheme.labelMedium,
               ),
               const SizedBox(height: 6),
@@ -198,7 +198,7 @@ class SkillDetailPage extends StatelessWidget {
                 builder: (c) => AlertDialog(
                   title: const Text('Birlikte öğrenme teklifi'),
                   content: Text(
-                    'Teklif göndermek ücretsiz. Öğretmen kabul ederse ${candidate.creditsRequired} tokenın oturum için kilitlenir. Öğrenmeyi tamamladığını onayladığında öğretmene aktarılır.',
+                    'Teklif göndermek ücretsiz. Sonraki adımda karşılıklı becerileri ve ikinizin de kilitleyeceği tokenı göreceksin. Başarılı takasta herkes kendi katkısını geri alır.',
                   ),
                   actions: [
                     TextButton(

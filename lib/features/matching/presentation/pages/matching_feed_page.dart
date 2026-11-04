@@ -1,3 +1,4 @@
+import '../../../exchange/data/mutual_exchange_service.dart';
 import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/core/text/skill_normalization.dart';
 import 'package:coetus/features/community/community.dart';
@@ -235,101 +236,103 @@ class _MatchingFeedPageState extends State<MatchingFeedPage> {
       return;
     }
 
-    final partnerName = candidate.user.name.isEmpty
-        ? 'Kullanıcı'
-        : candidate.user.name;
-    final skillName = candidate.teacherSkill.name;
-
     try {
-      final matchRef = _firestore.collection('matches').doc();
-      final sessionRef = _firestore.collection('sessions').doc(matchRef.id);
-      final participants = [currentUser.uid, candidate.user.id]..sort();
-      final chatRef = _firestore.collection('chats').doc(matchRef.id);
-      final currentUserName =
-          currentUser.displayName ??
-          currentUser.email?.split('@').first ??
-          'Kullanıcı';
-
-      await _firestore.runTransaction((transaction) async {
-        transaction.set(matchRef, {
-          'id': matchRef.id,
-          'participants': participants,
-          'requesterId': currentUser.uid,
-          'receiverId': candidate.user.id,
-          'requesterName': currentUserName,
-          'receiverName': partnerName,
-          'participantNames': {
-            currentUser.uid: currentUserName,
-            candidate.user.id: partnerName,
-          },
-          'skillName': skillName,
-          'skillId': candidate.teacherSkill.id,
-          'sessionId': sessionRef.id,
-          'chatId': chatRef.id,
-          'status': 'pending',
-          'credits': candidate.creditsRequired,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        transaction.set(sessionRef, {
-          'id': sessionRef.id,
-          'matchId': matchRef.id,
-          'teacherId': candidate.user.id,
-          'studentId': currentUser.uid,
-          'participants': participants,
-          'skillName': skillName,
-          'status': 'requested',
-          'credits': candidate.creditsRequired,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        transaction.set(chatRef, {
-          'id': chatRef.id,
-          'participants': participants,
-          'participantNames': {
-            currentUser.uid: currentUserName,
-            candidate.user.id: partnerName,
-          },
-          'participantSkills': {
-            candidate.user.id: [skillName],
-          },
-          'matchId': matchRef.id,
-          'sessionId': sessionRef.id,
-          'skillName': skillName,
-          'lastMessage': '$skillName için teklif gönderildi.',
-          'lastSenderId': currentUser.uid,
-          'lastMessageAt': FieldValue.serverTimestamp(),
-          'unreadCount': 0,
-          'credits': candidate.creditsRequired,
-          'status': 'pending',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        transaction.set(_firestore.collection('notifications').doc(), {
-          'userId': candidate.user.id,
-          'senderId': currentUser.uid,
-          'type': 'match_offer',
-          'title': 'Yeni yetenek teklifi',
-          'message':
-              '${currentUser.displayName ?? 'Bir kullanıcı'} $skillName için teklif gönderdi.',
-          'matchId': matchRef.id,
-          'sessionId': sessionRef.id,
-          'read': false,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      });
-
+      final profile = await _profileRepository.loadProfile();
+      final myLearn = profile.learnSkills
+          .where(
+            (s) => skillKey(s.name) == skillKey(candidate.teacherSkill.name),
+          )
+          .firstOrNull;
+      final choices = profile.teachSkills
+          .where(
+            (s) => candidate.partnerLearnSkills.any(
+              (l) => skillKey(l.name) == skillKey(s.name),
+            ),
+          )
+          .toList();
+      if (myLearn == null || choices.isEmpty) {
+        throw StateError(
+          'İki yönde de beceri uyumu gerekli. Önce öğreteceğiniz ve öğreneceğiniz becerileri ekleyin.',
+        );
+      }
       if (!mounted) return;
-      _showSnack('$partnerName için teklif gönderildi.');
-    } on FirebaseException catch (error) {
-      if (!mounted) return;
-      _showSnack(_mapFirestoreError(error));
-    } catch (_) {
-      if (!mounted) return;
-      _showSnack('Teklif gönderilemedi. Lütfen tekrar dene.');
+      var selected = choices.first;
+      final yes = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, update) => AlertDialog(
+            title: const Text('Karşılıklı takas teklifi'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Sen ${candidate.teacherSkill.name} öğreneceksin; ${candidate.teacherSkill.level * 10} tokenın kilitlenecek.',
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selected.id,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Sen ne öğreteceksin?',
+                    ),
+                    items: choices
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (id) => update(
+                      () => selected = choices.firstWhere((s) => s.id == id),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Karşı taraf ${selected.name} öğrenecek; ${selected.level * 10} tokenı kilitlenecek.',
+                  ),
+                  const Text(
+                    'Teklif ücretsizdir. Karşı taraf kabul ettiğinde iki katkı birlikte kilitlenir. İki tamamlanma veya iptal onayında herkes kendi katkısını geri alır.',
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Vazgeç'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Teklif gönder'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (yes != true) return;
+      final otherLearn = candidate.partnerLearnSkills.firstWhere(
+        (s) => skillKey(s.name) == skillKey(selected.name),
+      );
+      await MutualExchangeService().propose(
+        otherId: candidate.user.id,
+        myName: profile.user.name,
+        otherName: candidate.user.name,
+        myTeach: selected,
+        myLearn: myLearn,
+        otherTeach: candidate.teacherSkill,
+        otherLearn: otherLearn,
+      );
+      if (mounted) _showSnack('Karşılıklı takas teklifin gönderildi.');
+    } catch (error) {
+      if (mounted) {
+        _showSnack(
+          error is StateError
+              ? error.message
+              : 'Teklif gönderilemedi. Bağlantını ve becerilerini kontrol et.',
+        );
+      }
     }
   }
 

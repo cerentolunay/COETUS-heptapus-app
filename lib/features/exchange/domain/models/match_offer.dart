@@ -22,6 +22,7 @@ class MatchOffer {
   final String receiverName;
   final List<String> participants;
   final String skill;
+  final Map<String, int> deposits;
   final int credits;
   final MatchOfferStatus status;
   final DateTime? createdAt;
@@ -36,6 +37,7 @@ class MatchOffer {
     required this.participants,
     required this.skill,
     required this.credits,
+    this.deposits = const {},
     this.status = MatchOfferStatus.pending,
     this.createdAt,
     this.updatedAt,
@@ -48,8 +50,10 @@ class MatchOffer {
   factory MatchOffer.fromMap(Map<String, dynamic> map) {
     return MatchOffer(
       id: map['id'] as String? ?? '',
-      requesterId: map['requesterId'] as String? ?? '',
-      receiverId: map['receiverId'] as String? ?? '',
+      requesterId:
+          map['requesterId'] as String? ?? map['initiatorId'] as String? ?? '',
+      receiverId:
+          map['receiverId'] as String? ?? map['recipientId'] as String? ?? '',
       requesterName:
           map['requesterName'] as String? ??
           _readStringMap(map['participantNames'])[map['requesterId']] ??
@@ -64,6 +68,9 @@ class MatchOffer {
           map['skillName'] as String? ??
           map['skillId'] as String? ??
           '',
+      deposits: Map<String, dynamic>.from(
+        map['deposits'] as Map? ?? {},
+      ).map((k, v) => MapEntry(k, (v as num).toInt())),
       credits: _readInt(map['credits']),
       status: MatchOfferStatus.fromValue(map['status'] as String?),
       createdAt: _readDateTime(map['createdAt']),
@@ -92,6 +99,7 @@ class MatchOffer {
       receiverName: receiverName ?? this.receiverName,
       participants: participants ?? this.participants,
       skill: skill ?? this.skill,
+      deposits: deposits,
       credits: credits ?? this.credits,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
@@ -108,6 +116,7 @@ class MatchOffer {
       'receiverName': receiverName,
       'participants': participants,
       'skill': skill,
+      if (deposits.isNotEmpty) 'deposits': deposits,
       'credits': credits,
       'status': status.name,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),

@@ -20,7 +20,7 @@ service cloud.firestore {
 
     function immutableProfileFieldsUnchanged() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'signupRewardVersion', 'username', 'usernameChangedAt', 'accountDeletionPending', 'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
+        'lastExchangeSessionId', 'signupRewardVersion', 'username', 'usernameChangedAt', 'accountDeletionPending', 'lockedCredits', 'credits', 'trustScore', 'verified', 'email', 'id', 'verificationCount', 'peerApprovalCount', 'portfolioSkillCounts', 'portfolioTrust'
       ]);
     }
     function fixedGift(userId, rewardId, amount) {
@@ -115,6 +115,123 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // V2: two people each teach and learn; deposits return only to their owners.
+    function mutualTerminal(status) { return status in ['completed', 'cancelled', 'expired']; }
+    function mutualAmount(s, uid) { return s.deposits[uid]; }
+    function walletDelta(s, uid, direction) {
+      let path = /databases/$(database)/documents/users/$(uid);
+      let before = get(path).data;
+      let after = getAfter(path).data;
+      let amount = mutualAmount(s, uid);
+      return before.get('credits', 0) is int && before.get('lockedCredits', 0) is int &&
+        after.credits is int && after.lockedCredits is int &&
+        after.credits == before.get('credits', 0) + direction * amount &&
+        after.lockedCredits == before.get('lockedCredits', 0) - direction * amount &&
+        after.credits >= 0 && after.lockedCredits >= 0 && after.lastExchangeSessionId == s.id;
+    }
+    function bothWallets(s, direction) {
+      return walletDelta(s, s.participants[0], direction) && walletDelta(s, s.participants[1], direction);
+    }
+    function mutualWalletChange(uid) {
+      let id = request.resource.data.lastExchangeSessionId;
+      let path = /databases/$(database)/documents/sessions/$(id);
+      let before = get(path).data;
+      let after = getAfter(path).data;
+      let direction = before.status == 'requested' && after.status == 'active' ? -1 : 1;
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credits', 'lockedCredits', 'lastExchangeSessionId']) &&
+        before.schemaVersion == 2 && request.auth.uid in before.participants && uid in before.participants &&
+        before.deposits == after.deposits && before.participants == after.participants &&
+        ((before.status == 'requested' && after.status == 'active' && after.funded == true) ||
+         (before.status in ['active', 'disputed'] && mutualTerminal(after.status) && after.settledAt == request.time)) &&
+        request.resource.data.credits is int && request.resource.data.lockedCredits is int &&
+        request.resource.data.credits == resource.data.get('credits', 0) + direction * before.deposits[uid] &&
+        request.resource.data.lockedCredits == resource.data.get('lockedCredits', 0) - direction * before.deposits[uid] &&
+        request.resource.data.credits >= 0 && request.resource.data.lockedCredits >= 0;
+    }
+    function mutualSkill(s, teaching, learning) {
+      let t = get(/databases/$(database)/documents/users/$(teaching)/teachSkills/$(s.teachSkillIds[teaching])).data;
+      let l = get(/databases/$(database)/documents/users/$(learning)/learnSkills/$(s.learnSkillIds[learning])).data;
+      return t.level is int && t.level >= 1 && t.level <= 7 && s.levels[teaching] is int && s.deposits[learning] is int && s.levels[teaching] == t.level &&
+        s.taughtNames[teaching] == t.name &&
+        t.get('normalizedName', t.name.lower()) == l.get('normalizedName', l.name.lower()) &&
+        s.deposits[learning] == t.level * 10;
+    }
+    function newMutual(s, id) {
+      let m = getAfter(/databases/$(database)/documents/matches/$(id)).data;
+      return s.keys().hasOnly(['id','matchId','schemaVersion','requesterId','receiverId','participants','participantNames',
+          'teachSkillIds','learnSkillIds','taughtNames','levels','skill','credits','deposits','status','funded',
+          'completionVotes','cancellationVotes','completionRequestedAt','remindedAt','disputedBy','disputeReason','settledAt','createdAt','updatedAt']) &&
+        s.id == id && s.matchId == id && s.schemaVersion == 2 && s.requesterId == request.auth.uid &&
+        s.participants is list && s.participants.size() == 2 && s.participants[0] < s.participants[1] &&
+        s.requesterId != s.receiverId && s.participants.toSet() == [s.requesterId,s.receiverId].toSet() &&
+        s.deposits.keys().hasOnly(s.participants) && s.teachSkillIds.keys().hasOnly(s.participants) &&
+        s.learnSkillIds.keys().hasOnly(s.participants) && s.levels.keys().hasOnly(s.participants) &&
+        s.taughtNames.keys().hasOnly(s.participants) &&
+        s.status == 'requested' && s.funded == false && s.completionVotes == [] && s.cancellationVotes == [] &&
+        s.completionRequestedAt == null && s.remindedAt == null && s.disputedBy == null && s.disputeReason == '' && s.settledAt == null &&
+        s.createdAt == request.time && s.updatedAt == request.time &&
+        m.schemaVersion == 2 && m.initiatorId == s.requesterId && m.recipientId == s.receiverId &&
+        m.status == 'pending' && m.participants == s.participants && m.deposits == s.deposits &&
+        m.skillName == s.skill && m.credits == s.credits && s.credits == s.deposits[s.requesterId] &&
+        !exists(/databases/$(database)/documents/accountDeletions/$(s.receiverId)) &&
+        mutualSkill(s,s.participants[0],s.participants[1]) && mutualSkill(s,s.participants[1],s.participants[0]);
+    }
+    function voteAdded(before, after) {
+      return !(request.auth.uid in before) && after == before.concat([request.auth.uid]);
+    }
+    function noDeadlineOrOpen(s) {
+      return s.completionRequestedAt == null || request.time < s.completionRequestedAt + duration.value(72,'h');
+    }
+    function waitingMutual(s) {
+      return s.status == 'active' && s.completionVotes.size() == 1 && s.cancellationVotes == [] && s.disputedBy == null;
+    }
+    function finishMutual(before, after) {
+      return before.funded == true && after.settledAt == request.time && bothWallets(before, 1);
+    }
+    function updateMutual(before, after) {
+      let changed = after.diff(before).affectedKeys();
+      return before.schemaVersion == 2 && request.auth.uid in before.participants && after.updatedAt == request.time && (
+        // Counterparty acceptance atomically locks both, with frozen offer terms.
+        (before.status == 'requested' && before.receiverId == request.auth.uid && after.status == 'active' && after.funded == true &&
+          changed.hasOnly(['status','funded','updatedAt']) &&
+          get(/databases/$(database)/documents/matches/$(before.id)).data.status == 'pending' &&
+          getAfter(/databases/$(database)/documents/matches/$(before.id)).data.status == 'accepted' &&
+          !exists(/databases/$(database)/documents/accountDeletions/$(before.requesterId)) && bothWallets(before,-1)) ||
+        // Unfunded proposal can be closed, without any wallet change.
+        (before.status == 'requested' && after.status == 'cancelled' && changed.hasOnly(['status','updatedAt']) &&
+          getAfter(/databases/$(database)/documents/matches/$(before.id)).data.status in ['cancelled','rejected']) ||
+        // First completion starts an immutable server-time deadline; second returns both deposits.
+        (before.status == 'active' && before.cancellationVotes == [] && before.disputedBy == null && noDeadlineOrOpen(before) &&
+          voteAdded(before.completionVotes,after.completionVotes) && (
+            (before.completionVotes == [] && after.status == 'active' && after.completionRequestedAt == request.time &&
+              changed.hasOnly(['completionVotes','completionRequestedAt','updatedAt'])) ||
+            (before.completionVotes.size() == 1 && after.status == 'completed' &&
+              changed.hasOnly(['completionVotes','status','settledAt','updatedAt']) && finishMutual(before,after)))) ||
+        // Cancellation after a completion request blocks automatic expiry as a dispute.
+        (before.status in ['active','disputed'] && (before.status == 'disputed' || noDeadlineOrOpen(before)) &&
+          voteAdded(before.cancellationVotes,after.cancellationVotes) && (
+            (before.cancellationVotes == [] && (before.completionVotes == [] || before.status == 'disputed') && after.status == before.status &&
+              changed.hasOnly(['cancellationVotes','updatedAt'])) ||
+            (before.cancellationVotes == [] && before.completionVotes.size() == 1 && after.status == 'disputed' && after.disputedBy == request.auth.uid &&
+              after.disputeReason == 'Tamamlanma isteğinden sonra iptal istendi.' && changed.hasOnly(['cancellationVotes','status','disputedBy','disputeReason','updatedAt'])) ||
+            (before.cancellationVotes.size() == 1 && after.status == 'cancelled' &&
+              changed.hasOnly(['cancellationVotes','status','settledAt','updatedAt']) && finishMutual(before,after)))) ||
+        // An explicit objection from the person who has not confirmed stops time-based closure.
+        (waitingMutual(before) && !(request.auth.uid in before.completionVotes) && noDeadlineOrOpen(before) &&
+          after.status == 'disputed' && after.disputedBy == request.auth.uid && after.disputeReason is string &&
+          after.disputeReason.size() >= 10 && after.disputeReason.size() <= 500 &&
+          changed.hasOnly(['status','disputedBy','disputeReason','updatedAt'])) ||
+        // At most one reminder, only between 24 and 72 hours, verified by server time.
+        (waitingMutual(before) && before.remindedAt == null && after.remindedAt == request.time &&
+          request.time >= before.completionRequestedAt + duration.value(24,'h') && noDeadlineOrOpen(before) &&
+          changed.hasOnly(['remindedAt','updatedAt'])) ||
+        // Silence is not completion or an endorsement.
+        (waitingMutual(before) && after.status == 'expired' &&
+          request.time >= before.completionRequestedAt + duration.value(72,'h') &&
+          changed.hasOnly(['status','settledAt','updatedAt']) && finishMutual(before,after))
+      );
+    }
+
     // User profile root document.
     match /users/{userId} {
       allow read: if signedIn() || (request.auth != null && request.auth.uid == userId);
@@ -132,6 +249,8 @@ service cloud.firestore {
         request.resource.data.get('peerApprovalCount', 0) == 0 && request.resource.data.get('portfolioTrust', 0) == 0 &&
         request.resource.data.get('portfolioSkillCounts', {}) == {};
 
+      allow update: if signedIn() && request.resource.data.keys().hasAll(['lastExchangeSessionId','credits','lockedCredits']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(['credits','lockedCredits']) && mutualWalletChange(userId);
       allow update: if isOwner(userId) && (immutableProfileFieldsUnchanged() || usernameChange(userId) ||
         (resource.data.get('signupRewardVersion', 0) != 2 && fixedGift(userId, 'first_match', 20)) ||
         fixedGift(userId, 'welcome', resource.data.get('signupRewardVersion', 0) == 2 ? 200 : 50));
@@ -188,10 +307,28 @@ service cloud.firestore {
     match /matches/{matchId} {
       allow read: if isParticipant(resource.data.participants);
 
-      allow create: if signedIn() && request.resource.data.requesterId == request.auth.uid &&
+      allow create: if signedIn() && request.resource.data.schemaVersion == 2 &&
+        request.resource.data.keys().hasOnly(['id','schemaVersion','participants','initiatorId','recipientId','requesterName','receiverName','skillName','credits','deposits','status','createdAt','updatedAt']) &&
+        request.resource.data.id == matchId && request.resource.data.initiatorId == request.auth.uid &&
+        request.resource.data.recipientId != request.auth.uid && request.resource.data.status == 'pending' &&
+        request.resource.data.participants.toSet() == [request.resource.data.initiatorId,request.resource.data.recipientId].toSet() &&
+        getAfter(/databases/$(database)/documents/sessions/$(matchId)).data.requesterId == request.auth.uid;
+
+      allow create: if signedIn() && request.resource.data.get('schemaVersion',0) != 2 && request.resource.data.requesterId == request.auth.uid &&
         request.resource.data.receiverId != request.auth.uid && request.resource.data.status == 'pending' &&
-        request.resource.data.participants.toSet() == [request.resource.data.requesterId, request.resource.data.receiverId].toSet();
-      allow update: if isParticipant(resource.data.participants) &&
+        request.resource.data.participants.toSet() == [request.resource.data.requesterId, request.resource.data.receiverId].toSet() &&
+        (request.resource.data.get('schemaVersion',0) != 2 ||
+          getAfter(/databases/$(database)/documents/sessions/$(matchId)).data.requesterId == request.auth.uid);
+      allow update: if isParticipant(resource.data.participants) && resource.data.get('schemaVersion',0) == 2 &&
+        resource.data.status == 'pending' && request.auth.uid == resource.data.recipientId &&
+        request.resource.data.status == 'accepted' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']) &&
+        getAfter(/databases/$(database)/documents/sessions/$(matchId)).data.status == 'active';
+      allow update: if isParticipant(resource.data.participants) && resource.data.get('schemaVersion',0) == 2 &&
+        resource.data.status == 'pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']) &&
+        ((request.auth.uid == resource.data.recipientId && request.resource.data.status == 'rejected') ||
+         (request.auth.uid == resource.data.initiatorId && request.resource.data.status == 'cancelled')) &&
+        getAfter(/databases/$(database)/documents/sessions/$(matchId)).data.status == 'cancelled';
+      allow update: if isParticipant(resource.data.participants) && resource.data.get('schemaVersion',0) != 2 &&
         request.resource.data.requesterId == resource.data.requesterId &&
         request.resource.data.receiverId == resource.data.receiverId &&
         request.resource.data.participants == resource.data.participants &&
@@ -205,8 +342,9 @@ service cloud.firestore {
 
     // Session state is visible to teacher/student only.
     match /sessions/{sessionId} {
-      allow read: if signedIn() &&
-        request.auth.uid in [resource.data.teacherId, resource.data.studentId];
+      allow read: if signedIn() && (resource.data.get('schemaVersion',0) == 2
+        ? request.auth.uid in resource.data.participants
+        : request.auth.uid in [resource.data.teacherId, resource.data.studentId]);
 
       function validSessionParties() {
         let m = getAfter(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data;
@@ -216,8 +354,9 @@ service cloud.firestore {
           request.resource.data.credits == m.credits &&
           (request.auth.uid == m.requesterId && request.resource.data.status == 'requested' && m.status == 'pending') && request.resource.data.get('funded', false) == false;
       }
-      allow create: if signedIn() && validSessionParties();
-      allow update: if false;
+      allow create: if signedIn() && (request.resource.data.get('schemaVersion',0) == 2
+        ? newMutual(request.resource.data,sessionId) : validSessionParties());
+      allow update: if signedIn() && resource.data.get('schemaVersion',0) == 2 && updateMutual(resource.data, request.resource.data);
 
       allow delete: if false;
     }

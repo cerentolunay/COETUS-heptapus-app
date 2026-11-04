@@ -22,7 +22,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(sent, 0);
       expect(
-        find.textContaining('30 tokenın oturum için kilitlenir'),
+        find.textContaining('Sonraki adımda karşılıklı becerileri'),
         findsOneWidget,
       );
       await tester.tap(find.text('Vazgeç'));

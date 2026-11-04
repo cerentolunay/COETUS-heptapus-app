@@ -1,3 +1,8 @@
+import '../widgets/mutual_action_dialog.dart';
+import 'dart:async';
+import '../../data/mutual_exchange_service.dart';
+import '../../domain/mutual_exchange.dart';
+import '../widgets/mutual_session_card.dart';
 import '../../../matching/presentation/pages/match_success_page.dart';
 import 'package:coetus/preview/preview_mode.dart';
 import 'package:coetus/features/community/community.dart';
@@ -23,9 +28,101 @@ class ExchangePage extends StatefulWidget {
   State<ExchangePage> createState() => _ExchangePageState();
 }
 
-class _ExchangePageState extends State<ExchangePage> {
+class _ExchangePageState extends State<ExchangePage>
+    with WidgetsBindingObserver {
   late final ExchangeRepository _repository =
       ExchangeRepositoryFactory.create();
+
+  Stream<List<MatchOffer>>? _offerStream;
+  Stream<List<ExchangeSession>>? _sessionStream;
+  String? _streamUser;
+  List<ExchangeSession> _latestSessions = [];
+  final _dueAttempts = <String, DateTime>{};
+  Timer? _dueTimer;
+  bool _foreground = true;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _dueTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _processDue(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _dueTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (state == AppLifecycleState.resumed) _processDue();
+  }
+
+  Future<void> _processDue() async {
+    if (!mounted || !_foreground || PreviewMode.enabled || _userId == null) {
+      return;
+    }
+    final now = DateTime.now();
+    for (final session in List<ExchangeSession>.of(_latestSessions)) {
+      final state = session.mutual;
+      if (state == null) continue;
+      final action = state.dueForExpiry(now)
+          ? MutualAction.expire
+          : state.dueForReminder(now)
+          ? MutualAction.remind
+          : null;
+      if (action == null) continue;
+      final key = '${session.id}:${action.name}';
+      if (_dueAttempts[key] != null &&
+          now.difference(_dueAttempts[key]!) < const Duration(minutes: 5)) {
+        continue;
+      }
+      _dueAttempts[key] = now;
+      try {
+        await MutualExchangeService().act(session.id, action);
+      } catch (_) {
+        // Server time decides eligibility. Retry is bounded; no polling query.
+      }
+    }
+  }
+
+  Future<void> _mutualAction(
+    ExchangeSession session,
+    MutualAction action,
+  ) async {
+    if (PreviewMode.enabled) {
+      _showSnack('Örnek takas; gerçek bakiye veya onay değişmedi.');
+      return;
+    }
+    if (_processing.contains(session.id)) return;
+    final text = await showDialog<String>(
+      context: context,
+      builder: (_) => MutualActionDialog(action: action),
+    );
+    if (text == null || !mounted) return;
+    setState(() => _processing.add(session.id));
+    try {
+      await MutualExchangeService().act(session.id, action, reason: text);
+      if (mounted) _showSnack('Takas durumu güncellendi.');
+    } catch (error) {
+      if (mounted) {
+        _showSnack(
+          error is StateError
+              ? error.message
+              : error is FormatException
+              ? error.message
+              : 'İşlem doğrulanamadı. Süreyi, bağlantını ve takas durumunu kontrol et.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _processing.remove(session.id));
+    }
+  }
 
   static const List<String> _tabs = ['Aktif', 'Bekleyen', 'Geçmiş'];
 
@@ -44,6 +141,7 @@ class _ExchangePageState extends State<ExchangePage> {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => MatchSuccessPage(
+            claimGift: offer.deposits.isEmpty,
             user: MatchedUser(
               name: offer.requesterName,
               skills: const [],
@@ -70,45 +168,16 @@ class _ExchangePageState extends State<ExchangePage> {
 
   final Set<String> _processing = {};
   Future<void> _sessionAction(ExchangeSession session, bool refund) async {
-    if (_processing.contains(session.id)) return;
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(refund ? 'İptal ve iade isteği' : 'Öğrenme tamamlandı mı?'),
-        content: Text(
-          refund
-              ? 'İki taraf da onayladığında ${session.credits} token öğrenciye iade edilir. İlk onay tek başına iade yapmaz.'
-              : '${session.credits} kilitli token öğretmene aktarılacak. Bu işlemi yalnızca oturum tamamlandığında onayla.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: Text(refund ? 'İptali onayla' : 'Tamamla ve aktar'),
-          ),
-        ],
-      ),
-    );
-    if (yes != true || !mounted) return;
-    _processing.add(session.id);
-    try {
-      await communityCall(
-        refund ? 'cancelLearningSession' : 'completeLearningSession',
-        {'sessionId': session.id},
+    if (session.isMutual) {
+      await _mutualAction(
+        session,
+        refund ? MutualAction.cancel : MutualAction.complete,
       );
-      _showSnack(
-        refund
-            ? 'İptal onayın kaydedildi. İki onay olduğunda iade yapılır.'
-            : 'Oturum tamamlandı, token aktarıldı.',
-      );
-    } catch (e) {
-      _showSnack(communityError(e));
-    } finally {
-      _processing.remove(session.id);
+      return;
     }
+    _showSnack(
+      'Bu eski sürüme ait bir oturumdur. Kilitli katkılar otomatik dönüştürülmedi; yeni karşılıklı işlemler bu kayıtta çalıştırılmaz.',
+    );
   }
 
   void _showSnack(String message) {
@@ -129,11 +198,17 @@ class _ExchangePageState extends State<ExchangePage> {
   }
 
   Widget _buildContent(String userId) {
+    if (_streamUser != userId) {
+      _streamUser = userId;
+      _offerStream = _repository.streamUserOffers(userId);
+      _sessionStream = _repository.streamUserSessions(userId);
+    }
+
     return StreamBuilder<List<MatchOffer>>(
-      stream: _repository.streamUserOffers(userId),
+      stream: _offerStream,
       builder: (context, offerSnapshot) {
         return StreamBuilder<List<ExchangeSession>>(
-          stream: _repository.streamUserSessions(userId),
+          stream: _sessionStream,
           builder: (context, sessionSnapshot) {
             final hasError = offerSnapshot.hasError || sessionSnapshot.hasError;
             final isLoading =
@@ -143,6 +218,8 @@ class _ExchangePageState extends State<ExchangePage> {
 
             final offers = offerSnapshot.data ?? const <MatchOffer>[];
             final sessions = sessionSnapshot.data ?? const <ExchangeSession>[];
+            _latestSessions = sessions;
+            if (!PreviewMode.enabled) scheduleMicrotask(_processDue);
             final pendingOffers = offers
                 .where((offer) => offer.status == MatchOfferStatus.pending)
                 .toList();
@@ -155,13 +232,19 @@ class _ExchangePageState extends State<ExchangePage> {
             // Token özeti — orijinal hesaplama mantığı korunuyor: aktif ya da
             // planlı oturumların token toplamı ve tamamlanan oturum sayısı.
             final lockedCredits = visibleSessions
-                .where((s) => s.funded && s.studentId == userId)
+                .where((s) => s.funded && (s.isMutual || s.studentId == userId))
                 .where(
                   (session) =>
                       session.status == ExchangeSessionStatus.active ||
-                      session.status == ExchangeSessionStatus.scheduled,
+                      session.status == ExchangeSessionStatus.scheduled ||
+                      session.status == ExchangeSessionStatus.disputed,
                 )
-                .fold<int>(0, (total, session) => total + session.credits);
+                .fold<int>(
+                  0,
+                  (total, session) =>
+                      total +
+                      (session.mutual?.deposits[userId] ?? session.credits),
+                );
             final completedCount = visibleSessions
                 .where(
                   (session) =>
@@ -173,14 +256,16 @@ class _ExchangePageState extends State<ExchangePage> {
                 .where(
                   (session) =>
                       session.status == ExchangeSessionStatus.active ||
-                      session.status == ExchangeSessionStatus.scheduled,
+                      session.status == ExchangeSessionStatus.scheduled ||
+                      session.status == ExchangeSessionStatus.disputed,
                 )
                 .toList();
             final completedSessions = visibleSessions
                 .where(
                   (session) =>
                       session.status == ExchangeSessionStatus.completed ||
-                      session.status == ExchangeSessionStatus.cancelled,
+                      session.status == ExchangeSessionStatus.cancelled ||
+                      session.status == ExchangeSessionStatus.expired,
                 )
                 .toList();
 
@@ -333,6 +418,9 @@ class _ExchangePageState extends State<ExchangePage> {
   }) {
     switch (widget.sessionId != null && completedSessions.isNotEmpty
         ? 2
+        : widget.sessionId != null &&
+              pendingOffers.any((o) => o.id == widget.sessionId)
+        ? 1
         : _selectedTab) {
       case 1:
         if (pendingOffers.isEmpty) {
@@ -382,6 +470,8 @@ class _ExchangePageState extends State<ExchangePage> {
             session: completedSessions[index],
             onMarkCompleted: (s) => _sessionAction(s, false),
             onRefund: (s) => _sessionAction(s, true),
+            onMutualAction: _mutualAction,
+            busy: _processing,
           ),
         );
       default:
@@ -405,6 +495,8 @@ class _ExchangePageState extends State<ExchangePage> {
             session: activeSessions[index],
             onMarkCompleted: (s) => _sessionAction(s, false),
             onRefund: (s) => _sessionAction(s, true),
+            onMutualAction: _mutualAction,
+            busy: _processing,
           ),
         );
     }
@@ -450,6 +542,8 @@ int _sessionTimelineIndex(ExchangeSessionStatus status) {
       return 2;
     case ExchangeSessionStatus.completed:
       return 3;
+    case ExchangeSessionStatus.expired:
+    case ExchangeSessionStatus.disputed:
     case ExchangeSessionStatus.cancelled:
       // İptal edilen oturumlar hiçbir sekmede gösterilmiyor; yine de
       // eşlemeyi tam tutmak için en erken adıma sabitleniyor.
@@ -554,7 +648,10 @@ class _OfferCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: CoetusSpace.sm),
-              CoetusChip('${offer.credits} token', tone: CoetusChipTone.credit),
+              CoetusChip(
+                '${offer.deposits[isReceiver ? offer.receiverId : offer.requesterId] ?? offer.credits} token',
+                tone: CoetusChipTone.credit,
+              ),
             ],
           ),
           const SizedBox(height: CoetusSpace.md),
@@ -562,6 +659,10 @@ class _OfferCard extends StatelessWidget {
             '$otherName · teklif gönderildi, yanıt bekleniyor',
             style: t.bodySmall,
           ),
+          if (offer.deposits.isNotEmpty)
+            Text(
+              'Senin katkın: ${offer.deposits[isReceiver ? offer.receiverId : offer.requesterId]} · Karşı taraf: ${offer.deposits[isReceiver ? offer.requesterId : offer.receiverId]} token. İkiniz de öğretiyor ve öğreniyorsunuz.',
+            ),
           if (isReceiver) ...[
             const SizedBox(height: CoetusSpace.md),
             Row(
@@ -593,13 +694,29 @@ class _SessionCard extends StatelessWidget {
     required this.session,
     required this.onMarkCompleted,
     required this.onRefund,
+    this.onMutualAction,
+    this.busy = const {},
   });
 
   final ExchangeSession session;
   final ValueChanged<ExchangeSession> onMarkCompleted, onRefund;
+  final void Function(ExchangeSession, MutualAction)? onMutualAction;
+  final Set<String> busy;
 
   @override
   Widget build(BuildContext context) {
+    if (session.isMutual) {
+      return MutualSessionCard(
+        session: session,
+        userId: PreviewMode.enabled
+            ? PreviewMode.userId
+            : FirebaseAuth.instance.currentUser?.uid ?? '',
+        busy: busy.contains(session.id),
+        onChat: () => context.go('/chat-detail/${session.id}'),
+        onDetails: () => context.go('/exchange-detail/${session.id}'),
+        onAction: (action) => onMutualAction?.call(session, action),
+      );
+    }
     final t = Theme.of(context).textTheme;
     final timelineIndex = _sessionTimelineIndex(session.status);
     final showActions =
