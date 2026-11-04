@@ -28,7 +28,7 @@ tek tek Issue oluşturabilirsin veya dosyaları GitHub düzenleyicisinden takip 
 
 | Sıra | Bitti | Görev | Ön koşul | Sorumlu |
 |---|---|---|---|---|
-| 00 | [ ] | [Telefon test sürümünü incele ve bulguları kaydet](gorevler/00.md) | Yok | Ürün sahibi |
+| 00 | [x] | [Telefon test sürümünü incele ve bulguları kaydet](gorevler/00.md) — ürün sahibi 19 Ekim 2026’da tamamlandığını bildirdi | Yok | Ürün sahibi |
 | 01 | [ ] | [Karşılıklı öğrenme ve escrow ürün kararlarını kesinleştir](gorevler/01.md) | 00 | Ürün sahibi + geliştirici |
 | 02 | [ ] | [Firebase maliyetini ve ücretsiz backend yolunu kararlaştır](gorevler/02.md) | 01 | Ürün sahibi + geliştirici |
 | 03 | [ ] | [Test ortamını ve güvenli geliştirme sürecini kur](gorevler/03.md) | 02 | Geliştirici |

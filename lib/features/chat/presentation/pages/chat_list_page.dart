@@ -11,7 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class ChatListPage extends StatefulWidget {
-  const ChatListPage({super.key});
+  const ChatListPage({super.key, this.repository});
+  final ChatRepository? repository;
 
   @override
   State<ChatListPage> createState() => _ChatListPageState();
@@ -19,7 +20,10 @@ class ChatListPage extends StatefulWidget {
 
 class _ChatListPageState extends State<ChatListPage> {
   final TextEditingController _searchController = TextEditingController();
-  late final ChatRepository _repository = ChatRepositoryFactory.create();
+  late final ChatRepository _repository =
+      widget.repository ?? ChatRepositoryFactory.create();
+  Stream<List<ChatThread>>? _chatsStream;
+  String? _streamUserId;
   String _lastSearchQuery = '';
   int _selectedTab = 0;
 
@@ -57,6 +61,10 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     final userId = _userId;
+    if (userId != null && userId != _streamUserId) {
+      _streamUserId = userId;
+      _chatsStream = _repository.streamUserChats(userId);
+    }
 
     return Scaffold(
       backgroundColor: CoetusColors.oat,
@@ -167,7 +175,7 @@ class _ChatListPageState extends State<ChatListPage> {
 
   Widget _buildContent(String userId) {
     return StreamBuilder<List<ChatThread>>(
-      stream: _repository.streamUserChats(userId),
+      stream: _chatsStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return _buildState(

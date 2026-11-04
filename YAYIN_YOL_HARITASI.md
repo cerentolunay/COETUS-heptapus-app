@@ -48,8 +48,8 @@ hâle gelmez. İki yönlü eşleşme ve escrow dönüşümü üretim öncesi P0 
 - [ ] İlk sürümde fotoğraf/video, topluluk ve sohbetin hangilerinin açık olacağı.
 - [ ] Yüz yüze görüşmenin desteklenip desteklenmediği ve güvenli kullanım kuralları.
 - [ ] İlk ücretsiz planda kullanıcı/eşleşme sınırı; Premium satışa açılana kadar davranış.
-- [ ] Escrow çözümünde tokenlar karşı tarafa mı aktarılacak, sahiplerine mi dönecek?
-      Bu karar henüz verilmiş sayılmaz; bir tarafa otomatik ödeme varsayılmaz.
+- [x] Başarılı takasta herkes kendi kilitlediği tokenları geri alır; karşı tarafa
+      aktarım yapılmaz. Ürün sahibi kararı: 19 Ekim 2026. Uygulaması henüz tamamlanmadı.
 - [ ] İki katkının tutarı, eşit olmak zorunda olup olmadığı ve iki öğrenme yönünün
       tamamlanma/itiraz/zaman aşımı koşulları.
 - [ ] Aynı kişinin birden fazla hesapla hediye toplamasına karşı uygulanacak politika.
@@ -249,9 +249,9 @@ anlamına gelmez; READY durumu beklenir ve gerçek sorgu denenir.
 bunu hatırladığı olası model olarak belirtti; henüz kesinleşmiş karar veya mevcut
 kodda bulunan bir kural gibi kabul edilmez. Örneğin A ve B'nin 20'şer token
 kilitlemesi ortak taahhüt/teminat işlevi görebilir. “Eşit tutar kilitleme” ile
-“tamamlanınca kime aktarılacağı” iki ayrı karardır. Herkesin kendi katkısını geri
-alması ve karşılıklı aktarımda net bakiye eşit tutarlarda aynı olabilir; işlem
-kayıtları ve anlaşmazlık politikası yine de açıkça seçilmelidir.
+“tamamlanınca kime döneceği” iki ayrı karardır. Ürün sahibi 19 Ekim 2026’da başarılı
+takasta herkesin kendi katkısını geri almasını seçti. Karşı tarafa aktarım yapılmaz.
+Tutar ve anlaşmazlık politikası ayrıca kesinleştirilecektir.
 
 1. [ ] A'nın paylaşabileceği beceri B'nin öğrenmek istediğiyle; B'nin paylaşabileceği
        beceri de A'nın öğrenmek istediğiyle uyuşsun. Örneğin Python ↔ gitar.
@@ -268,9 +268,8 @@ kayıtları ve anlaşmazlık politikası yine de açıkça seçilmelidir.
        “Sen paylaşacaksın / Sen öğreneceksin” ve karşı tarafın karşılıkları görülsün.
 7. [ ] Tek kişinin “tamamladım” demesi escrow'u çözmesin. İki tarafın tamamlanma
        onayı ayrı kaydedilsin; tek onayda tokenlar kilitli kalsın.
-8. [ ] İki onay geldiğinde, **ürün sahibi tarafından seçilmiş escrow çözüm politikası**
-       tek kez ve atomik uygulansın. Tokenların karşı tarafa aktarılması ile sahibine
-       geri dönmesi farklı politikalardır; bu belge henüz birini seçmez.
+8. [ ] İki onay geldiğinde, **her katılımcının katkısı kendi hesabına iade edilsin**.
+       İki iade tek kez ve atomik uygulansın; karşı tarafa aktarım yapılmasın.
 9. [ ] Karşılıklı iptalde herkesin kendi katkısı doğru hesaba yalnızca bir kez iade
        edilsin. Tek taraflı ayrılma, yalnızca bir öğrenme yönünün gerçekleşmesi,
        anlaşmazlık ve yanıt vermeyen kişi için ayrı süreç tanımlansın.

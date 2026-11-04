@@ -9,6 +9,19 @@ class FirebaseChatRepository implements ChatRepository {
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
+  final _participantNames = <String, Future<String>>{};
+
+  @override
+  Stream<ChatThread?> streamChat(String chatId, String userId) => _firestore
+      .collection('chats')
+      .doc(chatId)
+      .snapshots()
+      .asyncMap((snapshot) async {
+        if (!snapshot.exists) return null;
+        final chat = ChatThread.fromFirestore(snapshot);
+        if (!chat.participants.contains(userId)) return null;
+        return (await _enrichMissingParticipantNames([chat])).single;
+      });
 
   @override
   Stream<List<ChatThread>> streamUserChats(String userId) {
@@ -142,13 +155,22 @@ class FirebaseChatRepository implements ChatRepository {
 
     final fetchedNames = <String, String>{};
     for (final userId in missingUserIds) {
-      final snapshot = await _firestore.collection('users').doc(userId).get();
-      final data = snapshot.data();
-      final name =
-          data?['displayName'] as String? ??
-          data?['name'] as String? ??
-          data?['email'] as String? ??
-          '';
+      String name;
+      try {
+        name = await _participantNames.putIfAbsent(userId, () async {
+          final snapshot = await _firestore
+              .collection('users')
+              .doc(userId)
+              .get();
+          final data = snapshot.data();
+          return data?['displayName'] as String? ??
+              data?['name'] as String? ??
+              '';
+        });
+      } catch (_) {
+        _participantNames.remove(userId);
+        rethrow;
+      }
       if (name.trim().isNotEmpty) {
         fetchedNames[userId] = name.trim();
       }

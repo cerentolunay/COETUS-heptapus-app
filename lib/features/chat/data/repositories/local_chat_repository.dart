@@ -6,6 +6,12 @@ class LocalChatRepository implements ChatRepository {
   const LocalChatRepository();
 
   @override
+  Stream<ChatThread?> streamChat(String chatId, String userId) =>
+      streamUserChats(
+        userId,
+      ).map((chats) => chats.where((c) => c.id == chatId).firstOrNull);
+
+  @override
   Stream<List<ChatThread>> streamUserChats(String userId) {
     return Stream.value(const []);
   }
