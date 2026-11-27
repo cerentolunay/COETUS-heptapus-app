@@ -32,6 +32,8 @@ Resmî kaynaklar: [Firebase fiyatları](https://firebase.google.com/pricing), [S
 
 ## Canlı yayın
 
+**27 Kasım 2026:** 24 saatlik anlaşmazlık kapanışı mevcut iki Functions'a yayımlandı; ikisi de `ACTIVE`, Scheduler etkin ve aralığı 15 dakika olarak doğrulandı. Diğer işlevlerin kod hashleri ve Firestore kuralları değişmedi. Storage, plan ve imaj temizleme politikası değiştirilmedi. Gerçek kullanıcı bakiyeleriyle yapay test yapılmadı; mali davranış emülatörde doğrulandı. Kaynak kodu PR #45'te ayrı dalda, mağaza/telefon güncellemesi bu işlem kapsamında yapılmadı.
+
 19 Ekim 2026 tarihinde iki yeni işlev `ACTIVE` olarak doğrulandı. Scheduler etkin ve aralığı `every 15 minutes`; her işlevin azami instance sayısı 1. Önceki bütün işlevlerin kod hashleri ve Firestore kural sürümü değişmedi. Storage veya portföy işlevleri yayımlanmadı. Yeni Eventarc servis hesabının ilk kurulumunda izin yayılma hatası alındı; tekrar denemeden sonra işlev etkinleşti.
 
 CLI'nin `--force` ile varsayılan imaj temizleme politikası oluşturabildiği fark edilince yayın istemcisi bu adımdan önce durduruldu. Google tarafında başlamış işlev oluşturma işlemi tamamlandı; canlı işlevler ve Scheduler ayrıca API'den doğrulandı. Mevcut Artifact Registry politikasına yazılmadı.
