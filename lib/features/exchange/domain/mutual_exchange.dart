@@ -22,7 +22,8 @@ class MutualExchange {
   final DateTime? completionRequestedAt, remindedAt;
   final String? disputedBy;
   final String disputeReason;
-  bool get terminal => ['completed', 'cancelled', 'expired'].contains(status);
+  bool get terminal =>
+      ['completed', 'cancelled', 'expired', 'dispute_closed'].contains(status);
   bool get waiting =>
       status == 'active' &&
       completionVotes.length == 1 &&

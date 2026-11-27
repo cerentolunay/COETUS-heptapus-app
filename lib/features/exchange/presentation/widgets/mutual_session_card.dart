@@ -34,6 +34,7 @@ class MutualSessionCard extends StatelessWidget {
       'completed' => 'Karşılıklı tamamlandı',
       'cancelled' => 'Karşılıklı iptal edildi',
       'expired' => 'Yanıt süresi doldu',
+      'dispute_closed' => 'Anlaşmazlıkla kapandı',
       'disputed' => 'İtiraz / iptal görüşmesi',
       'requested' => 'Teklif bekliyor',
       _ => 'Karşılıklı takas',
@@ -64,14 +65,14 @@ class MutualSessionCard extends StatelessWidget {
                     ? 'Herkes kendi kilitlediği tokenı geri aldı.'
                     : 'Bu teklifte token kilitlenmedi.',
               ),
-              if (state.status == 'expired')
+              if (state.status == 'expired' || state.status == 'dispute_closed')
                 const Text(
                   'Yanıt verilmemesi tamamlanma veya beceri onayı sayılmaz.',
                 ),
             ] else if (state.status == 'disputed') ...[
               const SizedBox(height: 8),
               const Text(
-                'Otomatik kapanma durdu. Karşılıklı iptalle tokenlarınızı geri alabilirsiniz.',
+                'İtirazdan itibaren 24 saat uzlaşma süreniz var. Karşılıklı iptalle hemen, uzlaşma olmazsa süre sonunda kendi tokenlarınız iade edilir. Bu takas başarılı sayılmaz; şikâyet incelemesi iade beklemez.',
               ),
             ] else if (state.completionVotes.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -81,7 +82,7 @@ class MutualSessionCard extends StatelessWidget {
                     : 'Karşı tarafın tamamlanma onayı var. Yanıtın bekleniyor.',
               ),
               const Text(
-                  'İlk onaydan 24 saat sonra hatırlatma, 72 saat içinde itiraz yoksa kendi tokenlarınız iade edilir. Sunucu 15 dakikada bir kontrol eder; uygulamanın açık olması gerekmez.',
+                'İlk onaydan 24 saat sonra hatırlatma, 72 saat içinde itiraz yoksa kendi tokenlarınız iade edilir. Sunucu 15 dakikada bir kontrol eder; uygulamanın açık olması gerekmez.',
               ),
               if (deadline != null)
                 Text(

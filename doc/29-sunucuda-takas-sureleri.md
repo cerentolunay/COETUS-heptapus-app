@@ -10,7 +10,9 @@ Bu karar, 28 numaralı belgedeki yalnızca ekran açıkken süre kontrolü kıs�
 
 Normal koşullarda işlem eşikten sonraki ilk 15 dakikalık kontrolde uygulanır; servis hataları, tekrar denemeler ve kuyruk yoğunluğu geciktirebilir. Tam saat garantisi yoktur. Her çalıştırma en çok 500 kayıt işler. Boş kuyrukta tek sorgu vardır; tüm oturumlar periyodik taranmaz.
 
-İtiraz veya tamamlanma sonrası iptal isteği kuyruğu durdurur. İkinci tamamlanma/iptal onayıyla kapanmış oturum yeniden iade edilmez. Eski ve tekrar gelen trigger olayları güncel oturumu okuyarak karara bağlanır. Eşzamanlı telefon ve sunucu işlemleri aynı Firestore transaction çatışma kontrolünden geçer. Bozuk cüzdan veya tutar varsa iki kişiden hiçbirine kısmi iade yapılmaz; hata günlüğe kaydedilir ve iş silinmez.
+İtiraz veya tamamlanma sonrası iptal isteği, normal 72 saatlik kapanışın yerine **itirazdan itibaren 24 saatlik uzlaşma süresi** başlatır. Karşılıklı iptal onayında hemen iade yapılır. Uzlaşma olmazsa sunucu `dispute_closed` (“Anlaşmazlıkla kapandı”) durumuyla herkesin kendi katkısını iade eder. Başarı/geçmiş sayaçları veya yetenek onayı oluşmaz; bu karar kimseyi haklı ya da haksız ilan etmez. Şikâyet incelemesi token iadesinden bağımsızdır; yeni bir moderasyon paneli bu değişikliğin kapsamı değildir.
+
+Sunucuya özel `disputeOpenedAt` alanı itirazın başlangıcını saklar. Sonraki iptal oyu süreyi uzatmaz. İkinci tamamlanma/iptal onayıyla kapanmış oturum yeniden iade edilmez. Eski ve tekrar gelen trigger olayları güncel oturumu okuyarak karara bağlanır. Eşzamanlı telefon ve sunucu işlemleri aynı Firestore transaction çatışma kontrolünden geçer. Bozuk cüzdan veya tutar varsa iki kişiden hiçbirine kısmi iade yapılmaz; hata günlüğe kaydedilir ve iş silinmez.
 
 Eski tek yönlü oturumlar otomatik dönüştürülmez. Kuyruğa istemciden yazılamaz; mevcut varsayılan Firestore reddetme kuralı geçerlidir. İlk yayın öncesinden kalan, ilk onayı verilmiş v2 oturumlar için yalnızca kuyruk kaydı ekleyen geçiş kontrolü gerekir; bakiye değiştirilmez.
 
@@ -21,6 +23,8 @@ Eski tek yönlü oturumlar otomatik dönüştürülmez. Kuyruğa istemciden yaz�
 Resmî kaynaklar: [Firebase fiyatları](https://firebase.google.com/pricing), [Scheduler açıklaması](https://firebase.google.com/docs/functions/schedule-functions).
 
 ## Testler
+
+**27 Kasım 2026 — 24 saatlik itiraz çözümü:** 182 Flutter testi, 57 Firebase emülatör testi ve temiz statik analiz. Normal Android debug APK derlendi. İtirazdan 24 saat önce iade yapılmaması, tam sınırda tek iade, karşılıklı iptalde hemen iade, sürenin sonraki oyla uzatılamaması ve istemcinin sunucu saatini değiştirememesi doğrulandı. Canlı geçiş kontrolünde v2 oturum ve eski itirazlı kayıt bulunmadı; mevcut cüzdanlara geçiş yazımı yapılmadı.
 
 181 Flutter testi ve 54 Firebase emülatör testi geçti. Yeni testler sunucunun uygulama açılmadan hatırlatması/iade etmesi, eşzamanlı tekrar çağrılarda tek iade, itiraz ve iptal sonrası eski kuyruk kaydının reddi, bozuk cüzdanda atomik geri alma ve istemcilerin kuyruk oluşturamamasını kapsar. İlk tam çalıştırmada eski destek işlemi testinde emülatör transaction hatası görüldü; ikinci tam çalıştırma 54/54 geçti. Statik analiz temiz, normal Android APK derlendi. Telefon USB listesinde görünmediği için bu sürüm cihaza kurulmadı.
 

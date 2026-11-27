@@ -265,7 +265,8 @@ class _ExchangePageState extends State<ExchangePage>
                   (session) =>
                       session.status == ExchangeSessionStatus.completed ||
                       session.status == ExchangeSessionStatus.cancelled ||
-                      session.status == ExchangeSessionStatus.expired,
+                      session.status == ExchangeSessionStatus.expired ||
+                      session.status == ExchangeSessionStatus.disputeClosed,
                 )
                 .toList();
 
@@ -543,6 +544,7 @@ int _sessionTimelineIndex(ExchangeSessionStatus status) {
     case ExchangeSessionStatus.completed:
       return 3;
     case ExchangeSessionStatus.expired:
+    case ExchangeSessionStatus.disputeClosed:
     case ExchangeSessionStatus.disputed:
     case ExchangeSessionStatus.cancelled:
       // İptal edilen oturumlar hiçbir sekmede gösterilmiyor; yine de

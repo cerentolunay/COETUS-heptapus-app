@@ -42,7 +42,7 @@ Yeni hesaplar **200 başlangıç tokenı** alır. Bir takasta kişinin katkısı
 | İkiniz de tamamlanmayı onaylarsanız | Sen 60, diğer kişi 70 tokenını geri alır. |
 | İkiniz de iptali onaylarsanız | Herkes kendi kilitli katkısını geri alır. |
 | İlk tamamlanma onayına yanıt gelmezse | 24 saat sonra uygulama içi hatırlatma oluşturulur; 72 saat sonunda itiraz yoksa herkesin kendi katkısı iade edilir. |
-| Tamamlanma isteğine itiraz edilirse | Otomatik kapanma durur; karşılıklı iptal seçeneği devam eder. |
+| Tamamlanma isteğine itiraz edilirse | 24 saatlik uzlaşma süresi başlar. Karşılıklı iptal hemen iade sağlar; uzlaşma olmazsa herkesin kendi katkısı iade edilir ve takas “Anlaşmazlıkla kapandı” olur. |
 
 **24/72 saatlik süre eşleşmeden değil, ilk tamamlanma onayından başlar.** Sunucu 15 dakikada bir zamanı gelen işlemleri kontrol eder; telefonların açık olması gerekmez. Servis gecikmeleri olabilir. Süre dolması başarılı takas veya yetenek onayı sayılmaz.
 

@@ -87,7 +87,12 @@ const {syncTimeout, sweepTimeouts} = require('./mutual_timeout');
 exports.syncMutualExchangeTimeout = onDocumentWritten({
   document: 'sessions/{sessionId}', region: 'europe-west1',
   minInstances: 0, maxInstances: 1, memory: '256MiB', retry: true,
-}, event => syncTimeout(db, event.params.sessionId));
+}, event => {
+  const before = event.data?.before.data(), after = event.data?.after.data();
+  const opened = before?.status !== 'disputed' && after?.status === 'disputed'
+    ? event.data.after.updateTime : undefined;
+  return syncTimeout(db, event.params.sessionId, opened);
+});
 exports.processMutualExchangeTimeouts = onSchedule({
   schedule: 'every 15 minutes', timeZone: 'Etc/UTC', region: 'europe-west1',
   minInstances: 0, maxInstances: 1, memory: '256MiB', timeoutSeconds: 300,
