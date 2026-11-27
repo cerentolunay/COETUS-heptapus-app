@@ -1,0 +1,16 @@
+# Reviewed historical findings only; future commits are not globally ignored.
+# Podfile SPEC CHECKSUMS are dependency integrity hashes.
+# Firebase client configuration keys identify the app; API restrictions remain a release check.
+01ce165095336c165cbb381a78b5c308b89ef4ea:ios/Podfile.lock:generic-api-key:1465
+01ce165095336c165cbb381a78b5c308b89ef4ea:macos/Podfile.lock:generic-api-key:1465
+01ce165095336c165cbb381a78b5c308b89ef4ea:ios/Podfile.lock:generic-api-key:1470
+01ce165095336c165cbb381a78b5c308b89ef4ea:ios/Podfile.lock:generic-api-key:1473
+01ce165095336c165cbb381a78b5c308b89ef4ea:ios/Podfile.lock:generic-api-key:1474
+01ce165095336c165cbb381a78b5c308b89ef4ea:macos/Podfile.lock:generic-api-key:1470
+01ce165095336c165cbb381a78b5c308b89ef4ea:ios/Podfile.lock:generic-api-key:1487
+01ce165095336c165cbb381a78b5c308b89ef4ea:macos/Podfile.lock:generic-api-key:1473
+01ce165095336c165cbb381a78b5c308b89ef4ea:macos/Podfile.lock:generic-api-key:1474
+01ce165095336c165cbb381a78b5c308b89ef4ea:macos/Podfile.lock:generic-api-key:1487
+70c6ec4e178097dd816e52b1ad83ef0db86bf1c6:android/app/google-services.json:gcp-api-key:32
+70c6ec4e178097dd816e52b1ad83ef0db86bf1c6:lib/firebase_options.dart:gcp-api-key:53
+70c6ec4e178097dd816e52b1ad83ef0db86bf1c6:lib/firebase_options.dart:gcp-api-key:61
