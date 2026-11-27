@@ -280,7 +280,7 @@ class MutualExchangeService {
               ? 'İptal isteği'
               : 'Tamamlanma onayın bekleniyor',
           operation == MutualAction.dispute
-              ? 'Otomatik iade durduruldu. Karşılıklı iptalle çözebilirsiniz.'
+              ? '24 saatlik uzlaşma süresi başladı. Karşılıklı iptal ederseniz hemen, uzlaşma olmazsa süre sonunda kendi tokenlarınız iade edilir.'
               : 'İlgili takası açıp yanıt verebilirsin. İtiraz yoksa ilk tamamlanma isteğinden 72 saat sonra süre dolar.',
         );
       }

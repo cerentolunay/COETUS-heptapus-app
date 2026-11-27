@@ -164,10 +164,39 @@ check('server rechecks objection and cancellation even with a stale due job',asy
   for(const kind of ['dispute','cancel']){
     await env.clearFirestore();await seed();await propose();await accept();await action('a','complete');
     await timeout.syncTimeout(db,'mutual');await action('b',kind);await backdate(73);
-    assert.equal(await timeout.processTimeout(db,'mutual'),'ignored');
+    await timeout.syncTimeout(db,'mutual');
+    assert.equal(await timeout.processTimeout(db,'mutual'),'waiting');
     await balances(140,160,60,40);
     assert.equal((await db.doc('sessions/mutual').get()).data().status,'disputed');
   }
+});
+check('dispute closes at 24 hours, returns own deposits once and never completes',async()=>{
+  await seed();await propose();await accept();await action('a','complete');await action('b','dispute');
+  const opened=(await db.doc('sessions/mutual').get()).updateTime;
+  await timeout.syncTimeout(db,'mutual',opened);
+  const deadline=opened.toMillis()+24*3600000;
+  assert.equal(await timeout.processTimeout(db,'mutual',deadline-1),'waiting');
+  await balances(140,160,60,40);
+  await Promise.all([timeout.processTimeout(db,'mutual',deadline),timeout.processTimeout(db,'mutual',deadline)]);
+  await balances(200,200,0,0);
+  const s=(await db.doc('sessions/mutual').get()).data();
+  assert.equal(s.status,'dispute_closed');assert.equal(s.completionVotes.length,1);
+  assert.equal((await db.doc('notifications/mutual_mutual_dispute_closed_a').get()).data().title,'Anlaşmazlıkla kapandı');
+});
+check('cancellation vote cannot extend dispute clock; mutual cancellation refunds immediately',async()=>{
+  await seed();await propose();await accept();await action('a','complete');await action('b','dispute');
+  const opened=(await db.doc('sessions/mutual').get()).updateTime;
+  await timeout.syncTimeout(db,'mutual',opened);await action('a','cancel');
+  await timeout.syncTimeout(db,'mutual');
+  assert.equal((await db.doc('sessions/mutual').get()).data().disputeOpenedAt.toMillis(),opened.toMillis());
+  await action('b','cancel');await balances(200,200,0,0);
+  await timeout.syncTimeout(db,'mutual',opened);
+  assert.equal(await timeout.processTimeout(db,'mutual',opened.toMillis()+25*3600000),'ignored');
+});
+check('clients cannot forge the server dispute clock or close a dispute themselves',async()=>{
+  await seed();await propose();await accept();await action('a','complete');await action('b','dispute');
+  await assertFails(updateDoc(doc(client('a'),'sessions/mutual'),{disputeOpenedAt:Timestamp.fromMillis(1),updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(doc(client('a'),'sessions/mutual'),{status:'dispute_closed',settledAt:serverTimestamp(),updatedAt:serverTimestamp()}));
 });
 check('server refuses a damaged wallet atomically and retains its job for investigation',async()=>{
   await seed();await propose();await accept();await action('a','complete');await backdate(73);

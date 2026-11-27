@@ -9,6 +9,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('dispute closure is terminal and preserves its wire status', () {
+    expect(
+      ExchangeSessionStatus.fromValue('dispute_closed'),
+      ExchangeSessionStatus.disputeClosed,
+    );
+    expect(
+      const MutualExchange(
+        participants: ['a', 'b'],
+        deposits: {'a': 60, 'b': 70},
+        status: 'dispute_closed',
+      ).terminal,
+      isTrue,
+    );
+  });
   test(
     'mutual offers resolve participant roles without legacy callable fields',
     () {

@@ -8,9 +8,11 @@ enum ExchangeSessionStatus {
   completed,
   cancelled,
   disputed,
+  disputeClosed,
   expired;
 
   static ExchangeSessionStatus fromValue(String? value) {
+    if (value == 'dispute_closed') return ExchangeSessionStatus.disputeClosed;
     return ExchangeSessionStatus.values.firstWhere(
       (status) => status.name == value,
       orElse: () => ExchangeSessionStatus.requested,
@@ -131,7 +133,9 @@ class ExchangeSession {
       },
       'funded': funded,
       'refundVotes': refundVotes,
-      'status': status.name,
+      'status': status == ExchangeSessionStatus.disputeClosed
+          ? 'dispute_closed'
+          : status.name,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
